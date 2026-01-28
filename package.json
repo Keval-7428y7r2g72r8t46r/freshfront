@@ -1,0 +1,49 @@
+{
+  "name": "freshfront-rd-blue",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:vercel": "npx vercel dev",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@decartai/sdk": "^0.0.40",
+    "@google/genai": "^1.30.0",
+    "@types/papaparse": "^5.5.2",
+    "@types/uuid": "^10.0.0",
+    "@upstash/qstash": "^2.8.4",
+    "@vercel/blob": "^0.27.0",
+    "convertapi-js": "~1.1",
+    "diff": "^8.0.2",
+    "diff2html": "^3.4.55",
+    "firebase": "^12.8.0",
+    "firebase-admin": "^13.6.0",
+    "mammoth": "^1.11.0",
+    "papaparse": "^5.5.3",
+    "pdf-lib": "^1.17.1",
+    "playwright-core": "^1.49.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-markdown": "9",
+    "stripe": "^20.0.0",
+    "twitter-api-v2": "^1.28.0",
+    "uuid": "^13.0.0",
+    "vercel": "^49.2.0",
+    "vite-plugin-pwa": "^0.21.2",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@vercel/node": "^5.5.15",
+    "@vitejs/plugin-react": "^4.0.0",
+    "firebase-tools": "^15.3.1",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
