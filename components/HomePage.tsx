@@ -958,7 +958,7 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
                   }
                 >
                   <span className="w-2 h-2 rounded-full bg-[#22c55e]"></span>
-                  From research to sale
+                  Where information lives 🧟
                 </div>
                 <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight leading-[1.05]">
                   A playground for data <br />& business automation
@@ -2718,4 +2718,5 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
     </div >
   );
 };
+
 
