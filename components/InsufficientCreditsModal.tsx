@@ -141,7 +141,7 @@ export const CreditBalanceDisplay: React.FC<{
 }> = ({ credits, isDarkMode, onClick, compact = false }) => {
     const isLow = credits < 50;
 
-    const iconUrl = "https://so7ow2fypz0vpnxi.public.blob.vercel-storage.com/coin%20%281%29.png";
+    const iconUrl = "https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/coin%20%281%29.png";
 
     if (compact) {
         return (
