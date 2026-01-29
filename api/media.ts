@@ -78,9 +78,13 @@ export default {
         const token = getBlobToken();
 
         console.log('[Media API] Handle Upload Token Request');
-        console.log('[Media API] Token present:', !!token);
+        console.log('[Media API] BLOB_READ_WRITE_TOKEN present:', !!process.env.BLOB_READ_WRITE_TOKEN);
+        console.log('[Media API] researcher_READ_WRITE_TOKEN present:', !!process.env.researcher_READ_WRITE_TOKEN);
+
         if (token) {
-          console.log('[Media API] Token start:', token.substring(0, 8) + '...');
+          console.log('[Media API] Token being used (first 8 chars):', token.substring(0, 8) + '...');
+        } else {
+          console.error('[Media API] NO TOKEN FOUND in environment variables');
         }
 
         try {
