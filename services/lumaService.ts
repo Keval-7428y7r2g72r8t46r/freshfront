@@ -23,30 +23,17 @@ export interface LumaGenerationResponse {
     request?: any;
 }
 
-const LUMA_API_URL = 'https://api.lumalabs.ai/dream-machine/v1/generations';
-
-const getApiKey = () => {
-    const key = import.meta.env.VITE_LUMA_API_KEY;
-    if (!key) {
-        console.warn('VITE_LUMA_API_KEY is missing');
-    }
-    return key;
-};
+import { authFetch } from './authFetch';
 
 export const lumaService = {
     /**
      * Modify a video using Luma Dream Machine
      */
     modifyVideo: async (params: LumaModifyRequest): Promise<LumaGenerationResponse> => {
-        const apiKey = getApiKey();
-        if (!apiKey) throw new Error('Luma API Key is missing. Please set VITE_LUMA_API_KEY.');
-
-        const response = await fetch(`${LUMA_API_URL}/video/modify`, {
+        const response = await authFetch(`/api/media?op=luma-modify`, {
             method: 'POST',
             headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 generation_type: 'modify_video',
@@ -55,8 +42,8 @@ export const lumaService = {
         });
 
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Luma API Error (${response.status}): ${errorText}`);
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || `Luma API Error: ${response.status}`);
         }
 
         return response.json();
@@ -66,24 +53,17 @@ export const lumaService = {
      * Get generation status
      */
     getGeneration: async (id: string): Promise<LumaGenerationResponse> => {
-        const apiKey = getApiKey();
-        if (!apiKey) throw new Error('Luma API Key is missing');
-
-        const response = await fetch(`${LUMA_API_URL}/${id}`, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
-            }
+        const response = await authFetch(`/api/media?op=luma-get-generation&id=${id}`, {
+            method: 'GET'
         });
 
         if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
             // If 404, might be expired or wrong ID
             if (response.status === 404) {
                 throw new Error('Generation not found');
             }
-            const errorText = await response.text();
-            throw new Error(`Luma API Error (${response.status}): ${errorText}`);
+            throw new Error(error.error || `Luma API Error: ${response.status}`);
         }
 
         return response.json();
