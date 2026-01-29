@@ -170,6 +170,56 @@ export default {
       }
     }
 
+    // Luma Proxy Operations
+    if (op === 'luma-modify') {
+      if (request.method !== 'POST') return error('Method not allowed', 405);
+      const apiKey = process.env.VITE_LUMA_API_KEY;
+      if (!apiKey) return error('Server configuration error: Missing Luma API Key', 500);
+
+      try {
+        const body = await request.json();
+        const response = await fetch('https://api.lumalabs.ai/dream-machine/v1/generations/video/modify', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify(body)
+        });
+
+        const data = await response.json();
+        return json(data, response.status);
+      } catch (e: any) {
+        console.error('[Media API] Luma modify failed:', e);
+        return error(e?.message || 'Luma modify failed', 500);
+      }
+    }
+
+    if (op === 'luma-get-generation') {
+      const id = url.searchParams.get('id');
+      if (!id) return error('Missing id', 400);
+
+      const apiKey = process.env.VITE_LUMA_API_KEY;
+      if (!apiKey) return error('Server configuration error: Missing Luma API Key', 500);
+
+      try {
+        const response = await fetch(`https://api.lumalabs.ai/dream-machine/v1/generations/${id}`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          }
+        });
+
+        const data = await response.json();
+        return json(data, response.status);
+      } catch (e: any) {
+        console.error('[Media API] Luma get generation failed:', e);
+        return error(e?.message || 'Luma get generation failed', 500);
+      }
+    }
+
     // Legacy Modules
     const mod = ALLOWED[op];
     if (!mod) return error('Not found', 404);
