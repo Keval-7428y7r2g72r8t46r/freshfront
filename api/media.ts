@@ -79,6 +79,7 @@ export default {
         const jsonResponse = await handleUpload({
           body,
           request,
+          token: getBlobToken(),
           onBeforeGenerateToken: async (pathname) => {
             return {
               allowedContentTypes: [
