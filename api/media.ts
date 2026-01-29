@@ -60,7 +60,6 @@ const ALLOWED: Record<string, LegacyModule> = {
 };
 
 const getBlobToken = () =>
-  process.env.researcher_READ_WRITE_TOKEN ||
   process.env.BLOB_READ_WRITE_TOKEN ||
   undefined;
 
@@ -76,29 +75,42 @@ export default {
         if (request.method !== 'POST') return error('Method not allowed', 405);
 
         const body = (await request.json()) as HandleUploadBody;
-        const jsonResponse = await handleUpload({
-          body,
-          request,
-          token: getBlobToken(),
-          onBeforeGenerateToken: async (pathname) => {
-            return {
-              allowedContentTypes: [
-                'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-                'video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm', 'video/ogg',
-                'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp4', 'audio/aac',
-                // Documents
-                'application/pdf', 'text/csv', 'text/plain', 'text/markdown',
-                'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-              ],
-              addRandomSuffix: true,
-            };
-          },
-          onUploadCompleted: async ({ blob }) => {
-            console.log('[Media API] Blob upload completed:', blob.url);
-          },
-        });
-        return json(jsonResponse);
+        const token = getBlobToken();
+
+        console.log('[Media API] Handle Upload Token Request');
+        console.log('[Media API] Token present:', !!token);
+        if (token) {
+          console.log('[Media API] Token start:', token.substring(0, 8) + '...');
+        }
+
+        try {
+          const jsonResponse = await handleUpload({
+            body,
+            request,
+            token,
+            onBeforeGenerateToken: async (pathname) => {
+              return {
+                allowedContentTypes: [
+                  'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+                  'video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm', 'video/ogg',
+                  'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp4', 'audio/aac',
+                  // Documents
+                  'application/pdf', 'text/csv', 'text/plain', 'text/markdown',
+                  'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                  'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                ],
+                addRandomSuffix: true,
+              };
+            },
+            onUploadCompleted: async ({ blob }) => {
+              console.log('[Media API] Blob upload completed:', blob.url);
+            },
+          });
+          return json(jsonResponse);
+        } catch (e: any) {
+          console.error('[Media API] handleUpload error:', e);
+          return error(e.message || 'Failed to handle upload token', 500, { error: e.message });
+        }
       }
 
       if (op === 'upload-blob') {
