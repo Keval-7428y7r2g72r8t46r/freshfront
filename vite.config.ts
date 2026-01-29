@@ -79,7 +79,8 @@ export default defineConfig(({ mode }) => {
       'process.env.PEXELS_API_KEY': JSON.stringify(env.PEXELS_API_KEY),
       'process.env.NEXT_PUBLIC_PEXELS_API_KEY': JSON.stringify(env.NEXT_PUBLIC_PEXELS_API_KEY || env.PEXELS_API_KEY),
       'process.env.NEXT_PUBLIC_CONVERTAPI_SECRET': JSON.stringify(env.NEXT_PUBLIC_CONVERTAPI_SECRET),
-      'process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN': JSON.stringify(env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN)
+      'process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN': JSON.stringify(env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN),
+      'process.env.BLOB_READ_WRITE_TOKEN': JSON.stringify(env.BLOB_READ_WRITE_TOKEN)
     },
     resolve: {
       alias: {
