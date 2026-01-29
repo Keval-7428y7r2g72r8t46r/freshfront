@@ -61,6 +61,7 @@ const ALLOWED: Record<string, LegacyModule> = {
 
 const getBlobToken = () =>
   process.env.BLOB_READ_WRITE_TOKEN ||
+  process.env.researcher_READ_WRITE_TOKEN ||
   undefined;
 
 export default {
