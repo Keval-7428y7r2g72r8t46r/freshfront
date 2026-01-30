@@ -15,6 +15,13 @@ const IconImage = () => (
     </svg>
 );
 
+const IconImages = () => (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 8l4.586-4.586a2 2 0 012.828 0L20 8m-2-2l1.586-1.586a2 2 0 012.828 0L24 6" style={{ transform: 'translate(2px, -2px)' }} />
+    </svg>
+);
+
 const IconVideo = () => (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -52,7 +59,7 @@ interface WorldGeneratorProps {
 }
 
 export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated, availableAssets = [] }) => {
-    const [activeTab, setActiveTab] = useState<'text' | 'image' | 'video'>('text');
+    const [activeTab, setActiveTab] = useState<'text' | 'image' | 'multi-image' | 'video'>('text');
     const [textPrompt, setTextPrompt] = useState('');
     const [
         inputMode, setInputMode
@@ -61,6 +68,9 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [selectedAsset, setSelectedAsset] = useState<AssetItem | null>(null);
 
+    // For multi-image
+    const [selectedAssets, setSelectedAssets] = useState<AssetItem[]>([]);
+
     const [isGenerating, setIsGenerating] = useState(false);
     const [progress, setProgress] = useState<string>('');
     const [generatedWorld, setGeneratedWorld] = useState<any | null>(null);
@@ -68,7 +78,7 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
 
     // Filter compatible assets based on active tab
     const compatibleAssets = availableAssets.filter(asset => {
-        if (activeTab === 'image') {
+        if (activeTab === 'image' || activeTab === 'multi-image') {
             return ['header', 'slide', 'notemap', 'social'].includes(asset.type) || asset.type.startsWith('image/');
         }
         if (activeTab === 'video') {
@@ -76,6 +86,23 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
         }
         return false;
     });
+
+    const handleAssetToggle = (asset: AssetItem) => {
+        if (activeTab === 'multi-image') {
+            if (selectedAssets.find(a => a.id === asset.id)) {
+                setSelectedAssets(selectedAssets.filter(a => a.id !== asset.id));
+            } else {
+                if (selectedAssets.length >= 8) {
+                    setError('You can select up to 8 images maximum.');
+                    return;
+                }
+                setSelectedAssets([...selectedAssets, asset]);
+                setError(null);
+            }
+        } else {
+            setSelectedAsset(asset);
+        }
+    };
 
     const handleGenerate = async () => {
         setIsGenerating(true);
@@ -107,6 +134,21 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
                     if (!selectedAsset?.url) throw new Error('Please select an asset');
                     request.world_prompt.image_prompt = { source: 'uri', uri: selectedAsset.url };
                 }
+
+            } else if (activeTab === 'multi-image') {
+                request.world_prompt.type = 'multi-image';
+
+                // Only supporting Asset selection for multi-image for now
+                if (selectedAssets.length < 2) throw new Error('Please select at least 2 images');
+
+                request.world_prompt.multi_image_prompt = selectedAssets.map((asset, index) => ({
+                    content: {
+                        source: 'uri',
+                        uri: asset.url
+                    },
+                    // Simple uniform distribution of azimuth for now
+                    azimuth: (360 / selectedAssets.length) * index
+                }));
 
             } else if (activeTab === 'video') {
                 request.world_prompt.type = 'video';
@@ -151,24 +193,30 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
                 <h2 className="text-xl font-bold dark:text-white">Generate 3D World</h2>
             </div>
 
-            <div className="flex gap-4 mb-6 border-b dark:border-gray-700">
+            <div className="flex gap-4 mb-6 border-b dark:border-gray-700 overflow-x-auto">
                 <button
                     onClick={() => setActiveTab('text')}
-                    className={`pb-2 px-4 flex items-center gap-2 ${activeTab === 'text' ? 'border-b-2 border-indigo-500 text-indigo-500' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'}`}
+                    className={`pb-2 px-4 flex items-center gap-2 whitespace-nowrap ${activeTab === 'text' ? 'border-b-2 border-indigo-500 text-indigo-500' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'}`}
                 >
-                    <IconMagic /> Text to World
+                    <IconMagic /> Text
                 </button>
                 <button
                     onClick={() => { setActiveTab('image'); setInputMode('upload'); }}
-                    className={`pb-2 px-4 flex items-center gap-2 ${activeTab === 'image' ? 'border-b-2 border-indigo-500 text-indigo-500' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'}`}
+                    className={`pb-2 px-4 flex items-center gap-2 whitespace-nowrap ${activeTab === 'image' ? 'border-b-2 border-indigo-500 text-indigo-500' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'}`}
                 >
-                    <IconImage /> Image to World
+                    <IconImage /> Image
+                </button>
+                <button
+                    onClick={() => { setActiveTab('multi-image'); setInputMode('asset'); }}
+                    className={`pb-2 px-4 flex items-center gap-2 whitespace-nowrap ${activeTab === 'multi-image' ? 'border-b-2 border-indigo-500 text-indigo-500' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'}`}
+                >
+                    <IconImages /> Multi-Image
                 </button>
                 <button
                     onClick={() => { setActiveTab('video'); setInputMode('upload'); }}
-                    className={`pb-2 px-4 flex items-center gap-2 ${activeTab === 'video' ? 'border-b-2 border-indigo-500 text-indigo-500' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'}`}
+                    className={`pb-2 px-4 flex items-center gap-2 whitespace-nowrap ${activeTab === 'video' ? 'border-b-2 border-indigo-500 text-indigo-500' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'}`}
                 >
-                    <IconVideo /> Video to World
+                    <IconVideo /> Video
                 </button>
             </div>
 
@@ -186,39 +234,42 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
                     />
                 </div>
 
-                {(activeTab === 'image' || activeTab === 'video') && (
+                {(activeTab === 'image' || activeTab === 'video' || activeTab === 'multi-image') && (
                     <div>
                         <div className="flex items-center gap-4 mb-3">
                             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                {activeTab === 'image' ? 'Image Source' : 'Video Source'}
+                                {activeTab === 'multi-image' ? 'Select Images (Max 8)' : (activeTab === 'image' ? 'Image Source' : 'Video Source')}
                             </label>
-                            <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-                                <button
-                                    onClick={() => setInputMode('upload')}
-                                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${inputMode === 'upload'
-                                        ? 'bg-white dark:bg-gray-600 shadow text-gray-900 dark:text-white'
-                                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                                        }`}
-                                >
-                                    <div className="flex items-center gap-1">
-                                        <IconUpload /> Upload
-                                    </div>
-                                </button>
-                                <button
-                                    onClick={() => setInputMode('asset')}
-                                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${inputMode === 'asset'
-                                        ? 'bg-white dark:bg-gray-600 shadow text-gray-900 dark:text-white'
-                                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                                        }`}
-                                >
-                                    <div className="flex items-center gap-1">
-                                        <IconFolder /> From Assets
-                                    </div>
-                                </button>
-                            </div>
+
+                            {activeTab !== 'multi-image' && (
+                                <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                                    <button
+                                        onClick={() => setInputMode('upload')}
+                                        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${inputMode === 'upload'
+                                            ? 'bg-white dark:bg-gray-600 shadow text-gray-900 dark:text-white'
+                                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                                            }`}
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            <IconUpload /> Upload
+                                        </div>
+                                    </button>
+                                    <button
+                                        onClick={() => setInputMode('asset')}
+                                        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${inputMode === 'asset'
+                                            ? 'bg-white dark:bg-gray-600 shadow text-gray-900 dark:text-white'
+                                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                                            }`}
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            <IconFolder /> From Assets
+                                        </div>
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
-                        {inputMode === 'upload' ? (
+                        {inputMode === 'upload' && activeTab !== 'multi-image' ? (
                             <input
                                 type="file"
                                 accept={activeTab === 'image' ? "image/*" : "video/*"}
@@ -229,45 +280,59 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
                             <div className="space-y-2">
                                 {compatibleAssets.length === 0 ? (
                                     <div className="p-4 border border-dashed rounded text-center text-sm text-gray-500 dark:text-gray-400">
-                                        No compatible {activeTab}s found in assets.
+                                        No compatible {activeTab === 'video' ? 'videos' : 'images'} found in assets.
                                     </div>
                                 ) : (
                                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-60 overflow-y-auto p-1">
-                                        {compatibleAssets.map(asset => (
-                                            <button
-                                                key={asset.id}
-                                                onClick={() => setSelectedAsset(asset)}
-                                                className={`relative aspect-square rounded overflow-hidden border-2 transition-all ${selectedAsset?.id === asset.id
-                                                    ? 'border-indigo-500 ring-2 ring-indigo-500/30'
-                                                    : 'border-transparent hover:border-gray-300 dark:hover:border-gray-600'
-                                                    }`}
-                                            >
-                                                {activeTab === 'image' ? (
-                                                    <img
-                                                        src={asset.url || ''}
-                                                        alt={asset.title}
-                                                        className="w-full h-full object-cover"
-                                                    />
-                                                ) : (
-                                                    <video
-                                                        src={asset.url || ''}
-                                                        className="w-full h-full object-cover pointer-events-none"
-                                                    />
-                                                )}
-                                                {selectedAsset?.id === asset.id && (
-                                                    <div className="absolute inset-0 bg-indigo-500/20 flex items-center justify-center">
-                                                        <div className="bg-indigo-500 text-white p-1 rounded-full">
-                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                                            </svg>
+                                        {compatibleAssets.map(asset => {
+                                            const isSelected = activeTab === 'multi-image'
+                                                ? selectedAssets.some(a => a.id === asset.id)
+                                                : selectedAsset?.id === asset.id;
+
+                                            // Find index for numbering in multi-select
+                                            const selectIndex = activeTab === 'multi-image'
+                                                ? selectedAssets.findIndex(a => a.id === asset.id)
+                                                : -1;
+
+                                            return (
+                                                <button
+                                                    key={asset.id}
+                                                    onClick={() => handleAssetToggle(asset)}
+                                                    className={`relative aspect-square rounded overflow-hidden border-2 transition-all ${isSelected
+                                                        ? 'border-indigo-500 ring-2 ring-indigo-500/30'
+                                                        : 'border-transparent hover:border-gray-300 dark:hover:border-gray-600'
+                                                        }`}
+                                                >
+                                                    {activeTab === 'video' ? (
+                                                        <video
+                                                            src={asset.url || ''}
+                                                            className="w-full h-full object-cover pointer-events-none"
+                                                        />
+                                                    ) : (
+                                                        <img
+                                                            src={asset.url || ''}
+                                                            alt={asset.title}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    )}
+
+                                                    {isSelected && (
+                                                        <div className="absolute inset-0 bg-indigo-500/20 flex items-center justify-center">
+                                                            <div className="bg-indigo-500 text-white w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold shadow-sm">
+                                                                {activeTab === 'multi-image' ? selectIndex + 1 : (
+                                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                                    </svg>
+                                                                )}
+                                                            </div>
                                                         </div>
+                                                    )}
+                                                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-1">
+                                                        <p className="text-[10px] text-white truncate text-center">{asset.title}</p>
                                                     </div>
-                                                )}
-                                                <div className="absolute bottom-0 left-0 right-0 bg-black/60 p-1">
-                                                    <p className="text-[10px] text-white truncate text-center">{asset.title}</p>
-                                                </div>
-                                            </button>
-                                        ))}
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>
