@@ -650,6 +650,17 @@ export const EmailBuilder: React.FC<EmailBuilderProps> = ({
             }
         };
         checkEmailStatus();
+
+        const handler = (event: MessageEvent) => {
+            if (event.origin !== window.location.origin) return;
+            const type = (event.data as any)?.type;
+            if (['gmail:connected', 'outlook:connected', 'google-drive:connected', 'youtube:connected'].includes(type)) {
+                console.log('[EmailBuilder] Auth event received:', type);
+                checkEmailStatus();
+            }
+        };
+        window.addEventListener('message', handler);
+        return () => window.removeEventListener('message', handler);
     }, [authFetch]);
 
     const handleSendEmail = useCallback(async () => {
