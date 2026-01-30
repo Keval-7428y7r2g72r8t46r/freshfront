@@ -312,6 +312,55 @@ export default {
         return error(e?.message || 'World Labs prepare upload failed', 500);
       }
     }
+
+    if (op === 'worldlabs-get-world') {
+      const id = url.searchParams.get('id');
+      if (!id) return error('Missing id', 400);
+
+      const apiKey = process.env.WORLD_LABS_API_KEY;
+      if (!apiKey) return error('Server configuration error: Missing World Labs API Key', 500);
+
+      try {
+        const response = await fetch(`https://api.worldlabs.ai/marble/v1/worlds/${id}`, {
+          method: 'GET',
+          headers: {
+            'WLT-Api-Key': apiKey,
+            'Accept': 'application/json'
+          }
+        });
+
+        const data = await response.json();
+        return json(data, response.status);
+      } catch (e: any) {
+        console.error('[Media API] World Labs get world failed:', e);
+        return error(e?.message || 'World Labs get world failed', 500);
+      }
+    }
+
+    if (op === 'worldlabs-list-worlds') {
+      if (request.method !== 'POST') return error('Method not allowed', 405);
+      const apiKey = process.env.WORLD_LABS_API_KEY;
+      if (!apiKey) return error('Server configuration error: Missing World Labs API Key', 500);
+
+      try {
+        const body = await request.json();
+        const response = await fetch('https://api.worldlabs.ai/marble/v1/worlds:list', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'WLT-Api-Key': apiKey,
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(body)
+        });
+
+        const data = await response.json();
+        return json(data, response.status);
+      } catch (e: any) {
+        console.error('[Media API] World Labs list worlds failed:', e);
+        return error(e?.message || 'World Labs list worlds failed', 500);
+      }
+    }
     const mod = ALLOWED[op];
     if (!mod) return error('Not found', 404);
 
