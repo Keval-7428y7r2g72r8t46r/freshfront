@@ -44,15 +44,7 @@ export interface OperationResponse {
         };
         world_id?: string;
     };
-    response?: { // The world object when done
-        id: string;
-        display_name: string;
-        world_marble_url: string;
-        assets: {
-            thumbnail_url: string;
-            caption?: string;
-        };
-    };
+    response?: World;
 }
 
 export interface PrepareUploadResponse {
