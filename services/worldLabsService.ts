@@ -162,5 +162,68 @@ export const worldLabsService = {
             await new Promise(resolve => setTimeout(resolve, pollInterval));
         }
         throw new Error('Polling timed out');
+    },
+
+    /**
+     * Get a world by ID
+     */
+    getWorld: async (id: string): Promise<World> => {
+        const response = await authFetch(`/api/media?op=worldlabs-get-world&id=${id}`);
+        if (!response.ok) throw new Error(`World Labs Get World Error: ${response.status}`);
+        return response.json();
+    },
+
+    /**
+     * List worlds
+     */
+    listWorlds: async (filters: ListWorldsFilters = {}): Promise<ListWorldsResponse> => {
+        const response = await authFetch('/api/media?op=worldlabs-list-worlds', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(filters)
+        });
+        if (!response.ok) throw new Error(`World Labs List Worlds Error: ${response.status}`);
+        return response.json();
     }
 };
+
+export interface World {
+    display_name: string;
+    world_id: string;
+    world_marble_url: string;
+    assets: {
+        caption?: string;
+        thumbnail_url?: string;
+        [key: string]: any;
+    };
+    created_at: string;
+    model?: string;
+    permission?: {
+        public: boolean;
+        [key: string]: any;
+    };
+    tags?: string[];
+    updated_at: string;
+    world_prompt?: {
+        text_prompt?: string;
+        type?: string;
+        [key: string]: any;
+    };
+}
+
+export interface ListWorldsFilters {
+    page_size?: number;
+    page_token?: string;
+    status?: string;
+    model?: string;
+    tags?: string[];
+    is_public?: boolean;
+    created_after?: string;
+    created_before?: string;
+    sort_by?: 'created_at' | 'updated_at';
+}
+
+export interface ListWorldsResponse {
+    worlds: World[];
+    next_page_token?: string;
+}
