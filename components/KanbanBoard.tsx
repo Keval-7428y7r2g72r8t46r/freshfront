@@ -308,12 +308,16 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
 
     const handler = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
-      if (!event.data || (event.data as any).type !== 'google-drive:connected') return;
-      refreshCalendarStatus().then((connected) => {
-        if (connected) {
-          loadCalendarEvents(calendarMonth).catch(() => undefined);
-        }
-      });
+      const type = (event.data as any)?.type;
+
+      // UNIFIED AUTH: Refresh calendar on ANY Google connection
+      if (['google-drive:connected', 'gmail:connected', 'youtube:connected'].includes(type)) {
+        refreshCalendarStatus().then((connected) => {
+          if (connected) {
+            loadCalendarEvents(calendarMonth).catch(() => undefined);
+          }
+        });
+      }
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
