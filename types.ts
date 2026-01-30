@@ -16,7 +16,7 @@ export type TabId = 'overview' | 'tasks' | 'seo' | 'notes' | 'assets' | 'data' |
 
 export interface AssetItem {
   id: string;
-  type: 'header' | 'slide' | 'notemap' | 'blog' | 'website' | 'social' | 'video' | 'podcast' | 'book' | 'table' | 'leadform' | 'product' | 'doc';
+  type: 'header' | 'slide' | 'notemap' | 'blog' | 'website' | 'social' | 'video' | 'podcast' | 'book' | 'table' | 'leadform' | 'product' | 'doc' | 'world';
   url?: string;
   title: string;
   description?: string;
@@ -401,6 +401,7 @@ export interface ResearchProject {
   // Project-level tables and charts (no session required)
   tables?: TableAsset[];
   charts?: TableAsset[];
+  worlds?: WorldAsset[];
   tabOrder?: string[];
   theme?: ThemeType;
   pinnedAssetIds?: string[];
@@ -745,6 +746,16 @@ export interface TableAsset {
   createdAt: number;
   googleSpreadsheetId?: string;
   googleSheetTitle?: string;
+}
+
+export interface WorldAsset {
+  id: string;
+  prompt: string;
+  previewUrl: string;
+  createdAt: number;
+  status?: 'generating' | 'complete' | 'failed';
+  operationId?: string;
+  data?: any;
 }
 
 // Lead form field configuration
