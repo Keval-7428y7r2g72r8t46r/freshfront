@@ -102,7 +102,9 @@ export const worldLabsService = {
         const extension = file.name.split('.').pop() || (kind === 'image' ? 'jpg' : 'mp4');
 
         // 1. Prepare
-        const prepareRes = await authFetch('/api/media?op=worldlabs-prepare-upload', {
+        const prepareUrl = '/api/media?op=worldlabs-prepare-upload';
+        console.log('[WorldLabs] calling:', prepareUrl);
+        const prepareRes = await authFetch(prepareUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -112,7 +114,10 @@ export const worldLabsService = {
             })
         });
 
-        if (!prepareRes.ok) throw new Error('Failed to prepare upload');
+        if (!prepareRes.ok) {
+            console.error('[WorldLabs] Prepare upload failed:', prepareRes.status, await prepareRes.text().catch(() => ''));
+            throw new Error('Failed to prepare upload');
+        }
         const { media_asset, upload_info } = await prepareRes.json() as PrepareUploadResponse;
 
         // 2. Upload to signed URL
