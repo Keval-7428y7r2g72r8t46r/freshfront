@@ -389,9 +389,22 @@ export default {
                     oauthUrl.searchParams.set('client_id', clientId);
                     oauthUrl.searchParams.set('redirect_uri', redirectUri);
                     oauthUrl.searchParams.set('response_type', 'code');
-                    oauthUrl.searchParams.set('scope', 'https://www.googleapis.com/auth/gmail.send');
+
+                    // UNIFIED SCOPES: Request EVERYTHING
+                    const scopes = [
+                        'https://www.googleapis.com/auth/drive.readonly',
+                        'https://www.googleapis.com/auth/spreadsheets',
+                        'https://www.googleapis.com/auth/documents',
+                        'https://www.googleapis.com/auth/calendar',
+                        'https://www.googleapis.com/auth/youtube.upload',
+                        'https://www.googleapis.com/auth/youtube.readonly',
+                        'https://www.googleapis.com/auth/gmail.send'
+                    ];
+                    oauthUrl.searchParams.set('scope', scopes.join(' '));
+
                     oauthUrl.searchParams.set('access_type', 'offline');
                     oauthUrl.searchParams.set('prompt', 'consent');
+                    oauthUrl.searchParams.set('include_granted_scopes', 'true');
                     oauthUrl.searchParams.set('state', Buffer.from(JSON.stringify({ returnTo })).toString('base64'));
 
                     return json({ url: oauthUrl.toString() });
@@ -453,24 +466,13 @@ export default {
 
                     const tokenJson: any = await tokenRes.json();
                     const db = getFirestore();
-                    const gmailRef = db.doc(`users/${uid}/integrations/gmail`);
 
-                    // If refresh_token is missing (e.g. re-auth without consent prompt), try to find it
-                    if (!tokenJson.refresh_token) {
-                        const existing = await gmailRef.get();
-                        if (existing.exists && existing.data()?.refreshToken) {
-                            tokenJson.refresh_token = existing.data()?.refreshToken;
-                        } else {
-                            // Try fallback to Drive
-                            const driveRef = db.doc(`users/${uid}/integrations/googleDrive`);
-                            const driveSnap = await driveRef.get();
-                            if (driveSnap.exists && driveSnap.data()?.refreshToken) {
-                                tokenJson.refresh_token = driveSnap.data()?.refreshToken;
-                            }
-                        }
-                    }
+                    // UNIFIED STORAGE: Save to all integration paths
+                    const collections = ['gmail', 'googleDrive', 'youtube', 'google'];
 
+                    // Prepare update data
                     const updateData: any = {
+                        provider: 'gmail', // or respective provider
                         accessToken: tokenJson.access_token,
                         accessTokenExpiresAt: Date.now() + (tokenJson.expires_in * 1000),
                         scope: tokenJson.scope,
@@ -481,7 +483,29 @@ export default {
                         updateData.refreshToken = tokenJson.refresh_token;
                     }
 
-                    await gmailRef.set(updateData, { merge: true });
+                    // If refresh_token is missing, try to find it from ANY existing integration
+                    if (!tokenJson.refresh_token) {
+                        let existingRefresh = '';
+                        for (const col of collections) {
+                            const doc = await db.doc(`users/${uid}/integrations/${col}`).get();
+                            if (doc.exists && doc.data()?.refreshToken) {
+                                existingRefresh = doc.data()?.refreshToken;
+                                break;
+                            }
+                        }
+                        if (existingRefresh) {
+                            updateData.refreshToken = existingRefresh;
+                        }
+                    }
+
+                    // Save to all collections
+                    await Promise.all(collections.map(async (col) => {
+                        const docRef = db.doc(`users/${uid}/integrations/${col}`);
+                        await docRef.set({
+                            ...updateData,
+                            provider: col
+                        }, { merge: true });
+                    }));
 
                     return json({ success: true });
                 }
