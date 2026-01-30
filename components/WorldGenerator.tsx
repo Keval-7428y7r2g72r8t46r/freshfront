@@ -93,8 +93,8 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
     const handleGenerate = async () => {
         setIsGenerating(true);
         setError(null);
-        setProgress('Initializing...');
-        setGeneratedWorld(null);
+        setProgress('Initializing job...');
+        // setGeneratedWorld(null); // Removed as per instruction
 
         try {
             if (!textPrompt) throw new Error('Please describe the world');
@@ -106,7 +106,7 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
                 }
             };
 
-            // Input Handling (Same logic as before, cleaner code)
+            // Input Handling
             const handleMediaInput = async () => {
                 const isMulti = activeTab === 'multi-image';
                 const isVideo = activeTab === 'video';
@@ -137,14 +137,20 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
 
             if (activeTab === 'video') request.world_prompt.type = 'video';
 
-            setProgress('Generating world...');
-            const result = await worldLabsService.generateWorld(request);
-            setGeneratedWorld(result.response);
-            onWorldGenerated(result);
+            setProgress('Starting generation...');
+            // Start the job, don't wait for completion here
+            const operation = await worldLabsService.generateWorld(request);
+
+            // Notify parent immediately with "generating" status
+            onWorldGenerated(operation);
+
+            // Allow user to start another or see status in queue
+            setTextPrompt('');
+            setSelectedFile(null);
 
         } catch (err: any) {
             console.error(err);
-            setError(err.message || 'Failed to generate world');
+            setError(err.message || 'Failed to start generation');
             onError(err.message);
         } finally {
             setIsGenerating(false);
