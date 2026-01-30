@@ -361,6 +361,55 @@ export default {
         return error(e?.message || 'World Labs list worlds failed', 500);
       }
     }
+
+    // xAI Proxy Operations
+    if (op === 'xai-edit-video') {
+      if (request.method !== 'POST') return error('Method not allowed', 405);
+      const apiKey = process.env.XAI_API_KEY;
+      if (!apiKey) return error('Server configuration error: Missing xAI API Key', 500);
+
+      try {
+        const body = await request.json();
+        const response = await fetch('https://api.x.ai/v1/videos/edits', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify(body)
+        });
+
+        const data = await response.json();
+        return json(data, response.status);
+      } catch (e: any) {
+        console.error('[Media API] xAI edit video failed:', e);
+        return error(e?.message || 'xAI edit video failed', 500);
+      }
+    }
+
+    if (op === 'xai-get-video') {
+      const id = url.searchParams.get('id');
+      if (!id) return error('Missing id', 400);
+
+      const apiKey = process.env.XAI_API_KEY;
+      if (!apiKey) return error('Server configuration error: Missing xAI API Key', 500);
+
+      try {
+        const response = await fetch(`https://api.x.ai/v1/videos/${id}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`
+          }
+        });
+
+        const data = await response.json();
+        return json(data, response.status);
+      } catch (e: any) {
+        console.error('[Media API] xAI get video failed:', e);
+        return error(e?.message || 'xAI get video failed', 500);
+      }
+    }
+
     const mod = ALLOWED[op];
     if (!mod) return error('Not found', 404);
 
