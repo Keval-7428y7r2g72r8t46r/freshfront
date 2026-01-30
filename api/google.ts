@@ -111,17 +111,27 @@ export default {
       const authResult = await requireAuth(request);
       if (authResult instanceof Response) return authResult;
 
+      // UNIFIED AUTH: Always use the Drive client ID (likely the main one) and redirect to Drive callback
+      // This effectively merges the flows. Even if 'youtube-auth-url' is called, we redirect to the unified flow
+      // if we want to force a merge. But to be safe for now, let's just make 'google-drive-auth-url' the Master.
+      // User asked to merge "all". So let's make BOTH of them request EVERYTHING and redirect to their respective callbacks?
+      // No, redirect uri must match the client ID setup.
+      // Let's assume we want to push everyone to the Unified Flow. 
+
       const isYoutube = op === 'youtube-auth-url';
 
-      const clientId = isYoutube
-        ? (process.env.YOUTUBE_CLIENT_ID || process.env.GOOGLE_DRIVE_CLIENT_ID || '').trim()
-        : (process.env.GOOGLE_DRIVE_CLIENT_ID || '').trim();
+      // We prefer the GOOGLE_DRIVE_CLIENT_ID as the primary "Google" ID
+      const clientId = (process.env.GOOGLE_DRIVE_CLIENT_ID || process.env.YOUTUBE_CLIENT_ID || '').trim();
 
       if (!clientId) {
-        return error(`Missing ${isYoutube ? 'YOUTUBE' : 'GOOGLE_DRIVE'}_CLIENT_ID`, 500);
+        return error('Missing GOOGLE_DRIVE_CLIENT_ID', 500);
       }
 
       const returnTo = (url.searchParams.get('returnTo') || '/').trim();
+
+      // UNIFIED CALLBACK: We'll use google-drive/callback for the unified flow as it's the "Master"
+      // If we are in youtube mode, we *could* stick to youtube/callback but we want to save tokens for everything.
+      // Let's stick to the requested Op's callback to avoid mismatch errors if the user click "Connect YouTube".
       const redirectUri = getRedirectUri(request, isYoutube ? 'youtube' : 'googleDrive');
 
       const oauthUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
@@ -133,11 +143,18 @@ export default {
       oauthUrl.searchParams.set('include_granted_scopes', 'true');
       oauthUrl.searchParams.set('state', base64UrlEncode(JSON.stringify({ returnTo })));
 
-      if (isYoutube) {
-        oauthUrl.searchParams.set('scope', 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly');
-      } else {
-        oauthUrl.searchParams.set('scope', 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/calendar');
-      }
+      // UNIFIED SCOPES: Request EVERYTHING
+      const scopes = [
+        'https://www.googleapis.com/auth/drive.readonly',
+        'https://www.googleapis.com/auth/spreadsheets',
+        'https://www.googleapis.com/auth/documents',
+        'https://www.googleapis.com/auth/calendar',
+        'https://www.googleapis.com/auth/youtube.upload',
+        'https://www.googleapis.com/auth/youtube.readonly',
+        'https://www.googleapis.com/auth/gmail.send'
+      ];
+
+      oauthUrl.searchParams.set('scope', scopes.join(' '));
 
       return json({ url: oauthUrl.toString() });
     }
@@ -155,12 +172,8 @@ export default {
       if (!code) return error('Missing code', 400);
 
       const isYoutube = op === 'youtube-exchange';
-      const clientId = isYoutube
-        ? (process.env.YOUTUBE_CLIENT_ID || process.env.GOOGLE_DRIVE_CLIENT_ID || '').trim()
-        : (process.env.GOOGLE_DRIVE_CLIENT_ID || '').trim();
-      const clientSecret = isYoutube
-        ? (process.env.YOUTUBE_CLIENT_SECRET || process.env.GOOGLE_DRIVE_CLIENT_SECRET || '').trim()
-        : (process.env.GOOGLE_DRIVE_CLIENT_SECRET || '').trim();
+      const clientId = (process.env.GOOGLE_DRIVE_CLIENT_ID || process.env.YOUTUBE_CLIENT_ID || '').trim();
+      const clientSecret = (process.env.GOOGLE_DRIVE_CLIENT_SECRET || process.env.YOUTUBE_CLIENT_SECRET || '').trim();
 
       if (!clientId || !clientSecret) return error('Missing Client ID/Secret', 500);
 
@@ -184,22 +197,11 @@ export default {
 
       const tokenJson: any = await tokenRes.json();
       const db = getFirestore();
-      const docRef = db.doc(`users/${uid}/integrations/${isYoutube ? 'youtube' : 'googleDrive'}`);
 
-      // FIX: Preserving Refresh Token if missing
-      if (!tokenJson.refresh_token) {
-        const existing = await docRef.get();
-        if (existing.exists && existing.data()?.refreshToken) {
-          tokenJson.refresh_token = existing.data()?.refreshToken;
-        } else if (isYoutube) {
-          // Youtube specific fallback: try Google Drive's token? 
-          // Legacy logic didn't explicit do this, but they often share projects.
-          // Let's stick to safe "preserve existing" first.
-        }
-      }
+      // UNIFIED STORAGE: Save to all integration paths
+      const collections = ['googleDrive', 'youtube', 'gmail', 'google'];
 
       const updateData: any = {
-        provider: isYoutube ? 'youtube' : 'googleDrive',
         accessToken: tokenJson.access_token,
         accessTokenExpiresAt: Date.now() + (Number(tokenJson.expires_in || 0) * 1000),
         scope: tokenJson.scope,
@@ -211,7 +213,29 @@ export default {
         updateData.refreshToken = tokenJson.refresh_token;
       }
 
-      await docRef.set(updateData, { merge: true });
+      // If refresh token is missing, try to find it from ANY existing Google integration
+      if (!tokenJson.refresh_token) {
+        let existingRefresh = '';
+        for (const col of collections) {
+          const doc = await db.doc(`users/${uid}/integrations/${col}`).get();
+          if (doc.exists && doc.data()?.refreshToken) {
+            existingRefresh = doc.data()?.refreshToken;
+            break;
+          }
+        }
+        if (existingRefresh) {
+          updateData.refreshToken = existingRefresh;
+        }
+      }
+
+      await Promise.all(collections.map(async (col) => {
+        const docRef = db.doc(`users/${uid}/integrations/${col}`);
+        await docRef.set({
+          ...updateData,
+          provider: col
+        }, { merge: true });
+      }));
+
       return json({ connected: Boolean(updateData.refreshToken) });
     }
 
