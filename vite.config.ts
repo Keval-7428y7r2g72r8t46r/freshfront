@@ -86,6 +86,7 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': path.resolve(__dirname, '.'),
         '@decartai/sdk': path.resolve(__dirname, 'node_modules/@decartai/sdk/dist/index.js'),
+        'three': path.resolve(__dirname, 'node_modules/three/build/three.module.js'),
       },
     },
     build: {
