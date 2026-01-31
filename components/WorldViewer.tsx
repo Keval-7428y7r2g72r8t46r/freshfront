@@ -1,7 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { WebGLRenderer, Scene, PerspectiveCamera, Clock, Color } from 'three';
 import { SparkRenderer, SplatMesh, SparkControls } from '@sparkjsdev/spark';
-import { WorldAsset } from '../types';
+import {
+    WorldAsset,
+    ResearchProject,
+    KnowledgeBaseFile
+} from '../types';
 import AnnotationCanvas, { AnnotationCanvasHandle } from './AnnotationCanvas';
 import { compositeImages, dataUrlToBlob, downloadDataUrl } from '../utils/canvasComposite';
 import { storageService } from '../services/storageService';
@@ -10,9 +14,10 @@ interface WorldViewerProps {
     world: WorldAsset;
     onClose: () => void;
     projectId?: string;
+    onProjectUpdate?: (project: ResearchProject) => void;
 }
 
-export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose, projectId }) => {
+export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose, projectId, onProjectUpdate }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const annotationCanvasRef = useRef<AnnotationCanvasHandle>(null);
     const rendererRef = useRef<WebGLRenderer | null>(null);
@@ -265,9 +270,40 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose, projec
 
             const uploadData = await uploadResponse.json();
 
-            // Add to project assets (you may need to update this based on your asset structure)
-            console.log('Image uploaded successfully:', uploadData.url);
-            alert('Screenshot saved to assets!');
+            // Link to project assets
+            const project = await storageService.getResearchProject(projectId);
+            if (project) {
+                const newFile: KnowledgeBaseFile = {
+                    id: `world-shot-${Date.now()}`,
+                    name: `world-annotation-${Date.now()}.png`,
+                    type: 'image/png',
+                    size: blob.size,
+                    url: uploadData.url,
+                    storagePath: uploadData.pathname,
+                    uploadedAt: Date.now(),
+                    summary: `Annotated screenshot of 3D world: ${world.prompt}`
+                };
+
+                const updatedKnowledgeBase = [newFile, ...(project.knowledgeBase || [])];
+                const updatedProject = {
+                    ...project,
+                    knowledgeBase: updatedKnowledgeBase,
+                    lastModified: Date.now()
+                };
+
+                await storageService.updateResearchProject(projectId, {
+                    knowledgeBase: updatedKnowledgeBase
+                });
+
+                if (onProjectUpdate) {
+                    onProjectUpdate(updatedProject);
+                }
+
+                alert('Screenshot saved to assets!');
+            } else {
+                console.warn('Project not found to link asset:', projectId);
+                alert('Screenshot uploaded but could not be linked to project.');
+            }
 
         } catch (e: any) {
             console.error('Failed to save to assets:', e);
