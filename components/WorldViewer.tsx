@@ -26,6 +26,11 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose, projec
     const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
     const [saving, setSaving] = useState(false);
 
+    const annotationModeRef = useRef(annotationMode);
+    useEffect(() => {
+        annotationModeRef.current = annotationMode;
+    }, [annotationMode]);
+
     useEffect(() => {
         if (!containerRef.current) return;
 
@@ -53,6 +58,7 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose, projec
             camera.aspect = w / h;
             camera.updateProjectionMatrix();
             renderer.setSize(w, h);
+            updateSize();
         };
 
         const init = async () => {
@@ -167,8 +173,8 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose, projec
                     if (!renderer || !scene || !camera || !controls) return;
 
                     const delta = clock.getDelta();
-                    // Only update controls if not in annotation mode
-                    if (!annotationMode) {
+                    // Only update controls if not in annotation mode - use ref to avoid stale closure
+                    if (!annotationModeRef.current) {
                         controls.update(camera);
                     }
                     renderer.render(scene, camera);
@@ -196,7 +202,7 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose, projec
             if (controls) (controls as any).dispose?.();
             scene?.clear();
         };
-    }, [world, annotationMode]);
+    }, [world]);
 
     const captureScreen = async (): Promise<string> => {
         const renderer = rendererRef.current;
