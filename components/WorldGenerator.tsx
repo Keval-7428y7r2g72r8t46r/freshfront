@@ -176,7 +176,7 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
     };
 
     return (
-        <div className="w-full space-y-4 animate-in fade-in duration-700">
+        <div className={`w-full space-y-4 animate-in fade-in duration-700 ${!isDarkMode ? 'text-gray-900' : ''}`}>
             {/* Mode Selection */}
             <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
                 <div className={`flex p-1 ${isDarkMode ? 'bg-[#1c1c1e]' : 'bg-gray-100'} rounded-xl border ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
