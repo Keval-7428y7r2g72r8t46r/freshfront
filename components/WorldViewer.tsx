@@ -4,7 +4,8 @@ import { SparkRenderer, SplatMesh, SparkControls } from '@sparkjsdev/spark';
 import {
     WorldAsset,
     ResearchProject,
-    KnowledgeBaseFile
+    KnowledgeBaseFile,
+    UploadedFile
 } from '../types';
 import AnnotationCanvas, { AnnotationCanvasHandle } from './AnnotationCanvas';
 import { compositeImages, dataUrlToBlob, downloadDataUrl } from '../utils/canvasComposite';
@@ -14,10 +15,11 @@ interface WorldViewerProps {
     world: WorldAsset;
     onClose: () => void;
     projectId?: string;
+    project?: ResearchProject;
     onProjectUpdate?: (project: ResearchProject) => void;
 }
 
-export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose, projectId, onProjectUpdate }) => {
+export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose, projectId, project, onProjectUpdate }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const annotationCanvasRef = useRef<AnnotationCanvasHandle>(null);
     const rendererRef = useRef<WebGLRenderer | null>(null);
@@ -242,68 +244,78 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose, projec
     };
 
     const handleSaveToAssets = async () => {
-        if (!projectId) {
-            alert('No project ID available');
-            return;
-        }
+        const id = project?.id || projectId;
+        if (!id || saving) return;
 
+        setSaving(true);
         try {
-            setSaving(true);
-            const dataUrl = await captureScreen();
-            const blob = dataUrlToBlob(dataUrl);
+            // Use provided project object or fetch fresh from storage
+            const currentProject = project || await storageService.getResearchProject(id);
 
-            // Upload to blob storage
-            const formData = new FormData();
-            formData.append('file', blob, `world-annotation-${Date.now()}.png`);
-
-            const uploadResponse = await fetch(
-                `/api/media?op=upload-blob&projectId=${projectId}&filename=world-annotation-${Date.now()}.png&contentType=image/png`,
-                {
-                    method: 'POST',
-                    body: blob
-                }
-            );
-
-            if (!uploadResponse.ok) {
-                throw new Error('Failed to upload image');
-            }
-
-            const uploadData = await uploadResponse.json();
-
-            // Link to project assets
-            const project = await storageService.getResearchProject(projectId);
-            if (project) {
-                const newFile: KnowledgeBaseFile = {
-                    id: `world-shot-${Date.now()}`,
-                    name: `world-annotation-${Date.now()}.png`,
-                    type: 'image/png',
-                    size: blob.size,
-                    url: uploadData.url,
-                    storagePath: uploadData.pathname,
-                    uploadedAt: Date.now(),
-                    summary: `Annotated screenshot of 3D world: ${world.prompt}`
-                };
-
-                const updatedKnowledgeBase = [newFile, ...(project.knowledgeBase || [])];
-                const updatedProject = {
-                    ...project,
-                    knowledgeBase: updatedKnowledgeBase,
-                    lastModified: Date.now()
-                };
-
-                await storageService.updateResearchProject(projectId, {
-                    knowledgeBase: updatedKnowledgeBase
-                });
-
-                if (onProjectUpdate) {
-                    onProjectUpdate(updatedProject);
-                }
-
-                alert('Screenshot saved to assets!');
-            } else {
-                console.warn('Project not found to link asset:', projectId);
+            if (!currentProject) {
+                console.warn('Project not found to link asset:', id);
                 alert('Screenshot uploaded but could not be linked to project.');
+                return;
             }
+
+            // captureScreen already handles compositing annotations
+            const compositeDataUrl = await captureScreen();
+            const blob = dataUrlToBlob(compositeDataUrl);
+
+            const filename = `screenshot-${Date.now()}.png`;
+            const uploadRes = await fetch(`/api/media?op=upload-blob&projectId=${id}&filename=${filename}&contentType=image/png`, {
+                method: 'POST',
+                body: blob
+            });
+
+            if (!uploadRes.ok) throw new Error('Failed to upload screenshot');
+
+            const resData = await uploadRes.json();
+
+            // Create KnowledgeBaseFile (Legacy/Compatibility)
+            const newFile: KnowledgeBaseFile = {
+                id: resData.url.split('/').pop() || Date.now().toString(),
+                name: filename,
+                type: 'image/png',
+                size: blob.size,
+                url: resData.url,
+                storagePath: resData.pathname || '',
+                uploadedAt: Date.now()
+            };
+
+            // Create UploadedFile (Data Tab / New Model)
+            const newUploadedFile: UploadedFile = {
+                id: newFile.id,
+                name: newFile.id,
+                uri: resData.url,
+                mimeType: newFile.type,
+                sizeBytes: blob.size,
+                displayName: newFile.name,
+                uploadedAt: newFile.uploadedAt,
+                url: resData.url,
+                summary: `World View screenshot of: ${world.prompt}`
+            };
+
+            const updatedKnowledgeBase = [newFile, ...(currentProject.knowledgeBase || [])];
+            const updatedUploadedFiles = [newUploadedFile, ...(currentProject.uploadedFiles || [])];
+
+            const updatedProject = {
+                ...currentProject,
+                knowledgeBase: updatedKnowledgeBase,
+                uploadedFiles: updatedUploadedFiles,
+                lastModified: Date.now()
+            };
+
+            await storageService.updateResearchProject(id, {
+                knowledgeBase: updatedKnowledgeBase,
+                uploadedFiles: updatedUploadedFiles
+            });
+
+            if (onProjectUpdate) {
+                onProjectUpdate(updatedProject);
+            }
+
+            alert('Screenshot saved to assets!');
 
         } catch (e: any) {
             console.error('Failed to save to assets:', e);
