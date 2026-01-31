@@ -176,21 +176,21 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
     };
 
     return (
-        <div className="w-full max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500">
+        <div className="w-full space-y-8 animate-in fade-in duration-700">
             {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex flex-col md:flex-row md:items-baseline justify-between gap-4 border-b pb-6 border-gray-100 dark:border-gray-800">
                 <div>
-                    <h2 className={`text-3xl font-bold bg-clip-text text-transparent ${isDarkMode ? 'bg-gradient-to-r from-white to-gray-400' : 'bg-gradient-to-r from-indigo-900 to-indigo-600'} tracking-tight`}>
+                    <h2 className={`text-4xl font-extrabold tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>
                         World Generator
                     </h2>
-                    <p className={`mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-sm max-w-lg leading-relaxed`}>
+                    <p className={`text-base ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} max-w-2xl leading-relaxed`}>
                         Transform your ideas into navigable 3D worlds using generative AI.
                         Start with text, or guide the structure with images and video.
                     </p>
                 </div>
 
                 {/* Modern Segmented Control */}
-                <div className={`flex p-1.5 ${isDarkMode ? 'bg-gray-800/80' : 'bg-gray-200/50'} backdrop-blur-md rounded-2xl border ${isDarkMode ? 'border-gray-700/50' : 'border-gray-300/50'} self-start md:self-center`}>
+                <div className={`flex p-1 ${isDarkMode ? 'bg-[#1c1c1e]' : 'bg-gray-100'} rounded-2xl border ${isDarkMode ? 'border-gray-800' : 'border-gray-200'} self-start md:self-end`}>
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
@@ -199,10 +199,10 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
                                 if (tab.id !== 'text') setInputMode(tab.id === 'multi-image' ? 'asset' : 'upload');
                             }}
                             className={`
-                                relative px-4 py-2 text-sm font-semibold rounded-xl transition-all duration-300 ease-out flex items-center gap-2
+                                relative px-5 py-2 text-sm font-bold rounded-xl transition-all duration-300 flex items-center gap-2
                                 ${activeTab === tab.id
-                                    ? (isDarkMode ? 'bg-gray-700 text-white shadow-sm ring-1 ring-white/10' : 'bg-white text-indigo-600 shadow-md ring-1 ring-black/5')
-                                    : (isDarkMode ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50' : 'text-gray-500 hover:text-indigo-600 hover:bg-white/50')
+                                    ? (isDarkMode ? 'bg-gray-800 text-white shadow-lg ring-1 ring-white/10' : 'bg-white text-indigo-600 shadow-md ring-1 ring-black/5')
+                                    : (isDarkMode ? 'text-gray-500 hover:text-gray-300' : 'text-gray-500 hover:text-indigo-600')
                                 }
                             `}
                         >
@@ -213,99 +213,118 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
                 {/* Left Column: Controls (Prompt & Inputs) */}
-                <div className="lg:col-span-5 space-y-6">
+                <div className="xl:col-span-5 space-y-6">
                     {/* Prompt Input */}
-                    <div className="group relative">
-                        <div className={`absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl ${isDarkMode ? 'opacity-20' : 'opacity-10'} group-focus-within:opacity-100 transition duration-500 blur-sm`}></div>
-                        <div className={`relative ${isDarkMode ? 'bg-gray-900' : 'bg-white'} rounded-xl p-1 border ${isDarkMode ? 'border-transparent' : 'border-gray-200 shadow-sm'}`}>
-                            <textarea
-                                value={textPrompt}
-                                onChange={(e) => setTextPrompt(e.target.value)}
-                                placeholder="Describe your world in detail..."
-                                className={`w-full bg-transparent p-4 ${isDarkMode ? 'text-white' : 'text-gray-900'} placeholder-gray-400 text-base border-none focus:ring-0 resize-none min-h-[140px] leading-relaxed`}
-                            />
-                            <div className={`px-4 pb-2 flex justify-between items-center border-t ${isDarkMode ? 'border-gray-800' : 'border-gray-100'} pt-2`}>
-                                <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Prompt</span>
-                                <span className="text-xs text-gray-400">{textPrompt.length} chars</span>
+                    <div className={`relative rounded-3xl p-6 ${isDarkMode ? 'bg-[#1c1c1e] border-[#3d3d3f]/60' : 'bg-white border-gray-200 shadow-sm'} border`}>
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-500">
+                                <IconMagic />
+                            </div>
+                            <span className={`text-sm font-bold uppercase tracking-widest ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Describe World</span>
+                        </div>
+
+                        <textarea
+                            value={textPrompt}
+                            onChange={(e) => setTextPrompt(e.target.value)}
+                            placeholder="Describe your world in detail (e.g., 'A bioluminescent forest at night with floating crystals and neon flora'...)"
+                            className={`w-full bg-transparent p-0 ${isDarkMode ? 'text-white' : 'text-gray-900'} placeholder-gray-500 text-lg border-none focus:ring-0 resize-none min-h-[160px] leading-relaxed mb-4`}
+                        />
+
+                        <div className={`flex justify-between items-center pt-4 border-t ${isDarkMode ? 'border-gray-800' : 'border-gray-100'}`}>
+                            <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>{textPrompt.length} characters</span>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setTextPrompt('')}
+                                    className={`p-2 rounded-full hover:bg-black/5 transition-colors ${isDarkMode ? 'text-gray-500 hover:text-white' : 'text-gray-400 hover:text-gray-900'}`}
+                                    title="Reset Prompt"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
                             </div>
                         </div>
                     </div>
 
-                    {/* Generate Button */}
-                    <button
-                        onClick={handleGenerate}
-                        disabled={isGenerating}
-                        className={`
-                            relative w-full py-4 rounded-xl font-bold flex items-center justify-center gap-3 overflow-hidden transition-all duration-300
-                            ${isGenerating
-                                ? (isDarkMode ? 'bg-white/5 cursor-wait text-gray-500' : 'bg-gray-100 cursor-wait text-gray-400')
-                                : (isDarkMode ? 'bg-white text-gray-900 hover:scale-[1.02] hover:shadow-xl' : 'bg-indigo-600 text-white hover:scale-[1.02] hover:shadow-xl shadow-indigo-200 shadow-lg')
-                            }
-                        `}
-                    >
-                        {isGenerating ? (
-                            <>
-                                <Spinner />
-                                <span className="font-medium">{progress}</span>
-                            </>
-                        ) : (
-                            <>
-                                <span className="relative z-10 flex items-center gap-2">
-                                    <IconCube /> Generate World
-                                </span>
-                                {/* Subtle gradient overlay on hover */}
-                                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/0 via-white/10 to-purple-500/0 opacity-0 hover:opacity-100 transition-opacity duration-500" />
-                            </>
-                        )}
-                    </button>
+                    {/* Generate Button Container */}
+                    <div className="relative group">
+                        <div className={`absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-[2rem] blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200`}></div>
+                        <button
+                            onClick={handleGenerate}
+                            disabled={isGenerating}
+                            className={`
+                                relative w-full py-5 rounded-[2rem] font-black text-lg flex items-center justify-center gap-3 transition-all duration-300
+                                ${isGenerating
+                                    ? (isDarkMode ? 'bg-[#2c2c2e] cursor-wait text-gray-500' : 'bg-gray-100 cursor-wait text-gray-400')
+                                    : (isDarkMode ? 'bg-white text-gray-900 hover:scale-[1.01]' : 'bg-indigo-600 text-white hover:scale-[1.01] shadow-2xl shadow-indigo-500/30')
+                                }
+                            `}
+                        >
+                            {isGenerating ? (
+                                <>
+                                    <Spinner />
+                                    <span className="tracking-tight uppercase">{progress}</span>
+                                </>
+                            ) : (
+                                <>
+                                    <IconCube /> <span className="uppercase tracking-widest">Generate World</span>
+                                </>
+                            )}
+                        </button>
+                    </div>
 
                     {error && (
-                        <div className={`p-4 ${isDarkMode ? 'bg-red-900/20 text-red-300' : 'bg-red-50 text-red-700'} border-l-4 border-red-500 rounded-r-lg`}>
-                            <p className="text-sm font-medium">{error}</p>
+                        <div className={`p-4 rounded-2xl flex items-start gap-3 ${isDarkMode ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-red-50 text-red-700 border border-red-100'}`}>
+                            <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            <p className="text-sm font-semibold">{error}</p>
                         </div>
                     )}
                 </div>
 
                 {/* Right Column: Reference Assets or Tips */}
-                <div className="lg:col-span-7">
+                <div className="xl:col-span-7">
                     {(activeTab !== 'text') ? (
-                        <div className={`${isDarkMode ? 'bg-gray-800/30 border-gray-700/50' : 'bg-gray-50 border-gray-200'} rounded-2xl border p-2 min-h-[300px] flex flex-col`}>
+                        <div className={`rounded-3xl border ${isDarkMode ? 'bg-[#1c1c1e] border-[#3d3d3f]/60' : 'bg-white border-gray-200 shadow-sm'} p-6 flex flex-col h-full min-h-[440px]`}>
                             {/* Sub-Header / Toggle */}
                             {activeTab !== 'multi-image' && (
-                                <div className="flex items-center justify-between px-4 py-3 mb-2">
-                                    <span className={`text-sm font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Reference {activeTab === 'video' ? 'Video' : 'Image'}</span>
-                                    <div className={`flex ${isDarkMode ? 'bg-gray-700/50' : 'bg-gray-200/50'} p-1 rounded-lg`}>
-                                        <button onClick={() => setInputMode('upload')} className={`px-3 py-1 text-xs rounded-md transition-all ${inputMode === 'upload' ? (isDarkMode ? 'bg-gray-600 text-white' : 'bg-white text-indigo-600 shadow-sm') : (isDarkMode ? 'text-gray-400' : 'text-gray-500')}`}>Upload</button>
-                                        <button onClick={() => setInputMode('asset')} className={`px-3 py-1 text-xs rounded-md transition-all ${inputMode === 'asset' ? (isDarkMode ? 'bg-gray-600 text-white' : 'bg-white text-indigo-600 shadow-sm') : (isDarkMode ? 'text-gray-400' : 'text-gray-500')}`}>Assets</button>
+                                <div className="flex items-center justify-between mb-6">
+                                    <div className="flex items-center gap-2">
+                                        <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'}`}>
+                                            {activeTab === 'video' ? <IconVideo /> : <IconImage />}
+                                        </div>
+                                        <span className={`font-bold text-sm tracking-wider uppercase ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Structure Guide</span>
+                                    </div>
+                                    <div className={`flex ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} p-1 rounded-full`}>
+                                        <button onClick={() => setInputMode('upload')} className={`px-5 py-1.5 text-xs font-bold rounded-full transition-all ${inputMode === 'upload' ? (isDarkMode ? 'bg-gray-700 text-white shadow-lg' : 'bg-white text-indigo-600 shadow-sm') : (isDarkMode ? 'text-gray-500' : 'text-gray-500')}`}>Upload</button>
+                                        <button onClick={() => setInputMode('asset')} className={`px-5 py-1.5 text-xs font-bold rounded-full transition-all ${inputMode === 'asset' ? (isDarkMode ? 'bg-gray-700 text-white shadow-lg' : 'bg-white text-indigo-600 shadow-sm') : (isDarkMode ? 'text-gray-500' : 'text-gray-500')}`}>Store</button>
                                     </div>
                                 </div>
                             )}
 
-                            <div className={`flex-1 rounded-xl ${isDarkMode ? 'bg-gray-900/50 border-gray-700/30' : 'bg-white border-gray-200'} border relative overflow-hidden`}>
+                            <div className={`flex-1 rounded-2xl ${isDarkMode ? 'bg-[#000000]/30 border-gray-800' : 'bg-gray-50 border-gray-200'} border flex flex-col relative overflow-hidden`}>
                                 {inputMode === 'upload' && activeTab !== 'multi-image' ? (
-                                    <div className={`absolute inset-0 flex flex-col items-center justify-center cursor-pointer group ${isDarkMode ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'} transition-colors`}>
+                                    <div className={`flex-1 flex flex-col items-center justify-center cursor-pointer group transition-all duration-300 ${isDarkMode ? 'hover:bg-indigo-500/5' : 'hover:bg-indigo-500/5'}`}>
                                         <input
                                             type="file"
                                             accept={activeTab === 'video' ? "video/*" : "image/*"}
                                             onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                                            className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                                            className="absolute inset-0 opacity-0 cursor-pointer z-20"
                                         />
-                                        <div className={`p-4 ${isDarkMode ? 'bg-indigo-500/10' : 'bg-indigo-50'} text-indigo-500 rounded-full mb-3 group-hover:scale-110 transition-transform`}>
+                                        <div className={`p-6 ${isDarkMode ? 'bg-indigo-500/10 text-indigo-400' : 'bg-indigo-50 text-indigo-500'} rounded-full mb-4 group-hover:scale-110 transition-transform duration-500 shadow-xl shadow-indigo-500/10`}>
                                             <IconCloudUpload />
                                         </div>
-                                        <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{selectedFile ? selectedFile.name : `Drop ${activeTab} here`}</p>
-                                        <p className="text-xs text-gray-400 mt-1">or click to browse</p>
+                                        <p className={`text-lg font-bold ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>{selectedFile ? selectedFile.name : `Drop ${activeTab} Reference`}</p>
+                                        <p className="text-sm text-gray-500 mt-2 font-medium">JPEG, PNG, WEBP or MP4</p>
                                     </div>
                                 ) : (
-                                    <div className="absolute inset-0 overflow-y-auto p-4 custom-scrollbar">
+                                    <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
                                         {compatibleAssets.length === 0 ? (
-                                            <div className="h-full flex flex-col items-center justify-center text-gray-400">
-                                                <p className="text-sm">No compatible assets found.</p>
+                                            <div className="h-full flex flex-col items-center justify-center text-gray-500">
+                                                <div className="mb-3 opacity-20"><IconCube /></div>
+                                                <p className="text-sm font-bold uppercase tracking-widest">No Compatible Assets</p>
                                             </div>
                                         ) : (
-                                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                                                 {compatibleAssets.map(asset => {
                                                     const isSelected = activeTab === 'multi-image'
                                                         ? selectedAssets.some(a => a.id === asset.id)
@@ -319,7 +338,7 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
                                                         <button
                                                             key={asset.id}
                                                             onClick={() => handleAssetToggle(asset)}
-                                                            className={`relative aspect-square group rounded-lg overflow-hidden transition-all duration-300 ${isSelected ? 'ring-2 ring-indigo-500 ring-offset-2' : 'hover:opacity-90'} ${isSelected && !isDarkMode ? 'ring-offset-white' : (isSelected ? 'ring-offset-gray-900' : '')}`}
+                                                            className={`relative aspect-[4/3] group rounded-xl overflow-hidden transition-all duration-500 ${isSelected ? 'ring-4 ring-indigo-500 scale-[0.98]' : 'hover:scale-[1.02] shadow-sm hover:shadow-xl'}`}
                                                         >
                                                             {(activeTab === 'video' || asset.type === 'video') ? (
                                                                 <video src={asset.url || ''} className="w-full h-full object-cover pointer-events-none" />
@@ -327,11 +346,11 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
                                                                 <img src={asset.url || ''} alt="" className="w-full h-full object-cover" />
                                                             )}
 
-                                                            <div className={`absolute inset-0 bg-black/40 transition-opacity ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
+                                                            <div className={`absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent transition-opacity duration-300 ${isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
 
                                                             {isSelected && (
-                                                                <div className="absolute inset-0 flex items-center justify-center">
-                                                                    <div className="bg-indigo-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-lg scale-110">
+                                                                <div className="absolute top-2 right-2">
+                                                                    <div className="bg-indigo-500 text-white w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shadow-2xl scale-110">
                                                                         {activeTab === 'multi-image' ? selectIndex : '✓'}
                                                                     </div>
                                                                 </div>
@@ -347,16 +366,18 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
                         </div>
                     ) : (
                         // Placeholder / Creative Tips when in Text Mode
-                        <div className={`h-full ${isDarkMode ? 'from-indigo-500/5 to-purple-500/5' : 'from-indigo-100/30 to-purple-100/30'} bg-gradient-to-br rounded-2xl border border-dashed ${isDarkMode ? 'border-gray-700' : 'border-gray-300'} flex items-center justify-center p-8`}>
-                            <div className="text-center max-w-sm">
-                                <div className={`inline-flex p-3 rounded-xl ${isDarkMode ? 'bg-gray-800' : 'bg-white shadow-sm'} mb-4`}>
-                                    <span className="text-2xl">💡</span>
-                                </div>
-                                <h3 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>Pro Tip</h3>
-                                <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-sm`}>
-                                    For best results, describe lighting and perspective.
-                                    <br />E.g., "A cyberpunk street <i>at sunset</i> with <i>neon rim lighting</i>, viewed from <i>low angle</i>."
-                                </p>
+                        <div className={`h-full flex flex-col items-center justify-center p-12 text-center rounded-3xl border border-dashed ${isDarkMode ? 'bg-[#1c1c1e] border-gray-800' : 'bg-gray-50 border-gray-200'} min-h-[440px]`}>
+                            <div className={`w-20 h-20 rounded-3xl flex items-center justify-center ${isDarkMode ? 'bg-gray-800 shadow-2xl' : 'bg-white shadow-xl'} mb-8 transform -rotate-3 hover:rotate-0 transition-transform duration-500`}>
+                                <span className="text-4xl">�</span>
+                            </div>
+                            <h3 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4 tracking-tight`}>AI World Labs</h3>
+                            <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-lg max-w-sm leading-relaxed mb-8`}>
+                                Describe the environment, lighting, and mood. The more descriptive, the better the result.
+                            </p>
+                            <div className={`flex flex-wrap justify-center gap-3`}>
+                                <span className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest ${isDarkMode ? 'bg-gray-800 text-gray-400' : 'bg-white text-gray-500 shadow-sm border border-gray-100'}`}>Cyberpunk Sunset</span>
+                                <span className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest ${isDarkMode ? 'bg-gray-800 text-gray-400' : 'bg-white text-gray-500 shadow-sm border border-gray-100'}`}>Ethereal Garden</span>
+                                <span className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest ${isDarkMode ? 'bg-gray-800 text-gray-400' : 'bg-white text-gray-500 shadow-sm border border-gray-100'}`}>Deep Ocean Abyss</span>
                             </div>
                         </div>
                     )}
@@ -365,26 +386,30 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
 
             {/* Generated Result - Full Width Card */}
             {generatedWorld && (
-                <div className="mt-8 animate-in slide-in-from-bottom-4 duration-700">
-                    <div className="relative rounded-2xl overflow-hidden bg-black aspect-video md:aspect-[21/9] group shadow-2xl shadow-indigo-500/20">
+                <div className="mt-8 animate-in slide-in-from-bottom-8 duration-1000">
+                    <div className="relative rounded-[2.5rem] overflow-hidden bg-black aspect-video xl:aspect-[21/9] group shadow-2xl shadow-indigo-500/40">
                         <img
                             src={generatedWorld?.assets?.thumbnail_url}
                             alt="Generated World"
-                            className="w-full h-full object-cover transition-transform duration-[1.5s] ease-in-out group-hover:scale-110"
+                            className="w-full h-full object-cover transition-transform duration-[3s] ease-in-out group-hover:scale-110"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-8">
-                            <div className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
-                                <h3 className="text-2xl font-bold text-white mb-2">{generatedWorld?.display_name || 'Untitled World'}</h3>
-                                <div className="flex items-center gap-4">
+                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent flex flex-col justify-end p-12">
+                            <div className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-700">
+                                <span className="inline-block px-4 py-1.5 rounded-full bg-indigo-500 text-white text-[10px] font-black uppercase tracking-[0.2em] mb-4">Success</span>
+                                <h3 className="text-4xl md:text-5xl font-black text-white mb-6 tracking-tighter leading-none">{generatedWorld?.display_name || 'Your New World'}</h3>
+                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-6">
                                     <a
                                         href={generatedWorld?.world_marble_url}
                                         target="_blank"
                                         rel="noreferrer"
-                                        className="inline-flex items-center gap-2 px-6 py-3 bg-white text-black rounded-full font-bold text-sm tracking-wide hover:bg-gray-200 transition-colors"
+                                        className="inline-flex items-center justify-center gap-3 px-10 py-5 bg-white text-black rounded-full font-black text-lg tracking-widest hover:bg-gray-100 transition-all hover:scale-105 active:scale-95 shadow-2xl"
                                     >
                                         <IconCube /> ENTER WORLD
                                     </a>
-                                    <span className="text-white/60 text-sm">Generated just now</span>
+                                    <div className="flex items-center gap-3 text-white/50">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                                        <span className="text-sm font-bold uppercase tracking-widest">Ready to explore</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
