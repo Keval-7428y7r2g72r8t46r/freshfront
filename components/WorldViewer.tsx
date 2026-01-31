@@ -96,7 +96,9 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose }) => {
                 const height = containerRef.current!.clientHeight;
 
                 camera = new PerspectiveCamera(60, width / height, 0.1, 1000);
-                camera.position.set(0, 1, 3);
+                // Position camera at origin, looking forward (negative Z in OpenGL)
+                camera.position.set(0, 0, 0);
+                camera.lookAt(0, 0, -1);
 
                 renderer = new WebGLRenderer({ antialias: false });
                 renderer.setSize(width, height);
@@ -106,19 +108,25 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose }) => {
                 // Controls
                 controls = new SparkControls({ canvas: renderer.domElement });
 
-                // Spark Renderer
+                // Spark Renderer - add as child of camera for better precision
                 spark = new SparkRenderer({ renderer });
-                scene.add(spark);
+                camera.add(spark);
+                scene.add(camera);
 
                 // Load Splat using proxied URL
                 const splat = new SplatMesh({ url: proxiedUrl });
+
+                // Re-orient from OpenCV to OpenGL coordinates
+                // OpenCV: Y down, Z forward → OpenGL: Y up, Z backward
+                // Quaternion (1,0,0,0) rotates 180° around X axis
+                splat.quaternion.set(1, 0, 0, 0);
+                splat.position.set(0, 0, -3); // Place splat in front of camera
+                splat.scale.setScalar(1.0);
+
                 scene.add(splat);
 
                 await splat.initialized;
                 setLoading(false);
-
-                // Center camera roughly - usually splats are at 0,0,0
-                // splat.position.set(0, 0, 0);
 
                 const clock = new Clock();
 
