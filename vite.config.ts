@@ -86,13 +86,11 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': path.resolve(__dirname, '.'),
         '@decartai/sdk': path.resolve(__dirname, 'node_modules/@decartai/sdk/dist/index.js'),
-        '@sparkjsdev/spark': path.resolve(__dirname, 'node_modules/@sparkjsdev/spark/dist/spark.module.js'),
-        'three': path.resolve(__dirname, 'node_modules/three/build/three.module.js'),
       },
     },
     build: {
       rollupOptions: {
-        external: ['convertapi-js']
+        // external: ['convertapi-js'] 
       }
     }
   };
