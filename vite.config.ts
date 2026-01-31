@@ -2,9 +2,18 @@ import path from 'path';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
+
+  // Robustly resolve dependencies that might have issues in Vercel's environment
+  // We use require.resolve to find the CJS entry, then map to the ESM build in the same directory.
+  const threePath = path.resolve(path.dirname(require.resolve('three')), 'three.module.js');
+  const sparkPath = path.resolve(path.dirname(require.resolve('@sparkjsdev/spark')), 'spark.module.js');
+
   return {
     server: {
       port: Number(process.env.PORT) || Number(process.env.VITE_PORT) || 5000,
@@ -86,11 +95,13 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': path.resolve(__dirname, '.'),
         '@decartai/sdk': path.resolve(__dirname, 'node_modules/@decartai/sdk/dist/index.js'),
+        'three': threePath,
+        '@sparkjsdev/spark': sparkPath,
       },
     },
     build: {
       rollupOptions: {
-        // external: ['convertapi-js'] 
+        // ensure appropriate externalization if needed, but we want to bundle.
       }
     }
   };
