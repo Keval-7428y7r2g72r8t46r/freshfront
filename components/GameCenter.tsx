@@ -132,60 +132,11 @@ requestAnimationFrame(loop);
 
 const GAMES: GameOption[] = [
     {
-        id: 'mario',
-        name: 'Super Mario',
-        icon: '🍄',
-        url: 'https://html-classic.itch.zone/html/6775271/index.html?v=1732313680',
-        description: 'Classic side-scrolling platformer'
-    },
-    {
-        id: 'sonic',
-        name: 'Sonic GBA',
-        icon: '🦔',
-        url: 'https://html-classic.itch.zone/html/10411855/index.html',
-        description: 'High-speed hedgehog action'
-    },
-    {
-        id: 'asterdots',
-        name: 'Asterdots',
-        icon: '⚪',
-        url: 'https://html-classic.itch.zone/html/6224283-601820/index.html',
-        description: 'Space arena shooter'
-    },
-    {
-        id: 'tetris',
-        name: 'Tetris',
-        icon: '🧱',
-        srcDoc: TETRIS_HTML,
-        description: 'Stack falling blocks'
-    },
-    {
-        id: 'snake',
-        name: 'Snake',
-        icon: '🐍',
-        srcDoc: SNAKE_HTML,
-        description: 'Classic arcade snake'
-    },
-    {
-        id: 'pong',
-        name: 'Pong',
-        icon: '🏓',
-        srcDoc: PONG_HTML,
-        description: 'Retro paddle game'
-    },
-    {
-        id: 'breakout',
-        name: 'Breakout',
-        icon: '🧱',
-        srcDoc: BREAKOUT_HTML,
-        description: 'Smash the bricks'
-    },
-    {
-        id: 'tabletennis',
-        name: 'Table Tennis',
-        icon: '🏓',
-        url: 'https://games.cdn.famobi.com/html5games/t/table-tennis-world-tour/92a8f146/?fg_domain=play.famobi.com&fg_aid=A1000-10A0A',
-        description: 'World tour ping pong'
+        id: 'flappybird',
+        name: 'Flappy Bird',
+        icon: '🐦',
+        url: 'https://flappybird.io/',
+        description: 'Tap to fly through pipes'
     },
     {
         id: 'basketball',
@@ -195,18 +146,32 @@ const GAMES: GameOption[] = [
         description: 'Shoot some hoops'
     },
     {
-        id: 'picohot',
-        name: 'PicoHot',
-        icon: '🔥',
-        url: 'https://html-classic.itch.zone/html/4274784/picohot_html/index.html?v=1732313756',
-        description: 'Superhot in PICO-8'
+        id: 'breakout',
+        name: 'Breakout',
+        icon: '🧱',
+        srcDoc: BREAKOUT_HTML,
+        description: 'Smash the bricks'
     },
     {
-        id: 'flappybird',
-        name: 'Flappy Bird',
-        icon: '🐦',
-        url: 'https://flappybird.io/',
-        description: 'Tap to fly through pipes'
+        id: 'asterdots',
+        name: 'Asterdots',
+        icon: '⚪',
+        url: 'https://html-classic.itch.zone/html/6224283-601820/index.html',
+        description: 'Space arena shooter'
+    },
+    {
+        id: 'snake',
+        name: 'Snake',
+        icon: '�',
+        srcDoc: SNAKE_HTML,
+        description: 'Classic arcade snake'
+    },
+    {
+        id: 'tetris',
+        name: 'Tetris',
+        icon: '🧱',
+        srcDoc: TETRIS_HTML,
+        description: 'Stack falling blocks'
     }
 ];
 
