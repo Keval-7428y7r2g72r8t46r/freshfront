@@ -34,12 +34,20 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose }) => {
 
         const init = async () => {
             try {
-                // Find the asset URL recursively
+                // Find the splat URL from World Labs response structure
                 const findAssetUrl = (obj: any): string => {
                     if (typeof obj === 'string') {
                         const low = obj.toLowerCase();
                         if (low.endsWith('.spz') || low.endsWith('.ply')) return obj;
                     } else if (typeof obj === 'object' && obj !== null) {
+                        // Check for spz_urls with resolution options (World Labs structure)
+                        if (obj.spz_urls) {
+                            // Prefer full_res, then 500k, then 100k
+                            if (obj.spz_urls.full_res) return obj.spz_urls.full_res;
+                            if (obj.spz_urls['500k']) return obj.spz_urls['500k'];
+                            if (obj.spz_urls['100k']) return obj.spz_urls['100k'];
+                        }
+
                         // Priority to names like 'spz', 'ply', 'splat'
                         const keys = Object.keys(obj);
                         for (const key of ['spz', 'ply', 'splat', 'url', 'stream_url']) {
@@ -48,6 +56,8 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose }) => {
                                 if (val.endsWith('.spz') || val.endsWith('.ply')) return obj[key];
                             }
                         }
+
+                        // Recursively search nested objects
                         for (const value of Object.values(obj)) {
                             const result = findAssetUrl(value);
                             if (result) return result;
@@ -57,14 +67,12 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose }) => {
                 };
 
                 let splatUrl = '';
-                if (world.data?.assets) {
-                    splatUrl = findAssetUrl(world.data.assets);
 
-                    // Fallback to explicit common fields if recursive search missed something (unlikely but safe)
-                    if (!splatUrl) {
-                        const assets = world.data.assets;
-                        splatUrl = assets.stream_url || assets.splat || assets.gaussian_splat || '';
-                    }
+                // Handle nested data structure from World Labs API
+                const worldData = world.data?.data || world.data;
+
+                if (worldData?.assets) {
+                    splatUrl = findAssetUrl(worldData.assets);
                 }
 
                 if (!splatUrl) {
