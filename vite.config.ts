@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => {
       allowedHosts: true,
     },
     optimizeDeps: {
-      include: ['@decartai/sdk', 'three'],
+      include: ['@decartai/sdk', 'three', '@sparkjsdev/spark'],
     },
     plugins: [
       react(),
@@ -86,6 +86,7 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@': path.resolve(__dirname, '.'),
         '@decartai/sdk': path.resolve(__dirname, 'node_modules/@decartai/sdk/dist/index.js'),
+        '@sparkjsdev/spark': path.resolve(__dirname, 'node_modules/@sparkjsdev/spark/dist/spark.module.js'),
         'three': path.resolve(__dirname, 'node_modules/three/build/three.module.js'),
       },
     },
