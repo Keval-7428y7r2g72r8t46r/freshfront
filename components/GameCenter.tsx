@@ -27,22 +27,15 @@ const GAMES: GameOption[] = [
         id: 'tetris',
         name: 'Tetris',
         icon: '🧱',
-        url: 'https://chvin.github.io/react-tetris/',
+        url: 'https://games.cdn.famobi.com/html5games/t/tetris/v010/?fg_domain=play.famobi.com&fg_aid=A1000-10A0A',
         description: 'Stack falling blocks'
     },
     {
-        id: 'snake',
-        name: 'Snake',
-        icon: '🐍',
-        url: 'https://playsnake.org/',
-        description: 'Classic snake game'
-    },
-    {
-        id: 'pong',
-        name: 'Pong',
+        id: 'tabletennis',
+        name: 'Table Tennis',
         icon: '🏓',
-        url: 'https://www.ponggame.org/',
-        description: 'Classic paddle game'
+        url: 'https://games.cdn.famobi.com/html5games/t/table-tennis-world-tour/92a8f146/?fg_domain=play.famobi.com&fg_aid=A1000-10A0A&fg_uid=8c8e5fc6-7e38-47ab-96eb-150276e79ef8&fg_pid=30e454d1-6b3e-491b-823b-09cd0cdb27ab&fg_beat=967',
+        description: 'World tour ping pong'
     },
     {
         id: 'flappybird',
@@ -52,11 +45,18 @@ const GAMES: GameOption[] = [
         description: 'Tap to fly through pipes'
     },
     {
-        id: 'asteroids',
-        name: 'Asteroids',
-        icon: '🚀',
-        url: 'https://www.echalk.co.uk/amusements/Games/asteroidsaliean/asteroidsaliean.html',
-        description: 'Shoot space rocks'
+        id: 'basketball',
+        name: 'Basketball',
+        icon: '🏀',
+        url: 'https://games.cdn.famobi.com/html5games/b/basketball-stars/v240/?fg_domain=play.famobi.com&fg_aid=A1000-10A0A',
+        description: 'Shoot hoops'
+    },
+    {
+        id: 'bubbleshooter',
+        name: 'Bubble Shooter',
+        icon: '🫧',
+        url: 'https://games.cdn.famobi.com/html5games/b/bubble-shooter-pro/v080/?fg_domain=play.famobi.com&fg_aid=A1000-10A0A',
+        description: 'Pop the bubbles'
     }
 ];
 
