@@ -1,4 +1,5 @@
 import path from 'path';
+import fs from 'fs';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -14,23 +15,27 @@ export default defineConfig(({ mode }) => {
 
   // Robustly resolve dependencies that might have issues in Vercel's environment
   // We use require.resolve to find the CJS entry, then map to the ESM build in the same directory.
-  let threePath = '';
-  let sparkPath = '';
+  // Fallback to absolute paths based on __dirname if require.resolve fails.
+  const getModulePath = (pkgName: string, subPath: string) => {
+    try {
+      // Try standard resolution first
+      const pkgJson = require.resolve(`${pkgName}/package.json`);
+      const pkgDir = path.dirname(pkgJson);
+      const fullPath = path.resolve(pkgDir, subPath);
+      if (fs.existsSync(fullPath)) return fullPath;
+    } catch (e) {
+      // Ignore and try fallback
+    }
 
-  try {
-    threePath = path.resolve(path.dirname(require.resolve('three')), 'three.module.js');
-  } catch (e) {
-    console.warn('Could not resolve "three" via require.resolve, using fallback path');
-    threePath = path.resolve(__dirname, 'node_modules/three/build/three.module.js');
-  }
+    // Fallback: search in project node_modules
+    const fallbackPath = path.resolve(__dirname, 'node_modules', pkgName, subPath);
+    if (fs.existsSync(fallbackPath)) return fallbackPath;
 
-  try {
-    sparkPath = path.resolve(path.dirname(require.resolve('@sparkjsdev/spark')), 'spark.module.js');
-  } catch (e) {
-    console.warn('Could not resolve "@sparkjsdev/spark" via require.resolve, using fallback path');
-    // Fallback based on typical structure if possible
-    sparkPath = path.resolve(__dirname, 'node_modules/@sparkjsdev/spark/dist/spark.module.js');
-  }
+    return pkgName; // Let Vite handle it if all else fails
+  };
+
+  const threePath = getModulePath('three', 'build/three.module.js');
+  const sparkPath = getModulePath('@sparkjsdev/spark', 'dist/spark.module.js');
 
   return {
     server: {
