@@ -16,6 +16,8 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose, projec
     const containerRef = useRef<HTMLDivElement>(null);
     const annotationCanvasRef = useRef<AnnotationCanvasHandle>(null);
     const rendererRef = useRef<WebGLRenderer | null>(null);
+    const sceneRef = useRef<Scene | null>(null);
+    const cameraRef = useRef<PerspectiveCamera | null>(null);
     const controlsRef = useRef<SparkControls | null>(null);
 
     const [error, setError] = useState<string | null>(null);
@@ -121,13 +123,18 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose, projec
                 camera.position.set(0, 0, 0);
                 camera.lookAt(0, 0, -1);
 
-                renderer = new WebGLRenderer({ antialias: false });
+                renderer = new WebGLRenderer({
+                    antialias: false,
+                    preserveDrawingBuffer: true
+                });
                 renderer.setSize(width, height);
                 renderer.setPixelRatio(window.devicePixelRatio);
                 containerRef.current!.appendChild(renderer.domElement);
 
                 // Store refs for external access
                 rendererRef.current = renderer;
+                sceneRef.current = scene;
+                cameraRef.current = camera;
                 updateSize();
 
                 // Controls
@@ -193,7 +200,13 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose, projec
 
     const captureScreen = async (): Promise<string> => {
         const renderer = rendererRef.current;
-        if (!renderer) throw new Error('Renderer not initialized');
+        const scene = sceneRef.current;
+        const camera = cameraRef.current;
+
+        if (!renderer || !scene || !camera) throw new Error('Renderer not initialized');
+
+        // Ensure we have a fresh render for the screenshot
+        renderer.render(scene, camera);
 
         // Get 3D viewer screenshot
         const viewerDataUrl = renderer.domElement.toDataURL('image/png');
