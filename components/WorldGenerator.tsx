@@ -356,8 +356,8 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
                     ) : (
                         // Placeholder / Creative Tips when in Text Mode
                         <div className={`h-full flex flex-col items-center justify-center p-8 text-center rounded-2xl border border-dashed ${isDarkMode ? 'bg-[#111111]/30 border-gray-800' : 'bg-gray-50 border-gray-200'} min-h-[400px]`}>
-                            <div className={`w-20 h-20 rounded-3xl flex items-center justify-center ${isDarkMode ? 'bg-gray-800 shadow-2xl' : 'bg-white shadow-xl'} mb-8 transform -rotate-3 hover:rotate-0 transition-transform duration-500`}>
-                                <span className="text-4xl">�</span>
+                            <div className={`w-20 h-20 rounded-3xl flex items-center justify-center ${isDarkMode ? 'bg-[#5e5ce6]/20 shadow-2xl border border-[#5e5ce6]/30' : 'bg-indigo-50 shadow-xl border border-indigo-100'} mb-8 transform -rotate-6 hover:rotate-0 transition-all duration-700 hover:scale-110`}>
+                                <span className="text-4xl drop-shadow-lg">🌍</span>
                             </div>
                             <h3 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-3 tracking-tight`}>AI World Labs</h3>
                             <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-sm max-w-sm leading-relaxed mb-6`}>
