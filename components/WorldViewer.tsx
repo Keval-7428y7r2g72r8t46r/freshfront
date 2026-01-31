@@ -84,6 +84,10 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose }) => {
 
                 console.log('[WorldViewer] Loading splat from:', splatUrl);
 
+                // Proxy the URL through our backend to bypass CORS
+                const proxiedUrl = `/api/media?op=proxy-world-asset&url=${encodeURIComponent(splatUrl)}`;
+                console.log('[WorldViewer] Using proxied URL:', proxiedUrl);
+
                 // Setup THREE.js
                 scene = new Scene();
                 scene.background = new Color(0x000000);
@@ -106,8 +110,8 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose }) => {
                 spark = new SparkRenderer({ renderer });
                 scene.add(spark);
 
-                // Load Splat
-                const splat = new SplatMesh({ url: splatUrl });
+                // Load Splat using proxied URL
+                const splat = new SplatMesh({ url: proxiedUrl });
                 scene.add(splat);
 
                 await splat.initialized;
@@ -130,18 +134,7 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose }) => {
 
             } catch (e: any) {
                 console.error('Failed to init WorldViewer:', e);
-
-                // Check if this is a CORS error
-                const isCorsError = e.message?.includes('fetch') ||
-                    e.message?.includes('CORS') ||
-                    e.message?.includes('Failed to fetch') ||
-                    e.name === 'TypeError';
-
-                if (isCorsError) {
-                    setError('Unable to load 3D model due to browser security restrictions. Please use the link below to view in World Labs viewer.');
-                } else {
-                    setError(e.message || 'Failed to load 3D viewer');
-                }
+                setError(e.message || 'Failed to load 3D viewer. Please use the fallback link below.');
                 setLoading(false);
             }
         };
