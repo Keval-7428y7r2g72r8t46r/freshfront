@@ -25,40 +25,41 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose }) => {
 
         const init = async () => {
             try {
-                // Find the splat URL
-                // The API might return it in various places within 'assets'
+                // Find the splat URL recursively
+                const findAssetUrl = (obj: any): string => {
+                    if (typeof obj === 'string') {
+                        const low = obj.toLowerCase();
+                        if (low.endsWith('.spz') || low.endsWith('.ply')) return obj;
+                    } else if (typeof obj === 'object' && obj !== null) {
+                        // Priority to names like 'spz', 'ply', 'splat'
+                        const keys = Object.keys(obj);
+                        for (const key of ['spz', 'ply', 'splat', 'url', 'stream_url']) {
+                            if (typeof obj[key] === 'string') {
+                                const val = obj[key].toLowerCase();
+                                if (val.endsWith('.spz') || val.endsWith('.ply')) return obj[key];
+                            }
+                        }
+                        for (const value of Object.values(obj)) {
+                            const result = findAssetUrl(value);
+                            if (result) return result;
+                        }
+                    }
+                    return '';
+                };
+
                 let splatUrl = '';
                 if (world.data?.assets) {
-                    // Check for explicit splat/ply/spz fields
-                    const assets = world.data.assets;
+                    splatUrl = findAssetUrl(world.data.assets);
 
-                    // Try to find a URL ending in .spz or .ply
-                    // Flatten the simple properties to check
-                    const possibleUrls = Object.values(assets).filter(v => typeof v === 'string' && (v.endsWith('.spz') || v.endsWith('.ply')));
-
-                    if (possibleUrls.length > 0) {
-                        splatUrl = possibleUrls[0] as string;
-                    } else if (assets.stream_url) {
-                        splatUrl = assets.stream_url;
-                    } else if (assets.splat) {
-                        splatUrl = assets.splat;
-                    } else if (assets.gaussian_splat) {
-                        splatUrl = assets.gaussian_splat;
+                    // Fallback to explicit common fields if recursive search missed something (unlikely but safe)
+                    if (!splatUrl) {
+                        const assets = world.data.assets;
+                        splatUrl = assets.stream_url || assets.splat || assets.gaussian_splat || '';
                     }
                 }
 
-                // Fallback: if we just have a marble URL, we might need to assume a convention or fail
-                if (!splatUrl && world.data?.world_marble_url) {
-                    // Sometimes the world ID can construct the asset URL, but it's risky.
-                    // For now, let's try to infer or error.
-                    console.warn('No explicit splat URL found in assets:', world.data?.assets);
-                    // setError('Could not find 3D asset URL.');
-                    // return;
-                }
-
                 if (!splatUrl) {
-                    // For testing/mocking if we don't have it yet, we might want to alert key details
-                    console.log('World Data:', world);
+                    console.error('No 3D asset found in world data:', world);
                     setError(`No 3D asset found. (Check console for data)`);
                     setLoading(false);
                     return;
