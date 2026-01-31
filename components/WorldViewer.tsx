@@ -77,10 +77,12 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose }) => {
 
                 if (!splatUrl) {
                     console.error('No 3D asset found in world data:', world);
-                    setError(`No 3D asset found. (Check console for data)`);
+                    setError(`No 3D asset found. Please use the fallback link below to view in browser.`);
                     setLoading(false);
                     return;
                 }
+
+                console.log('[WorldViewer] Loading splat from:', splatUrl);
 
                 // Setup THREE.js
                 scene = new Scene();
@@ -128,7 +130,18 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose }) => {
 
             } catch (e: any) {
                 console.error('Failed to init WorldViewer:', e);
-                setError(e.message || 'Failed to load 3D viewer');
+
+                // Check if this is a CORS error
+                const isCorsError = e.message?.includes('fetch') ||
+                    e.message?.includes('CORS') ||
+                    e.message?.includes('Failed to fetch') ||
+                    e.name === 'TypeError';
+
+                if (isCorsError) {
+                    setError('Unable to load 3D model due to browser security restrictions. Please use the link below to view in World Labs viewer.');
+                } else {
+                    setError(e.message || 'Failed to load 3D viewer');
+                }
                 setLoading(false);
             }
         };
@@ -184,15 +197,15 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose }) => {
                         <div className="absolute inset-0 flex items-center justify-center text-red-500 bg-black/80 z-20">
                             <div className="text-center p-6 bg-gray-900 rounded-xl border border-red-500/20 max-w-md">
                                 <p className="font-semibold mb-2">Error</p>
-                                <p>{error}</p>
-                                {world.data?.world_marble_url && (
+                                <p className="mb-1">{error}</p>
+                                {(world.data?.data?.world_marble_url || world.data?.world_marble_url) && (
                                     <a
-                                        href={world.data.world_marble_url}
+                                        href={world.data?.data?.world_marble_url || world.data?.world_marble_url}
                                         target="_blank"
                                         rel="noreferrer"
-                                        className="mt-4 inline-block px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors text-white"
+                                        className="mt-4 inline-block px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm transition-colors text-white font-medium"
                                     >
-                                        Open in Browser (Fallback)
+                                        🌍 Open in World Labs Viewer
                                     </a>
                                 )}
                             </div>
