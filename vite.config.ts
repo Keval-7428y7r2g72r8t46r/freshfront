@@ -13,46 +13,6 @@ const __dirname = path.dirname(__filename);
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
 
-  console.log('--- Vite Config Debug ---');
-  console.log('CWD:', process.cwd());
-  console.log('__dirname:', __dirname);
-
-  // Robustly resolve dependencies that might have issues in Vercel's environment
-  // Fallback to absolute paths based on __dirname if require.resolve fails.
-  const getModulePath = (pkgName: string, subPath: string) => {
-    try {
-      // Try standard resolution first
-      const pkgJson = require.resolve(`${pkgName}/package.json`);
-      const pkgDir = path.dirname(pkgJson);
-      const fullPath = path.resolve(pkgDir, subPath);
-      if (fs.existsSync(fullPath)) {
-        console.log(`Resolved ${pkgName} to: ${fullPath}`);
-        return fullPath;
-      }
-    } catch (e) {
-      // Ignore and try fallback
-    }
-
-    // Fallback: search in project node_modules
-    const paths = [
-      path.resolve(__dirname, 'node_modules', pkgName, subPath),
-      path.resolve(process.cwd(), 'node_modules', pkgName, subPath)
-    ];
-
-    for (const p of paths) {
-      if (fs.existsSync(p)) {
-        console.log(`Fallback resolved ${pkgName} to: ${p}`);
-        return p;
-      }
-    }
-
-    console.warn(`Could not resolve ${pkgName} build at ${subPath}`);
-    return undefined; // Let Vite handle it naturally if all else fails
-  };
-
-  const threePath = getModulePath('three', 'build/three.module.js');
-  const sparkPath = getModulePath('@sparkjsdev/spark', 'dist/spark.module.js');
-
   return {
     server: {
       port: Number(process.env.PORT) || Number(process.env.VITE_PORT) || 5000,
@@ -60,7 +20,7 @@ export default defineConfig(({ mode }) => {
       allowedHosts: true,
     },
     optimizeDeps: {
-      include: ['@decartai/sdk', 'three', '@sparkjsdev/spark'],
+      include: ['@decartai/sdk'],
     },
     plugins: [
       react(),
@@ -131,24 +91,15 @@ export default defineConfig(({ mode }) => {
       'process.env.BLOB_READ_WRITE_TOKEN': JSON.stringify(env.BLOB_READ_WRITE_TOKEN)
     },
     resolve: {
-      alias: (() => {
-        const a: Record<string, string> = {
-          '@': path.resolve(__dirname, '.'),
-          '@decartai/sdk': path.resolve(__dirname, 'node_modules/@decartai/sdk/dist/index.js'),
-        };
-        if (threePath) a['three'] = threePath;
-        if (sparkPath) a['@sparkjsdev/spark'] = sparkPath;
-        return a;
-      })(),
-    },
-    ssr: {
-      noExternal: ['three', '@sparkjsdev/spark'],
+      alias: {
+        '@': path.resolve(__dirname, '.'),
+        '@decartai/sdk': path.resolve(__dirname, 'node_modules/@decartai/sdk/dist/index.js'),
+      },
     },
     build: {
       rollupOptions: {
-        // ensure appropriate externalization if needed, but we want to bundle.
+        external: ['three', '@sparkjsdev/spark'],
       }
     }
   };
 });
-
