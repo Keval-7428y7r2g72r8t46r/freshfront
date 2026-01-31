@@ -23,9 +23,18 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose }) => {
         let controls: SparkControls | null = null;
         let animationId: number | null = null;
 
+        const handleResize = () => {
+            if (!containerRef.current || !camera || !renderer) return;
+            const w = containerRef.current.clientWidth;
+            const h = containerRef.current.clientHeight;
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+        };
+
         const init = async () => {
             try {
-                // Find the splat URL recursively
+                // Find the asset URL recursively
                 const findAssetUrl = (obj: any): string => {
                     if (typeof obj === 'string') {
                         const low = obj.toLowerCase();
@@ -107,15 +116,6 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose }) => {
                     renderer.render(scene, camera);
                 });
 
-                // Handle resize
-                const handleResize = () => {
-                    if (!containerRef.current || !camera || !renderer) return;
-                    const w = containerRef.current.clientWidth;
-                    const h = containerRef.current.clientHeight;
-                    camera.aspect = w / h;
-                    camera.updateProjectionMatrix();
-                    renderer.setSize(w, h);
-                };
                 window.addEventListener('resize', handleResize);
 
             } catch (e: any) {
@@ -128,12 +128,15 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose }) => {
         init();
 
         return () => {
-            if (animationId) cancelAnimationFrame(animationId);
+            window.removeEventListener('resize', handleResize);
             if (renderer) {
+                renderer.setAnimationLoop(null);
                 renderer.dispose();
                 containerRef.current?.removeChild(renderer.domElement);
             }
-            // Cleanup other resources if needed
+            if (spark) (spark as any).dispose?.();
+            if (controls) (controls as any).dispose?.();
+            scene?.clear();
         };
     }, [world]);
 
