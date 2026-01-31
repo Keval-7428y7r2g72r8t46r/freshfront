@@ -13,8 +13,11 @@ const __dirname = path.dirname(__filename);
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
 
+  console.log('--- Vite Config Debug ---');
+  console.log('CWD:', process.cwd());
+  console.log('__dirname:', __dirname);
+
   // Robustly resolve dependencies that might have issues in Vercel's environment
-  // We use require.resolve to find the CJS entry, then map to the ESM build in the same directory.
   // Fallback to absolute paths based on __dirname if require.resolve fails.
   const getModulePath = (pkgName: string, subPath: string) => {
     try {
@@ -22,16 +25,29 @@ export default defineConfig(({ mode }) => {
       const pkgJson = require.resolve(`${pkgName}/package.json`);
       const pkgDir = path.dirname(pkgJson);
       const fullPath = path.resolve(pkgDir, subPath);
-      if (fs.existsSync(fullPath)) return fullPath;
+      if (fs.existsSync(fullPath)) {
+        console.log(`Resolved ${pkgName} to: ${fullPath}`);
+        return fullPath;
+      }
     } catch (e) {
       // Ignore and try fallback
     }
 
     // Fallback: search in project node_modules
-    const fallbackPath = path.resolve(__dirname, 'node_modules', pkgName, subPath);
-    if (fs.existsSync(fallbackPath)) return fallbackPath;
+    const paths = [
+      path.resolve(__dirname, 'node_modules', pkgName, subPath),
+      path.resolve(process.cwd(), 'node_modules', pkgName, subPath)
+    ];
 
-    return pkgName; // Let Vite handle it if all else fails
+    for (const p of paths) {
+      if (fs.existsSync(p)) {
+        console.log(`Fallback resolved ${pkgName} to: ${p}`);
+        return p;
+      }
+    }
+
+    console.warn(`Could not resolve ${pkgName} build at ${subPath}`);
+    return undefined; // Let Vite handle it naturally if all else fails
   };
 
   const threePath = getModulePath('three', 'build/three.module.js');
@@ -115,12 +131,18 @@ export default defineConfig(({ mode }) => {
       'process.env.BLOB_READ_WRITE_TOKEN': JSON.stringify(env.BLOB_READ_WRITE_TOKEN)
     },
     resolve: {
-      alias: {
-        '@': path.resolve(__dirname, '.'),
-        '@decartai/sdk': path.resolve(__dirname, 'node_modules/@decartai/sdk/dist/index.js'),
-        'three': threePath,
-        '@sparkjsdev/spark': sparkPath,
-      },
+      alias: (() => {
+        const a: Record<string, string> = {
+          '@': path.resolve(__dirname, '.'),
+          '@decartai/sdk': path.resolve(__dirname, 'node_modules/@decartai/sdk/dist/index.js'),
+        };
+        if (threePath) a['three'] = threePath;
+        if (sparkPath) a['@sparkjsdev/spark'] = sparkPath;
+        return a;
+      })(),
+    },
+    ssr: {
+      noExternal: ['three', '@sparkjsdev/spark'],
     },
     build: {
       rollupOptions: {
