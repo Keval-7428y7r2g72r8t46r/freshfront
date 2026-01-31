@@ -3,16 +3,34 @@ import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import { createRequire } from 'module';
+import { fileURLToPath } from 'url';
 
 const require = createRequire(import.meta.url);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
 
   // Robustly resolve dependencies that might have issues in Vercel's environment
   // We use require.resolve to find the CJS entry, then map to the ESM build in the same directory.
-  const threePath = path.resolve(path.dirname(require.resolve('three')), 'three.module.js');
-  const sparkPath = path.resolve(path.dirname(require.resolve('@sparkjsdev/spark')), 'spark.module.js');
+  let threePath = '';
+  let sparkPath = '';
+
+  try {
+    threePath = path.resolve(path.dirname(require.resolve('three')), 'three.module.js');
+  } catch (e) {
+    console.warn('Could not resolve "three" via require.resolve, using fallback path');
+    threePath = path.resolve(__dirname, 'node_modules/three/build/three.module.js');
+  }
+
+  try {
+    sparkPath = path.resolve(path.dirname(require.resolve('@sparkjsdev/spark')), 'spark.module.js');
+  } catch (e) {
+    console.warn('Could not resolve "@sparkjsdev/spark" via require.resolve, using fallback path');
+    // Fallback based on typical structure if possible
+    sparkPath = path.resolve(__dirname, 'node_modules/@sparkjsdev/spark/dist/spark.module.js');
+  }
 
   return {
     server: {
