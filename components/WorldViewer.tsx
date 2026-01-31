@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import * as THREE from 'three';
+import { WebGLRenderer, Scene, PerspectiveCamera, Clock, Color } from 'three';
 import { SparkRenderer, SplatMesh, SparkControls } from '@sparkjsdev/spark';
 import { WorldAsset } from '../types';
 
@@ -16,9 +16,9 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose }) => {
     useEffect(() => {
         if (!containerRef.current) return;
 
-        let renderer: THREE.WebGLRenderer | null = null;
-        let scene: THREE.Scene | null = null;
-        let camera: THREE.PerspectiveCamera | null = null;
+        let renderer: WebGLRenderer | null = null;
+        let scene: Scene | null = null;
+        let camera: PerspectiveCamera | null = null;
         let spark: SparkRenderer | null = null;
         let controls: SparkControls | null = null;
         let animationId: number | null = null;
@@ -65,16 +65,16 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose }) => {
                 }
 
                 // Setup THREE.js
-                scene = new THREE.Scene();
-                scene.background = new THREE.Color(0x000000);
+                scene = new Scene();
+                scene.background = new Color(0x000000);
 
                 const width = containerRef.current!.clientWidth;
                 const height = containerRef.current!.clientHeight;
 
-                camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
+                camera = new PerspectiveCamera(60, width / height, 0.1, 1000);
                 camera.position.set(0, 1, 3);
 
-                renderer = new THREE.WebGLRenderer({ antialias: false });
+                renderer = new WebGLRenderer({ antialias: false });
                 renderer.setSize(width, height);
                 renderer.setPixelRatio(window.devicePixelRatio);
                 containerRef.current!.appendChild(renderer.domElement);
@@ -96,7 +96,7 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose }) => {
                 // Center camera roughly - usually splats are at 0,0,0
                 // splat.position.set(0, 0, 0);
 
-                const clock = new THREE.Clock();
+                const clock = new Clock();
 
                 renderer.setAnimationLoop(() => {
                     if (!renderer || !scene || !camera || !controls) return;
