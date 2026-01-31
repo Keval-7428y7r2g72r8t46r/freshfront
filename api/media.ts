@@ -60,8 +60,8 @@ const ALLOWED: Record<string, LegacyModule> = {
 };
 
 const getBlobToken = () =>
-  process.env.BLOB_READ_WRITE_TOKEN ||
   process.env.researcher_READ_WRITE_TOKEN ||
+  process.env.BLOB_READ_WRITE_TOKEN ||
   undefined;
 
 export default {
@@ -76,46 +76,28 @@ export default {
         if (request.method !== 'POST') return error('Method not allowed', 405);
 
         const body = (await request.json()) as HandleUploadBody;
-        const token = getBlobToken();
-
-        console.log('[Media API] Handle Upload Token Request');
-        console.log('[Media API] BLOB_READ_WRITE_TOKEN present:', !!process.env.BLOB_READ_WRITE_TOKEN);
-        console.log('[Media API] researcher_READ_WRITE_TOKEN present:', !!process.env.researcher_READ_WRITE_TOKEN);
-
-        if (token) {
-          console.log('[Media API] Token being used (first 8 chars):', token.substring(0, 8) + '...');
-        } else {
-          console.error('[Media API] NO TOKEN FOUND in environment variables');
-        }
-
-        try {
-          const jsonResponse = await handleUpload({
-            body,
-            request,
-            token,
-            onBeforeGenerateToken: async (pathname) => {
-              return {
-                allowedContentTypes: [
-                  'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-                  'video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm', 'video/ogg',
-                  'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp4', 'audio/aac',
-                  // Documents
-                  'application/pdf', 'text/csv', 'text/plain', 'text/markdown',
-                  'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                  'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                ],
-                addRandomSuffix: true,
-              };
-            },
-            onUploadCompleted: async ({ blob }) => {
-              console.log('[Media API] Blob upload completed:', blob.url);
-            },
-          });
-          return json(jsonResponse);
-        } catch (e: any) {
-          console.error('[Media API] handleUpload error:', e);
-          return error(e.message || 'Failed to handle upload token', 500, { error: e.message });
-        }
+        const jsonResponse = await handleUpload({
+          body,
+          request,
+          onBeforeGenerateToken: async (pathname) => {
+            return {
+              allowedContentTypes: [
+                'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+                'video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm', 'video/ogg',
+                'audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp4', 'audio/aac',
+                // Documents
+                'application/pdf', 'text/csv', 'text/plain', 'text/markdown',
+                'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              ],
+              addRandomSuffix: true,
+            };
+          },
+          onUploadCompleted: async ({ blob }) => {
+            console.log('[Media API] Blob upload completed:', blob.url);
+          },
+        });
+        return json(jsonResponse);
       }
 
       if (op === 'upload-blob') {
@@ -188,228 +170,47 @@ export default {
       }
     }
 
-    // Luma Proxy Operations
-    if (op === 'luma-modify') {
-      if (request.method !== 'POST') return error('Method not allowed', 405);
-      const apiKey = process.env.VITE_LUMA_API_KEY;
-      if (!apiKey) return error('Server configuration error: Missing Luma API Key', 500);
+    // Proxy World Labs Asset Operation
+    if (op === 'proxy-world-asset') {
+      const assetUrl = url.searchParams.get('url');
+      if (!assetUrl) return error('Missing url parameter', 400);
+
+      // Security: Only allow World Labs CDN
+      if (!assetUrl.startsWith('https://cdn.marble.worldlabs.ai/')) {
+        console.warn('[Media API] Rejected non-World Labs URL:', assetUrl);
+        return error('Invalid asset URL - only World Labs CDN is allowed', 403);
+      }
 
       try {
-        const body = await request.json();
-        const response = await fetch('https://api.lumalabs.ai/dream-machine/v1/generations/video/modify', {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-          },
-          body: JSON.stringify(body)
-        });
+        console.log('[Media API] Proxying World Labs asset:', assetUrl);
+        const response = await fetch(assetUrl);
 
-        const data = await response.json();
-        return json(data, response.status);
+        if (!response.ok) {
+          console.error('[Media API] World Labs CDN returned error:', response.status);
+          return error(`Failed to fetch asset: ${response.status}`, response.status);
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const contentType = response.headers.get('content-type') || 'application/octet-stream';
+
+        // Headers for CORS and caching
+        const headers = {
+          'Content-Type': contentType,
+          'Cache-Control': 'public, max-age=86400', // 24 hours for large 3D files
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, OPTIONS',
+          'Content-Length': buffer.length.toString()
+        };
+
+        return new Response(buffer, { status: 200, headers });
       } catch (e: any) {
-        console.error('[Media API] Luma modify failed:', e);
-        return error(e?.message || 'Luma modify failed', 500);
+        console.error('[Media API] Proxy world asset failed:', e);
+        return error('Failed to proxy world asset', 500);
       }
     }
 
-    if (op === 'luma-get-generation') {
-      const id = url.searchParams.get('id');
-      if (!id) return error('Missing id', 400);
-
-      const apiKey = process.env.VITE_LUMA_API_KEY;
-      if (!apiKey) return error('Server configuration error: Missing Luma API Key', 500);
-
-      try {
-        const response = await fetch(`https://api.lumalabs.ai/dream-machine/v1/generations/${id}`, {
-          method: 'GET',
-          headers: {
-            'Accept': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-          }
-        });
-
-        const data = await response.json();
-        return json(data, response.status);
-      } catch (e: any) {
-        console.error('[Media API] Luma get generation failed:', e);
-        return error(e?.message || 'Luma get generation failed', 500);
-      }
-    }
-
-    // World Labs Proxy Operations
-    if (op === 'worldlabs-generate') {
-      if (request.method !== 'POST') return error('Method not allowed', 405);
-      const apiKey = process.env.WORLD_LABS_API_KEY;
-      if (!apiKey) return error('Server configuration error: Missing World Labs API Key', 500);
-
-      try {
-        const body = await request.json();
-        const response = await fetch('https://api.worldlabs.ai/marble/v1/worlds:generate', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'WLT-Api-Key': apiKey,
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify(body)
-        });
-
-        const data = await response.json();
-        return json(data, response.status);
-      } catch (e: any) {
-        console.error('[Media API] World Labs generate failed:', e);
-        return error(e?.message || 'World Labs generate failed', 500);
-      }
-    }
-
-    if (op === 'worldlabs-get-operation') {
-      const id = url.searchParams.get('id');
-      if (!id) return error('Missing id', 400);
-
-      const apiKey = process.env.WORLD_LABS_API_KEY;
-      if (!apiKey) return error('Server configuration error: Missing World Labs API Key', 500);
-
-      try {
-        const response = await fetch(`https://api.worldlabs.ai/marble/v1/operations/${id}`, {
-          method: 'GET',
-          headers: {
-            'WLT-Api-Key': apiKey,
-            'Accept': 'application/json'
-          }
-        });
-
-        const data = await response.json();
-        return json(data, response.status);
-      } catch (e: any) {
-        console.error('[Media API] World Labs get operation failed:', e);
-        return error(e?.message || 'World Labs get operation failed', 500);
-      }
-    }
-
-    if (op === 'worldlabs-prepare-upload') {
-      if (request.method !== 'POST') return error('Method not allowed', 405);
-      const apiKey = process.env.WORLD_LABS_API_KEY;
-      if (!apiKey) return error('Server configuration error: Missing World Labs API Key', 500);
-
-      try {
-        const body = await request.json();
-        const response = await fetch('https://api.worldlabs.ai/marble/v1/media-assets:prepare_upload', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'WLT-Api-Key': apiKey,
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify(body)
-        });
-
-        const data = await response.json();
-        return json(data, response.status);
-      } catch (e: any) {
-        console.error('[Media API] World Labs prepare upload failed:', e);
-        return error(e?.message || 'World Labs prepare upload failed', 500);
-      }
-    }
-
-    if (op === 'worldlabs-get-world') {
-      const id = url.searchParams.get('id');
-      if (!id) return error('Missing id', 400);
-
-      const apiKey = process.env.WORLD_LABS_API_KEY;
-      if (!apiKey) return error('Server configuration error: Missing World Labs API Key', 500);
-
-      try {
-        const response = await fetch(`https://api.worldlabs.ai/marble/v1/worlds/${id}`, {
-          method: 'GET',
-          headers: {
-            'WLT-Api-Key': apiKey,
-            'Accept': 'application/json'
-          }
-        });
-
-        const data = await response.json();
-        return json(data, response.status);
-      } catch (e: any) {
-        console.error('[Media API] World Labs get world failed:', e);
-        return error(e?.message || 'World Labs get world failed', 500);
-      }
-    }
-
-    if (op === 'worldlabs-list-worlds') {
-      if (request.method !== 'POST') return error('Method not allowed', 405);
-      const apiKey = process.env.WORLD_LABS_API_KEY;
-      if (!apiKey) return error('Server configuration error: Missing World Labs API Key', 500);
-
-      try {
-        const body = await request.json();
-        const response = await fetch('https://api.worldlabs.ai/marble/v1/worlds:list', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'WLT-Api-Key': apiKey,
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify(body)
-        });
-
-        const data = await response.json();
-        return json(data, response.status);
-      } catch (e: any) {
-        console.error('[Media API] World Labs list worlds failed:', e);
-        return error(e?.message || 'World Labs list worlds failed', 500);
-      }
-    }
-
-    // xAI Proxy Operations
-    if (op === 'xai-edit-video') {
-      if (request.method !== 'POST') return error('Method not allowed', 405);
-      const apiKey = process.env.XAI_API_KEY;
-      if (!apiKey) return error('Server configuration error: Missing xAI API Key', 500);
-
-      try {
-        const body = await request.json();
-        const response = await fetch('https://api.x.ai/v1/videos/edits', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-          },
-          body: JSON.stringify(body)
-        });
-
-        const data = await response.json();
-        return json(data, response.status);
-      } catch (e: any) {
-        console.error('[Media API] xAI edit video failed:', e);
-        return error(e?.message || 'xAI edit video failed', 500);
-      }
-    }
-
-    if (op === 'xai-get-video') {
-      const id = url.searchParams.get('id');
-      if (!id) return error('Missing id', 400);
-
-      const apiKey = process.env.XAI_API_KEY;
-      if (!apiKey) return error('Server configuration error: Missing xAI API Key', 500);
-
-      try {
-        const response = await fetch(`https://api.x.ai/v1/videos/${id}`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${apiKey}`
-          }
-        });
-
-        const data = await response.json();
-        return json(data, response.status);
-      } catch (e: any) {
-        console.error('[Media API] xAI get video failed:', e);
-        return error(e?.message || 'xAI get video failed', 500);
-      }
-    }
-
+    // Legacy Modules
     const mod = ALLOWED[op];
     if (!mod) return error('Not found', 404);
 
