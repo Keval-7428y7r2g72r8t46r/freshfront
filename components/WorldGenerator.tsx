@@ -176,21 +176,10 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
     };
 
     return (
-        <div className="w-full space-y-8 animate-in fade-in duration-700">
-            {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-baseline justify-between gap-4 border-b pb-6 border-gray-100 dark:border-gray-800">
-                <div>
-                    <h2 className={`text-4xl font-extrabold tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-2`}>
-                        World Generator
-                    </h2>
-                    <p className={`text-base ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} max-w-2xl leading-relaxed`}>
-                        Transform your ideas into navigable 3D worlds using generative AI.
-                        Start with text, or guide the structure with images and video.
-                    </p>
-                </div>
-
-                {/* Modern Segmented Control */}
-                <div className={`flex p-1 ${isDarkMode ? 'bg-[#1c1c1e]' : 'bg-gray-100'} rounded-2xl border ${isDarkMode ? 'border-gray-800' : 'border-gray-200'} self-start md:self-end`}>
+        <div className="w-full space-y-4 animate-in fade-in duration-700">
+            {/* Mode Selection */}
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+                <div className={`flex p-1 ${isDarkMode ? 'bg-[#1c1c1e]' : 'bg-gray-100'} rounded-xl border ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
@@ -199,9 +188,9 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
                                 if (tab.id !== 'text') setInputMode(tab.id === 'multi-image' ? 'asset' : 'upload');
                             }}
                             className={`
-                                relative px-5 py-2 text-sm font-bold rounded-xl transition-all duration-300 flex items-center gap-2
+                                relative px-4 py-1.5 text-xs font-bold rounded-lg transition-all duration-300 flex items-center gap-2
                                 ${activeTab === tab.id
-                                    ? (isDarkMode ? 'bg-gray-800 text-white shadow-lg ring-1 ring-white/10' : 'bg-white text-indigo-600 shadow-md ring-1 ring-black/5')
+                                    ? (isDarkMode ? 'bg-gray-800 text-white shadow-sm ring-1 ring-white/10' : 'bg-white text-indigo-600 shadow-sm ring-1 ring-black/5')
                                     : (isDarkMode ? 'text-gray-500 hover:text-gray-300' : 'text-gray-500 hover:text-indigo-600')
                                 }
                             `}
@@ -213,11 +202,11 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
                 {/* Left Column: Controls (Prompt & Inputs) */}
                 <div className="xl:col-span-5 space-y-6">
                     {/* Prompt Input */}
-                    <div className={`relative rounded-3xl p-6 ${isDarkMode ? 'bg-[#1c1c1e] border-[#3d3d3f]/60' : 'bg-white border-gray-200 shadow-sm'} border`}>
+                    <div className={`relative rounded-2xl p-5 ${isDarkMode ? 'bg-[#111111]/50 border-[#3d3d3f]/40' : 'bg-gray-50 border-gray-200'} border`}>
                         <div className="flex items-center gap-2 mb-4">
                             <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-500">
                                 <IconMagic />
@@ -253,10 +242,10 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
                             onClick={handleGenerate}
                             disabled={isGenerating}
                             className={`
-                                relative w-full py-5 rounded-[2rem] font-black text-lg flex items-center justify-center gap-3 transition-all duration-300
+                                relative w-full py-3.5 rounded-2xl font-bold text-base flex items-center justify-center gap-3 transition-all duration-300
                                 ${isGenerating
                                     ? (isDarkMode ? 'bg-[#2c2c2e] cursor-wait text-gray-500' : 'bg-gray-100 cursor-wait text-gray-400')
-                                    : (isDarkMode ? 'bg-white text-gray-900 hover:scale-[1.01]' : 'bg-indigo-600 text-white hover:scale-[1.01] shadow-2xl shadow-indigo-500/30')
+                                    : 'bg-[#0071e3] text-white hover:bg-[#0077ed] hover:scale-[1.01]'
                                 }
                             `}
                         >
@@ -284,7 +273,7 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
                 {/* Right Column: Reference Assets or Tips */}
                 <div className="xl:col-span-7">
                     {(activeTab !== 'text') ? (
-                        <div className={`rounded-3xl border ${isDarkMode ? 'bg-[#1c1c1e] border-[#3d3d3f]/60' : 'bg-white border-gray-200 shadow-sm'} p-6 flex flex-col h-full min-h-[440px]`}>
+                        <div className={`rounded-2xl border ${isDarkMode ? 'bg-[#111111]/50 border-[#3d3d3f]/40' : 'bg-gray-50 border-gray-200'} p-5 flex flex-col h-full min-h-[400px]`}>
                             {/* Sub-Header / Toggle */}
                             {activeTab !== 'multi-image' && (
                                 <div className="flex items-center justify-between mb-6">
@@ -366,12 +355,12 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
                         </div>
                     ) : (
                         // Placeholder / Creative Tips when in Text Mode
-                        <div className={`h-full flex flex-col items-center justify-center p-12 text-center rounded-3xl border border-dashed ${isDarkMode ? 'bg-[#1c1c1e] border-gray-800' : 'bg-gray-50 border-gray-200'} min-h-[440px]`}>
+                        <div className={`h-full flex flex-col items-center justify-center p-8 text-center rounded-2xl border border-dashed ${isDarkMode ? 'bg-[#111111]/30 border-gray-800' : 'bg-gray-50 border-gray-200'} min-h-[400px]`}>
                             <div className={`w-20 h-20 rounded-3xl flex items-center justify-center ${isDarkMode ? 'bg-gray-800 shadow-2xl' : 'bg-white shadow-xl'} mb-8 transform -rotate-3 hover:rotate-0 transition-transform duration-500`}>
                                 <span className="text-4xl">�</span>
                             </div>
-                            <h3 className={`text-2xl font-black ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-4 tracking-tight`}>AI World Labs</h3>
-                            <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-lg max-w-sm leading-relaxed mb-8`}>
+                            <h3 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'} mb-3 tracking-tight`}>AI World Labs</h3>
+                            <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-600'} text-sm max-w-sm leading-relaxed mb-6`}>
                                 Describe the environment, lighting, and mood. The more descriptive, the better the result.
                             </p>
                             <div className={`flex flex-wrap justify-center gap-3`}>
