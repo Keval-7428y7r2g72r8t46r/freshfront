@@ -2,16 +2,27 @@ import React, { useEffect, useRef, useState } from 'react';
 import { WebGLRenderer, Scene, PerspectiveCamera, Clock, Color } from 'three';
 import { SparkRenderer, SplatMesh, SparkControls } from '@sparkjsdev/spark';
 import { WorldAsset } from '../types';
+import AnnotationCanvas, { AnnotationCanvasHandle } from './AnnotationCanvas';
+import { compositeImages, dataUrlToBlob, downloadDataUrl } from '../utils/canvasComposite';
+import { storageService } from '../services/storageService';
 
 interface WorldViewerProps {
     world: WorldAsset;
     onClose: () => void;
+    projectId?: string;
 }
 
-export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose }) => {
+export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose, projectId }) => {
     const containerRef = useRef<HTMLDivElement>(null);
+    const annotationCanvasRef = useRef<AnnotationCanvasHandle>(null);
+    const rendererRef = useRef<WebGLRenderer | null>(null);
+    const controlsRef = useRef<SparkControls | null>(null);
+
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
+    const [annotationMode, setAnnotationMode] = useState(false);
+    const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+    const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         if (!containerRef.current) return;
@@ -22,6 +33,16 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose }) => {
         let spark: SparkRenderer | null = null;
         let controls: SparkControls | null = null;
         let animationId: number | null = null;
+
+        // Track container size for annotation canvas
+        const updateSize = () => {
+            if (containerRef.current) {
+                setContainerSize({
+                    width: containerRef.current.clientWidth,
+                    height: containerRef.current.clientHeight
+                });
+            }
+        };
 
         const handleResize = () => {
             if (!containerRef.current || !camera || !renderer) return;
@@ -105,8 +126,13 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose }) => {
                 renderer.setPixelRatio(window.devicePixelRatio);
                 containerRef.current!.appendChild(renderer.domElement);
 
+                // Store refs for external access
+                rendererRef.current = renderer;
+                updateSize();
+
                 // Controls
                 controls = new SparkControls({ canvas: renderer.domElement });
+                controlsRef.current = controls;
 
                 // Spark Renderer - add as child of camera for better precision
                 spark = new SparkRenderer({ renderer });
@@ -134,7 +160,10 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose }) => {
                     if (!renderer || !scene || !camera || !controls) return;
 
                     const delta = clock.getDelta();
-                    controls.update(camera);
+                    // Only update controls if not in annotation mode
+                    if (!annotationMode) {
+                        controls.update(camera);
+                    }
                     renderer.render(scene, camera);
                 });
 
@@ -160,7 +189,79 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose }) => {
             if (controls) (controls as any).dispose?.();
             scene?.clear();
         };
-    }, [world]);
+    }, [world, annotationMode]);
+
+    const captureScreen = async (): Promise<string> => {
+        const renderer = rendererRef.current;
+        if (!renderer) throw new Error('Renderer not initialized');
+
+        // Get 3D viewer screenshot
+        const viewerDataUrl = renderer.domElement.toDataURL('image/png');
+
+        // Get annotation canvas if it exists
+        const annotationDataUrl = annotationCanvasRef.current?.toDataURL('image/png');
+
+        // Composite both images
+        const composite = await compositeImages(viewerDataUrl, annotationDataUrl);
+        return composite;
+    };
+
+    const handleDownload = async () => {
+        try {
+            const dataUrl = await captureScreen();
+            const filename = `world-${world.id}-${Date.now()}.png`;
+            downloadDataUrl(dataUrl, filename);
+        } catch (e: any) {
+            console.error('Failed to download screenshot:', e);
+            alert('Failed to download screenshot');
+        }
+    };
+
+    const handleSaveToAssets = async () => {
+        if (!projectId) {
+            alert('No project ID available');
+            return;
+        }
+
+        try {
+            setSaving(true);
+            const dataUrl = await captureScreen();
+            const blob = dataUrlToBlob(dataUrl);
+
+            // Upload to blob storage
+            const formData = new FormData();
+            formData.append('file', blob, `world-annotation-${Date.now()}.png`);
+
+            const uploadResponse = await fetch(
+                `/api/media?op=upload-blob&projectId=${projectId}&filename=world-annotation-${Date.now()}.png&contentType=image/png`,
+                {
+                    method: 'POST',
+                    body: blob
+                }
+            );
+
+            if (!uploadResponse.ok) {
+                throw new Error('Failed to upload image');
+            }
+
+            const uploadData = await uploadResponse.json();
+
+            // Add to project assets (you may need to update this based on your asset structure)
+            console.log('Image uploaded successfully:', uploadData.url);
+            alert('Screenshot saved to assets!');
+
+        } catch (e: any) {
+            console.error('Failed to save to assets:', e);
+            alert('Failed to save to assets');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleAnnotationCapture = (dataUrl: string) => {
+        // This is called by AnnotationCanvas when needed
+        // Currently not used, but available for future features
+    };
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md">
@@ -169,15 +270,52 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose }) => {
                 {/* Header */}
                 <div className="flex items-center justify-between mb-2 text-white">
                     <h2 className="text-lg font-semibold truncate">{world.prompt}</h2>
-                    <button
-                        onClick={onClose}
-                        className="p-2 hover:bg-white/10 rounded-full transition-colors"
-                        title="Close Viewer"
-                    >
-                        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+
+                    <div className="flex items-center gap-2">
+                        {/* Annotation Toggle */}
+                        <button
+                            onClick={() => setAnnotationMode(!annotationMode)}
+                            className={`px-4 py-2 rounded-lg transition-colors font-medium ${annotationMode
+                                ? 'bg-indigo-600 hover:bg-indigo-700'
+                                : 'bg-white/10 hover:bg-white/20'
+                                }`}
+                            title="Toggle Annotation Mode"
+                        >
+                            {annotationMode ? '✏️ Annotating' : '✏️ Annotate'}
+                        </button>
+
+                        {/* Download Button */}
+                        <button
+                            onClick={handleDownload}
+                            className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors font-medium"
+                            title="Download Screenshot"
+                        >
+                            📥 Download
+                        </button>
+
+                        {/* Save to Assets Button */}
+                        {projectId && (
+                            <button
+                                onClick={handleSaveToAssets}
+                                disabled={saving}
+                                className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors font-medium"
+                                title="Save to Assets"
+                            >
+                                {saving ? '💾 Saving...' : '💾 Save to Assets'}
+                            </button>
+                        )}
+
+                        {/* Close Button */}
+                        <button
+                            onClick={onClose}
+                            className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                            title="Close Viewer"
+                        >
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
                 {/* 3D Container */}
@@ -212,11 +350,26 @@ export const WorldViewer: React.FC<WorldViewerProps> = ({ world, onClose }) => {
                             </div>
                         </div>
                     )}
+
+                    {/* Annotation Canvas Overlay */}
+                    {containerSize.width > 0 && containerSize.height > 0 && (
+                        <AnnotationCanvas
+                            ref={annotationCanvasRef}
+                            width={containerSize.width}
+                            height={containerSize.height}
+                            enabled={annotationMode}
+                            onToggle={setAnnotationMode}
+                            onCapture={handleAnnotationCapture}
+                        />
+                    )}
                 </div>
 
                 {/* Controls Hint */}
                 <div className="mt-2 text-center text-xs text-white/50">
-                    Left Click: Rotate • Right Click: Pan • Scroll: Zoom • Arrow Keys: Look/Move
+                    {annotationMode
+                        ? '🎨 Annotation Mode Active - Use toolbar to draw • Toggle off to navigate'
+                        : 'Left Click: Rotate • Right Click: Pan • Scroll: Zoom • Arrow Keys: Look/Move'
+                    }
                 </div>
             </div>
         </div>
