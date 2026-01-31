@@ -525,6 +525,7 @@ export const createResearchProjectInFirestore = async (uid: string, project: Res
       emailTemplates: project.emailTemplates || [],
       theme: project.theme || null,
       pinnedAssetIds: project.pinnedAssetIds || [],
+      worlds: project.worlds || [],
     });
     await setDoc(projectRef, projectData);
     console.log("Research project created in Firestore:", project.id);
@@ -570,6 +571,7 @@ export const getResearchProjectsFromFirestore = async (uid: string): Promise<Res
         emailTemplates: data.emailTemplates || [],
         theme: data.theme,
         pinnedAssetIds: data.pinnedAssetIds || [],
+        worlds: data.worlds || [],
       } as ResearchProject;
     });
 
@@ -621,6 +623,7 @@ export const getResearchProjectsFromFirestore = async (uid: string): Promise<Res
         // otherwise fall back to the project's theme (or null)
         theme: (refData as any).theme || data.theme,
         pinnedAssetIds: data.pinnedAssetIds || [],
+        worlds: data.worlds || [],
       } as ResearchProject);
     }
 
@@ -825,11 +828,10 @@ export const getResearchProjectFromFirestore = async (
         currentUserRole: 'owner',
         // Clear any persisted active research flags on hydration; the live
         // in-progress state is tracked separately in App and BlogCreator.
-        activeResearchTopic: null,
-        activeResearchStartedAt: null,
         emailTemplates: data.emailTemplates || [], // Add emailTemplates to shared projects
         theme: data.theme,
         pinnedAssetIds: data.pinnedAssetIds || [],
+        worlds: data.worlds || [],
       } as ResearchProject;
 
       return project;
