@@ -42,25 +42,12 @@ const RESEARCH_PROJECTS_OWNER_KEY = 'gemini_research_projects_owner_uid';
 let currentUserUid: string | null = null;
 let localStorageWriteTimeout: NodeJS.Timeout | null = null;
 
-const safeLocalStorageSetItem = (key: string, value: string) => {
-  try {
-    localStorage.setItem(key, value);
-  } catch (e: any) {
-    if (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014 || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
-      console.warn(`[StorageService] LocalStorage quota exceeded for key "${key}". Data not saved locally.`);
-      // We don't throw here to allow the app to continue (e.g. syncing to Firestore)
-    } else {
-      console.error(`[StorageService] Failed to save to localStorage key "${key}"`, e);
-    }
-  }
-};
-
 const debouncedLocalStorageSave = (key: string, data: any) => {
   if (localStorageWriteTimeout) {
     clearTimeout(localStorageWriteTimeout);
   }
   localStorageWriteTimeout = setTimeout(() => {
-    safeLocalStorageSetItem(key, JSON.stringify(data));
+    localStorage.setItem(key, JSON.stringify(data));
     localStorageWriteTimeout = null;
   }, 100);
 };
@@ -70,7 +57,7 @@ const immediateLocalStorageSave = (key: string, data: any) => {
     clearTimeout(localStorageWriteTimeout);
     localStorageWriteTimeout = null;
   }
-  safeLocalStorageSetItem(key, JSON.stringify(data));
+  localStorage.setItem(key, JSON.stringify(data));
 };
 
 export const storageService = {
@@ -151,7 +138,7 @@ export const storageService = {
         const firestoreProjects = await getProjectsFromFirestore(currentUserUid);
         if (firestoreProjects.length > 0) {
           // Also update localStorage for offline access
-          safeLocalStorageSetItem(STORAGE_KEY, JSON.stringify(firestoreProjects));
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(firestoreProjects));
           return firestoreProjects;
         }
       } catch (e) {
@@ -189,7 +176,7 @@ export const storageService = {
     };
 
     projects.unshift(newProject);
-    safeLocalStorageSetItem(STORAGE_KEY, JSON.stringify(projects));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
 
     // Sync to Firestore if user is logged in
     if (currentUserUid) {
@@ -217,7 +204,7 @@ export const storageService = {
     };
 
     projects.unshift(newProject);
-    safeLocalStorageSetItem(STORAGE_KEY, JSON.stringify(projects));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
 
     // Async sync to Firestore
     if (currentUserUid) {
@@ -235,7 +222,7 @@ export const storageService = {
     if (index !== -1) {
       projects[index].researchReport = report;
       projects[index].lastModified = Date.now();
-      safeLocalStorageSetItem(STORAGE_KEY, JSON.stringify(projects));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
 
       // Sync to Firestore
       if (currentUserUid) {
@@ -283,7 +270,7 @@ export const storageService = {
       };
       fallbackProject.websiteVersions.push(newVersion);
       projects.unshift(fallbackProject);
-      safeLocalStorageSetItem(STORAGE_KEY, JSON.stringify(projects));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
 
       // Sync to Firestore
       if (currentUserUid) {
@@ -308,7 +295,7 @@ export const storageService = {
     const [updatedProject] = projects.splice(index, 1);
     projects.unshift(updatedProject);
 
-    safeLocalStorageSetItem(STORAGE_KEY, JSON.stringify(projects));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
 
     // Sync to Firestore
     if (currentUserUid) {
@@ -328,7 +315,7 @@ export const storageService = {
     if (index !== -1 && projects[index].websiteVersions.length > 0) {
       projects[index].websiteVersions[0].html = html;
       projects[index].lastModified = Date.now();
-      safeLocalStorageSetItem(STORAGE_KEY, JSON.stringify(projects));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
 
       // Sync to Firestore
       if (currentUserUid) {
@@ -346,7 +333,7 @@ export const storageService = {
 
   deleteProject: async (id: string) => {
     const projects = storageService.getLocalProjects().filter(p => p.id !== id);
-    safeLocalStorageSetItem(STORAGE_KEY, JSON.stringify(projects));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
 
     // Sync to Firestore
     if (currentUserUid) {
@@ -363,7 +350,7 @@ export const storageService = {
     const project = projects.find(p => p.id === id);
     if (project) {
       project.topic = newTopic;
-      safeLocalStorageSetItem(STORAGE_KEY, JSON.stringify(projects));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
 
       // Sync to Firestore
       if (currentUserUid) {
@@ -444,7 +431,7 @@ export const storageService = {
           projectCache.setProjects(firestoreProjects);
           debouncedLocalStorageSave(RESEARCH_PROJECTS_KEY, firestoreProjects);
           try {
-            safeLocalStorageSetItem(RESEARCH_PROJECTS_OWNER_KEY, currentUserUid);
+            localStorage.setItem(RESEARCH_PROJECTS_OWNER_KEY, currentUserUid);
           } catch (e) {
             console.warn('Failed to persist research projects owner uid to localStorage', e);
           }
@@ -473,7 +460,7 @@ export const storageService = {
           projectCache.setProjects(localProjects);
           debouncedLocalStorageSave(RESEARCH_PROJECTS_KEY, localProjects);
           try {
-            safeLocalStorageSetItem(RESEARCH_PROJECTS_OWNER_KEY, currentUserUid);
+            localStorage.setItem(RESEARCH_PROJECTS_OWNER_KEY, currentUserUid);
           } catch (e) {
             console.warn('Failed to persist research projects owner uid to localStorage after sync', e);
           }
@@ -1439,7 +1426,8 @@ export const storageService = {
         aiInsights: project.aiInsights,
         activeResearchTopic: project.activeResearchTopic,
         activeResearchStartedAt: project.activeResearchStartedAt,
-        activeResearchStatus: project.activeResearchStatus
+        activeResearchStatus: project.activeResearchStatus,
+        worlds: project.worlds || [],
       });
       console.log("Project fully synced to Firestore:", project.id);
     } catch (e) {
@@ -1667,7 +1655,7 @@ export const storageService = {
           lastModified: Date.now()
         };
         projects[projectIndex].lastModified = Date.now();
-        safeLocalStorageSetItem(RESEARCH_PROJECTS_KEY, JSON.stringify(projects));
+        localStorage.setItem(RESEARCH_PROJECTS_KEY, JSON.stringify(projects));
 
         projectCache.setProject(projects[projectIndex]);
 
