@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => {
       allowedHosts: true,
     },
     optimizeDeps: {
-      include: ['@decartai/sdk'],
+      include: ['@decartai/sdk', 'three'],
     },
     plugins: [
       react(),
