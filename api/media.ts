@@ -55,6 +55,7 @@ const ALLOWED: Record<string, LegacyModule> = {
   'video-overview': videoOverview,
   'youtube-video-analysis': youtubeVideoAnalysis,
   'xai-edit-video': xaiVideo,
+  'xai-generate-video': xaiVideo,
   'xai-get-video': xaiVideo,
   // Privacy operations (consolidated from privacy.ts)
   'account-delete': accountDelete,
