@@ -25,6 +25,10 @@ async function xaiFetch(request: Request): Promise<Response> {
         return handleEditVideo(request);
     }
 
+    if (op === 'xai-generate-video') {
+        return handleGenerateVideo(request);
+    }
+
     if (op === 'xai-get-video') {
         return handleGetVideo(request);
     }
@@ -33,6 +37,91 @@ async function xaiFetch(request: Request): Promise<Response> {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
     });
+}
+
+async function handleGenerateVideo(request: Request): Promise<Response> {
+    try {
+        // Verify authentication
+        const authResult = await requireAuth(request);
+        if ('error' in authResult) {
+            return new Response(JSON.stringify({ error: authResult.error }), {
+                status: 401,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }
+
+        if (!XAI_API_KEY) {
+            return new Response(JSON.stringify({ error: 'xAI API key not configured' }), {
+                status: 500,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }
+
+        const body = await request.json();
+        const { prompt, image, duration, aspect_ratio, resolution, model = 'grok-imagine-video' } = body;
+
+        if (!prompt) {
+            return new Response(JSON.stringify({ error: 'Prompt is required' }), {
+                status: 400,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }
+
+        const xaiBody: any = {
+            prompt,
+            model,
+        };
+
+        if (image?.url) xaiBody.image = { url: image.url };
+        if (duration) xaiBody.duration = duration;
+        if (aspect_ratio) xaiBody.aspect_ratio = aspect_ratio;
+        if (resolution) xaiBody.resolution = resolution;
+
+        console.log('[xAI Video] Sending generation request:', {
+            prompt: prompt.substring(0, 50),
+            duration,
+            aspect_ratio
+        });
+
+        // Call xAI API
+        const response = await fetch(`${XAI_BASE_URL}/videos/generations`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${XAI_API_KEY}`,
+            },
+            body: JSON.stringify(xaiBody),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            console.error('[xAI Video] Generation failed:', result);
+            return new Response(JSON.stringify({
+                error: result.error || result.message || `xAI API error: ${response.status}`,
+                details: result
+            }), {
+                status: response.status,
+                headers: { 'Content-Type': 'application/json' },
+            });
+        }
+
+        console.log('[xAI Video] Generation request successful:', result.request_id);
+
+        return new Response(JSON.stringify(result), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+        });
+    } catch (error: any) {
+        console.error('[xAI Video] Generation error:', error);
+        return new Response(JSON.stringify({
+            error: error.message || 'Failed to generate video',
+            details: error.toString()
+        }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+        });
+    }
 }
 
 async function handleEditVideo(request: Request): Promise<Response> {
