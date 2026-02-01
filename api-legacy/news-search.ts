@@ -111,8 +111,17 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json()) as RequestBody;
 
-    const q = (body.q || '').toString().trim();
-    if (!q) return error('Missing q', 400);
+    let rawQ = (body.q || '').toString().trim();
+    if (!rawQ) return error('Missing q', 400);
+
+    // Sanitize query: 
+    // 1. Remove literal backslashes often produced by escaping in generation or transmission
+    // 2. Ensure quotes are balanced to prevent engine-level syntax issues
+    let q = rawQ.replace(/\\"/g, '"').replace(/\\/g, '');
+    const quoteCount = (q.match(/"/g) || []).length;
+    if (quoteCount % 2 !== 0) {
+      q += '"';
+    }
 
     const pageSize = clampInt(body.pageSize, 1, 50, 20);
     const language = (pick<RequestBody>(body, 'language') || 'en').toString().trim().toLowerCase();
