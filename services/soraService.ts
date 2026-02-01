@@ -6,8 +6,8 @@ export type SoraModel = 'sora-2' | 'sora-2-pro' | 'veo-3.1';
 export interface CreateVideoOptions {
   model?: SoraModel;
   prompt: string;
-  seconds?: '4' | '8' | '12';
-  size?: '720x1280' | '1280x720' | '1024x1792' | '1792x1024';
+  seconds?: '4' | '8' | '12' | '5' | '10' | '15';
+  size?: '720x1280' | '1280x720' | '1024x1792' | '1792x1024' | '1024x768' | '1024x1024' | '768x1024' | '1024x682' | '682x1024';
 }
 
 export interface VideoJob {
