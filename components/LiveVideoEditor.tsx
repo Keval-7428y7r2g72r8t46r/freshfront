@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { createDecartClient, models } from '@decartai/sdk';
 import type { DecartSDKError } from '@decartai/sdk';
+import { CreditOperation } from '../services/creditService';
 
 interface LiveVideoEditorProps {
     className?: string;
@@ -9,6 +10,8 @@ interface LiveVideoEditorProps {
     onSelectImage?: () => void;
     onRemoveImage?: () => void;
     isDarkMode?: boolean;
+    checkCredits: (operation: CreditOperation) => Promise<boolean>;
+    deductCredits: (operation: CreditOperation) => Promise<boolean>;
 }
 
 export const LiveVideoEditor: React.FC<LiveVideoEditorProps> = ({
@@ -17,7 +20,9 @@ export const LiveVideoEditor: React.FC<LiveVideoEditorProps> = ({
     imageReference,
     imagePreviewUrl,
     onSelectImage,
-    onRemoveImage
+    onRemoveImage,
+    checkCredits,
+    deductCredits,
 }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -65,6 +70,16 @@ export const LiveVideoEditor: React.FC<LiveVideoEditorProps> = ({
     }, []);
 
     const handleConnect = async () => {
+        // Credit Check
+        const hasCredits = await checkCredits('videoLive');
+        if (!hasCredits) return;
+
+        const success = await deductCredits('videoLive');
+        if (!success) {
+            setError('Failed to deduct credits');
+            return;
+        }
+
         setError(null);
         setIsGenerating(true);
 
