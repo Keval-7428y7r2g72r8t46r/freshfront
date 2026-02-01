@@ -213,6 +213,45 @@ export default {
       }
     }
 
+    // Proxy xAI Video Asset Operation
+    if (op === 'proxy-xai-video') {
+      const videoUrl = url.searchParams.get('url');
+      if (!videoUrl) return error('Missing url parameter', 400);
+
+      // Security: Only allow xAI CDN
+      if (!videoUrl.startsWith('https://vidgen.x.ai/')) {
+        console.warn('[Media API] Rejected non-xAI URL:', videoUrl);
+        return error('Invalid video URL - only xAI CDN is allowed', 403);
+      }
+
+      try {
+        console.log('[Media API] Proxying xAI video:', videoUrl);
+        const response = await fetch(videoUrl);
+
+        if (!response.ok) {
+          console.error('[Media API] xAI CDN returned error:', response.status);
+          return error(`Failed to fetch video: ${response.status}`, response.status);
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        const contentType = response.headers.get('content-type') || 'video/mp4';
+
+        const headers = {
+          'Content-Type': contentType,
+          'Cache-Control': 'public, max-age=3600',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, OPTIONS',
+          'Content-Length': buffer.length.toString()
+        };
+
+        return new Response(buffer, { status: 200, headers });
+      } catch (e: any) {
+        console.error('[Media API] Proxy xAI video failed:', e);
+        return error('Failed to proxy xAI video', 500);
+      }
+    }
+
     // Legacy Modules
     const mod = ALLOWED[op];
     if (!mod) return error('Not found', 404);
