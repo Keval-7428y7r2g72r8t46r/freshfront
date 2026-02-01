@@ -320,86 +320,51 @@ export const editImageWithGeminiNano = async (
     throw new Error('Image and prompt are required for editing');
   }
 
-  // Use Nano Banana Pro (gemini-3-pro-image-preview) for better edit understanding
-  // Falls back to gemini-2.5-flash-image if Pro fails
-  const primaryModel = process.env.MODEL_IMAGE_SMART || 'gemini-3-pro-image-preview';
-  const fallbackModel = process.env.MODEL_IMAGE_FAST || 'gemini-2.5-flash-image';
-
-  // Enhanced prompt that instructs the model to interpret annotations/markups
-  const annotationAwarePrompt = `You are an expert image editor. Analyze this image carefully:
-
-1. ANNOTATION DETECTION: Look for any visible markups, annotations, or drawings on the image such as:
-   - Circles or ovals (indicates areas of focus or elements to modify)
-   - Crosses or X marks (indicates elements to remove or delete)
-   - Arrows (indicates direction of change or elements to add/modify)
-   - Scribbles or highlights (indicates areas to change or enhance)
-   - Text annotations (read and follow any written instructions)
-   - Lines or boxes (indicates boundaries or areas of interest)
-
-2. USER INSTRUCTION: ${prompt.trim()}
-
-3. EDIT TASK: Combine the visual annotations with the user's text instruction to understand the complete edit request. Apply the edits to produce a clean, professional output image WITHOUT the annotation markings visible in the final result.
-
-Generate the edited image now.`;
+  // Uses Gemini 2.5 Flash Image (Nano Banana) or Gemini 3 Pro Image Preview
+  const modelToUse = process.env.MODEL_IMAGE_FAST || 'gemini-2.5-flash-image';
 
   // Construct the prompt with image and text
   const contents = [
     {
       role: 'user',
       parts: [
+        { text: prompt.trim() },
         {
           inlineData: {
             mimeType: mimeType,
             data: imageBase64,
           },
         },
-        { text: annotationAwarePrompt },
       ],
     },
   ];
 
-  const generateWithModel = async (model: string): Promise<Blob> => {
+  try {
     const response = await ai.models.generateContent({
-      model: model,
+      model: modelToUse,
       contents: contents,
-      config: {
-        responseModalities: ['TEXT', 'IMAGE'],
-      },
     });
 
     // Check for inline data (native image handling)
     const candidates = response.candidates;
     if (candidates && candidates.length > 0) {
-      // Find the last non-thought image part (final result)
-      for (let i = candidates[0].content.parts.length - 1; i >= 0; i--) {
-        const part = candidates[0].content.parts[i];
-        if (part.inlineData && part.inlineData.data && !(part as any).thought) {
+      for (const part of candidates[0].content.parts) {
+        if (part.inlineData && part.inlineData.data) {
           // Convert base64 to Blob
           const binaryString = atob(part.inlineData.data);
           const bytes = new Uint8Array(binaryString.length);
-          for (let j = 0; j < binaryString.length; j++) {
-            bytes[j] = binaryString.charCodeAt(j);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
           }
-          return new Blob([bytes], { type: 'image/png' });
+          return new Blob([bytes], { type: 'image/png' }); // Gemini typically returns PNG
         }
       }
     }
 
     throw new Error('No image data returned from Gemini');
-  };
-
-  try {
-    // Try Nano Banana Pro first
-    return await generateWithModel(primaryModel);
-  } catch (primaryError) {
-    console.warn(`[editImageWithGeminiNano] ${primaryModel} failed, falling back to ${fallbackModel}:`, primaryError);
-    try {
-      // Fallback to Nano Banana Flash
-      return await generateWithModel(fallbackModel);
-    } catch (fallbackError) {
-      console.error('Gemini Image Editing failed (both models):', fallbackError);
-      throw fallbackError;
-    }
+  } catch (error) {
+    console.error('Gemini Nano Image Editing failed:', error);
+    throw error;
   }
 }
 
@@ -667,9 +632,15 @@ const sanitizeNewsApiQuery = (value: string): string => {
   // If Gemini outputs something like: q="..." AND ...
   q = q.replace(/^\s*q\s*=\s*/i, '').trim();
 
-  // Remove wrapping quotes
-  if ((q.startsWith('"') && q.endsWith('"')) || (q.startsWith("'") && q.endsWith("'"))) {
-    q = q.slice(1, -1).trim();
+  // Collapse whitespace
+  q = q.replace(/\s+/g, ' ').trim();
+
+  // Remove literal backslashes often produced by escaping in generation or transmission
+  // and ensure quotes are balanced.
+  q = q.replace(/\\"/g, '"').replace(/\\/g, '');
+  const quoteCount = (q.match(/"/g) || []).length;
+  if (quoteCount % 2 !== 0) {
+    q += '"';
   }
 
   // First line only
@@ -3585,13 +3556,7 @@ export const analyzeDocument = async (file: File): Promise<string> => {
 
 
 // Stream the website code generation with error propagation
-// Stream the website code generation with error propagation
-export const streamWebsiteCode = async (
-  spec: string,
-  theme: DualTheme | undefined,
-  onChunk: (text: string) => void,
-  mediaItems?: WebsiteMedia[]
-): Promise<string> => {
+export const streamWebsiteCode = async (spec: string, theme: DualTheme | undefined, onChunk: (text: string) => void): Promise<string> => {
   const streamAi = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   if (!spec) {
@@ -3624,60 +3589,9 @@ export const streamWebsiteCode = async (
   }
 
   try {
-    const imageParts: any[] = [];
-    const hostedMedia: string[] = [];
-    const dataMedia: string[] = [];
-
-    if (mediaItems && mediaItems.length > 0) {
-      mediaItems.forEach((item, idx) => {
-        // Add for AI vision/analysis
-        const base64Data = item.base64 || (item.url.startsWith('data:') ? item.url : null);
-        if (base64Data) {
-          const matches = base64Data.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/);
-          if (matches && matches.length === 3) {
-            imageParts.push({
-              inlineData: {
-                mimeType: matches[1],
-                data: matches[2]
-              }
-            });
-          }
-        }
-
-        const mediaType = item.type === 'video' ? 'VIDEO' : 'IMAGE';
-        const label = `MEDIA_${idx + 1} (${mediaType}, ${item.mimeType})`;
-        if (item.url.startsWith('http')) {
-          hostedMedia.push(`${label}: ${item.url}`);
-        } else {
-          dataMedia.push(`${label}:\n${item.url}`);
-        }
-      });
-    }
-
-    const mediaSection = mediaItems && mediaItems.length > 0 ? `
-**⚠️ CRITICAL: USER-PROVIDED MEDIA ASSETS ⚠️**
-The user has provided ${mediaItems.length} media file(s). You MUST use these instead of placeholders.
-
-${hostedMedia.length > 0 ? `### 🌐 HOSTED MEDIA (PRIORITIZE THESE):
-${hostedMedia.join('\n')}
-` : ''}
-
-${dataMedia.length > 0 ? `### 📄 DATA URIs (USE IF NO HOSTED VERSION AVAILABLE):
-${dataMedia.join('\n\n')}
-` : ''}
-
-**INSTRUCTIONS**:
-1. USE the EXACT URLs listed above for all img src and video src attributes.
-2. DO NOT use "https://gemini.image/..." or "https://unsplash.com/..." when user media is available.
-3. If it is a VIDEO, use a <video src="..." controls class="..."></video> tag.
-4. If it is an IMAGE, use an <img src="..." class="..." /> tag.
-` : '';
-
     const streamContents = {
       parts: [
         { text: "You are an ELITE Frontend Engineer and UI/UX Designer creating STUNNING, award-winning websites." },
-        { text: mediaSection || "No user media provided by the user." },
-        ...imageParts,
         { text: `SPECIFICATION:\n${spec}` },
         { text: themeContext },
         {
@@ -3690,22 +3604,32 @@ ${dataMedia.join('\n\n')}
           **MANDATORY VISUAL EXCELLENCE**:
           1. **Hero Section**: Large, impactful hero with gradient backgrounds, animated text, or parallax effects.
           2. **Typography**: Use Google Fonts (Inter, Poppins, or Playfair Display). Mix font weights creatively.
-          3. **Animations**: Add CSS animations and transitions (Fade-ins, Hover effects, Smooth scroll).
+          3. **Animations**: Add CSS animations and transitions:
+             - Fade-in on scroll (Intersection Observer)
+             - Hover effects on cards (scale, shadow lift, color shift)
+             - Smooth page transitions
+             - Loading animations
           4. **Glassmorphism**: Use backdrop-blur, semi-transparent backgrounds where appropriate.
           5. **Gradients**: Use modern gradient combinations (mesh gradients, radial gradients).
-          6. **Shadows**: Layered shadows for depth (shadow-lg, shadow-2xl).
-          7. **Spacing**: Generous whitespace, asymmetric layouts.
-          8. **Icons**: Use Heroicons or Lucide.
-          
-          **⚠️ EMBEDDING RULES ⚠️**:
-          - USE THE PROVIDE HOSTED MEDIA URLs from the section at the top of this prompt.
-          - Place these assets in the hero section, gallery, or contextually relevant areas.
-          - At least ${Math.min(mediaItems?.length || 0, 3)} of these assets must be used.
-          - Use <video src="URL"> for videos and <img src="URL"> for images.
-          - DO NOT USE PLACEHOLDER SERVICES.
+          6. **Shadows**: Layered shadows for depth (shadow-lg, shadow-2xl with color tints).
+          7. **Spacing**: Generous whitespace, asymmetric layouts for visual interest.
+          8. **Icons**: Use Heroicons or Lucide via CDN for beautiful icons.
+          9. **Cards**: Modern card designs with hover states and subtle borders.
+          10. **Buttons**: Gradient buttons, pill shapes, with hover animations.
           
           **MOBILE-FIRST RESPONSIVE**:
+          - All layouts must work perfectly on mobile (320px) to desktop (1920px+).
           - Use Tailwind responsive prefixes (sm:, md:, lg:, xl:).
+          - Touch-friendly buttons (min 44px tap targets).
+          
+          **INTERACTIVITY**:
+          - Smooth scroll behavior.
+          - Interactive elements with visual feedback.
+          - Micro-interactions (button ripples, icon animations).
+          
+          **REAL-TIME DATA APIs**:
+          - **CRYPTO**: \`https://min-api.cryptocompare.com/data/price?fsym={SYMBOL}&tsyms=USD\`
+          - **STOCKS**: \`https://corsproxy.io/?https://query1.finance.yahoo.com/v8/finance/chart/{SYMBOL}?interval=1d&range=1d\` (Parse chart.result[0].meta.regularMarketPrice)
           
           CREATE A WEBSITE THAT LOOKS LIKE IT WAS DESIGNED BY A TOP AGENCY.` }
       ]
@@ -4038,12 +3962,14 @@ PRODUCT ${idx + 1}:
 
   try {
     const imageParts: any[] = [];
-    const hostedMedia: string[] = [];
-    const dataMedia: string[] = [];
+    // Build embeddable media references for the AI to use in HTML
+    let mediaEmbedText = '';
 
     if (mediaItems && mediaItems.length > 0) {
+      mediaEmbedText = '\n\n**EMBEDDABLE MEDIA URLs** (Use these EXACT URLs in your HTML):\n';
+
       mediaItems.forEach((item, idx) => {
-        // Add for AI vision/analysis
+        // Add for AI vision/analysis (use base64 if available, otherwise skip vision)
         const base64Data = item.base64 || (item.url.startsWith('data:') ? item.url : null);
         if (base64Data) {
           const matches = base64Data.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/);
@@ -4057,43 +3983,22 @@ PRODUCT ${idx + 1}:
           }
         }
 
+        // Provide the URL for embedding in HTML
         const mediaType = item.type === 'video' ? 'VIDEO' : 'IMAGE';
-        const label = `MEDIA_${idx + 1} (${mediaType}, ${item.mimeType})`;
-        if (item.url.startsWith('http')) {
-          hostedMedia.push(`${label}: ${item.url}`);
-        } else {
-          dataMedia.push(`${label}:\n${item.url}`);
-        }
+        mediaEmbedText += `\nMEDIA_${idx + 1} (${mediaType}, ${item.mimeType}):\nURL: ${item.url}\n`;
       });
+
+      mediaEmbedText += '\n\n**IMPORTANT**: Use the EXACT URLs above as the src attribute in your img/video tags. Do NOT use placeholder URLs like "https://gemini.image/...".\n';
     }
-
-    const mediaSection = mediaItems && mediaItems.length > 0 ? `
-**⚠️ CRITICAL: USER-PROVIDED MEDIA ASSETS ⚠️**
-The user has provided ${mediaItems.length} media file(s). You MUST use these instead of placeholders.
-
-${hostedMedia.length > 0 ? `### 🌐 HOSTED MEDIA (PRIORITIZE THESE):
-${hostedMedia.join('\n')}
-` : ''}
-
-${dataMedia.length > 0 ? `### 📄 DATA URIs (USE IF NO HOSTED VERSION AVAILABLE):
-${dataMedia.join('\n\n')}
-` : ''}
-
-**INSTRUCTIONS**:
-1. USE the EXACT URLs listed above for all img src and video src attributes.
-2. DO NOT use "https://gemini.image/..." or "https://unsplash.com/..." when user media is available.
-3. If it is a VIDEO, use a <video src="..." controls class="..."></video> tag.
-4. If it is an IMAGE, use an <img src="..." class="..." /> tag.
-` : '';
 
     const streamContents = {
       parts: [
         { text: "You are an ELITE E-commerce Frontend Engineer and UI/UX Designer creating a STUNNING, COMPLETE online store website." },
-        { text: mediaSection || "No user media provided." },
-        ...imageParts,
         { text: `USER'S DESIGN VISION:\n${prompt}` },
         { text: `BRAND NAME: ${brandName || 'Online Store'}` },
         { text: `PRODUCTS TO DISPLAY (YOU MUST INCLUDE EVERY PRODUCT):${productSpecs}` },
+        ...imageParts,
+        ...(mediaEmbedText ? [{ text: mediaEmbedText }] : []),
         {
           text: `TECHNICAL REQUIREMENTS:
           - OUTPUT ONLY RAW HTML CODE. Do not wrap in markdown \`\`\` code blocks.
@@ -4102,34 +4007,56 @@ ${dataMedia.join('\n\n')}
           - Include a header with brand name${logoUrl ? ` and logo (use this URL: ${logoUrl})` : ''}
           - Display ALL products in a responsive grid layout
           
-          **⚠️ CRITICAL MEDIA & PRODUCT REQUIREMENTS ⚠️**:
-          1. USE REAL ASSETS: You MUST use the URLs provided in the "USER-PROVIDED MEDIA ASSETS" section at the top of this prompt. 
-          2. NO PLACEHOLDERS: Never use "https://gemini.image/..." or Unsplash if user media is provided.
-          3. Each product MUST be displayed as a card with:
+          **⚠️ CRITICAL PRODUCT REQUIREMENTS ⚠️**:
+          1. Each product MUST be displayed as a card with:
              - Product image (use the provided imageUrl or a placeholder gradient)
              - Product name as heading
              - Description text
              - Price prominently displayed
              - "Buy Now" button that links to the product's paymentLinkUrl
           
-          **DESIGN & EMBEDDING**:
-          - Prioritize the HOSTED MEDIA links provided at the top of this prompt.
-          - Place media in hero banner, about section, or featured imagery areas.
-          - Use at least ${Math.min(mediaItems?.length || 0, 2)} of these media files prominently.
+          2. The "Buy Now" button MUST be an <a> tag with:
+             - href set to the exact paymentLinkUrl provided
+             - target="_blank" to open in new tab
+             - Prominent styling (colored, rounded, with hover effects)
+          
+          **DESIGN REQUIREMENTS**:
+          - Modern, clean aesthetic with proper spacing
+          - Responsive grid: 1 column mobile, 2 columns tablet, 3-4 columns desktop
+          - Product cards with subtle shadows and hover effects
+          - Consistent typography and color scheme
+          - Hero section with store name and tagline
+          - Footer with basic info
+          
+          **VISUAL ENHANCEMENTS**:
+          - Smooth hover animations on product cards (scale, shadow)
+          - Gradient accents for buttons
+          - Image hover zoom effect
+          - Professional color palette (avoid harsh colors)
+          - Dark mode support using Tailwind dark: classes
+          
+          **USER-PROVIDED MEDIA** (CRITICAL):
+          The user has provided ${mediaItems && mediaItems.length > 0 ? mediaItems.length : 0} additional media file(s) for styling/branding.
+          ${mediaItems && mediaItems.length > 0 ? `
+          ⚠️ YOU MUST USE THESE MEDIA FILES ⚠️
+          
+          STEP 1 - ANALYZE: Look at each media item and understand what it is (logo, hero banner, product shot, etc.)
+          STEP 2 - EMBED: Use the EXACT URLs provided in the EMBEDDABLE MEDIA URLs section above
+          STEP 3 - VERIFY: Ensure all img/video src attributes use the provided URLs - NO placeholder URLs!
+          
+          For IMAGES: <img src="THE_URL_FROM_ABOVE" class="..." />
+          For VIDEOS: <video src="THE_URL_FROM_ABOVE" controls class="..."></video>
+          
+          - Place media in hero banner, about section, or featured imagery areas
+          - Use at least ${Math.min(mediaItems.length, 2)} of these media files prominently
+          ` : '- No additional media provided, use product images only'}
           
           **DO NOT**:
           - Skip any products - include ALL of them
           - Use placeholder buyLinks - use the EXACT paymentLinkUrl provided
           - Create a checkout/cart system - just link directly to Stripe
           - Wrap output in markdown code blocks
-          - USE PLACEHOLDER IMAGES WHEN USER MEDIA IS LISTED AT THE TOP OF THIS PROMPT.`
-        },
-        {
-          text: `⚠️ FINAL FORCE-MEDIA REMINDER ⚠️
-          - You MUST use the URLs provided in the USER-PROVIDED MEDIA ASSETS section at the top of this prompt.
-          - DO NOT generate new image URLs or use Unsplash.
-          - If a product image URL is available in the PRODUCTS section, use that first.
-          - If branding/context images are available at the top, use those for banners/sections.`
+          - Use placeholder image URLs like "https://gemini.image/..." when user media is provided`
         }
       ]
     };
@@ -4177,74 +4104,6 @@ ${dataMedia.join('\n\n')}
   }
 }
 
-// ---------------------------------------------------------
-// Multimodal Image Understanding (Gemini 3 Flash)
-// ---------------------------------------------------------
-
-/**
- * Uses vision capabilities to analyze all provided media assets.
- * Returns a detailed report of what is in each image and how it relates to the context.
- */
-export const analyzeMediaAssets = async (
-  mediaItems: WebsiteMedia[],
-  researchContext: string,
-  onLog?: (text: string) => void
-): Promise<string> => {
-  if (!mediaItems || mediaItems.length === 0) return "";
-
-  if (onLog) onLog(`[Vision] Analyzing ${mediaItems.length} images for multimodal context...`);
-
-  const imageParts: any[] = [];
-  mediaItems.forEach((item, idx) => {
-    // We need base64 for the inlineData vision call
-    const base64Data = item.base64 || (item.url.startsWith('data:') ? item.url : null);
-    if (base64Data) {
-      const matches = base64Data.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/);
-      if (matches && matches.length === 3) {
-        imageParts.push({ text: `MEDIA_${idx + 1}:` });
-        imageParts.push({
-          inlineData: {
-            mimeType: matches[1],
-            data: matches[2]
-          }
-        });
-      }
-    }
-  });
-
-  if (imageParts.length === 0) {
-    if (onLog) onLog(`[Vision] No vision-ready assets found (missing base64). Skipping analysis.`);
-    return "";
-  }
-
-  const prompt = `
-SYSTEM: You are a Multimodal Visual Analyst. 
-OBJECTIVE: Analyze these provided images for a professional document about: "${researchContext.substring(0, 500)}".
-
-FOR EACH IMAGE (MEDIA_1, MEDIA_2, etc.), provide:
-1. **Description**: What is actually in the image? (Subject, mood, style).
-2. **Contextual Relevance**: How does this link to the research topic?
-3. **Suggested Caption**: A professional, relevant caption.
-4. **Suggested Layout Role**: (e.g., Hero image, sidebar accent, evidence/detail, background).
-
-Return your analysis as a structured list.
-`;
-
-  try {
-    const response = await ai.models.generateContent({
-      model: MODEL_SUPER_FAST,
-      contents: [{ role: 'user', parts: [{ text: prompt }, ...imageParts] }]
-    });
-
-    const analysis = response.text || "";
-    if (onLog) onLog(`[Vision] Analysis complete. Improving PDF relevance...`);
-    return analysis;
-  } catch (error) {
-    console.warn("[analyzeMediaAssets] Vision analysis failed:", error);
-    return "";
-  }
-};
-
 // Step 2: Refine Code with Gemini 3 Pro (Thinking) -> Fallback to 2.5 Pro -> Fallback to Flash
 export const refineWebsiteCode = async (
   currentHtml: string,
@@ -4252,15 +4111,8 @@ export const refineWebsiteCode = async (
   theme: DualTheme | undefined,
   onChunk: (text: string) => void,
   onLog?: (text: string) => void,
-  mediaItems?: WebsiteMedia[],
-  isPdf?: boolean
+  mediaItems?: WebsiteMedia[]
 ): Promise<string> => {
-  // 1. Perform Multimodal Pre-Analysis for PDFs with assets
-  let visualAnalysis = "";
-  if (isPdf && mediaItems && mediaItems.length > 0) {
-    visualAnalysis = await analyzeMediaAssets(mediaItems, researchContext, onLog);
-  }
-
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   let themeContext = "";
@@ -4285,17 +4137,16 @@ export const refineWebsiteCode = async (
     `;
   }
 
-  const smartModel = await (isPdf ? getImageModel() : getSmartModel());
-
   const generate = async (modelName: string, budget: number) => {
-    const nativeImages: string[] = [];
     const imageParts: any[] = [];
-    const hostedMedia: string[] = [];
-    const dataMedia: string[] = [];
+    // Build embeddable media references for the AI to use in HTML
+    let mediaEmbedText = '';
 
     if (mediaItems && mediaItems.length > 0) {
+      mediaEmbedText = '\n\n**EMBEDDABLE MEDIA URLs** (Use these EXACT URLs in your HTML):\n';
+
       mediaItems.forEach((item, idx) => {
-        // Add for AI vision/analysis
+        // Add for AI vision/analysis (use base64 if available, otherwise skip vision)
         const base64Data = item.base64 || (item.url.startsWith('data:') ? item.url : null);
         if (base64Data) {
           const matches = base64Data.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/);
@@ -4309,173 +4160,143 @@ export const refineWebsiteCode = async (
           }
         }
 
+        // Provide the URL for embedding in HTML
         const mediaType = item.type === 'video' ? 'VIDEO' : 'IMAGE';
-        const label = `MEDIA_${idx + 1} (${mediaType}, ${item.mimeType})`;
-        if (item.url.startsWith('http')) {
-          hostedMedia.push(`${label}: ${item.url}`);
-        } else {
-          dataMedia.push(`${label}:\n${item.url}`);
-        }
+        mediaEmbedText += `\nMEDIA_${idx + 1} (${mediaType}, ${item.mimeType}):\nURL: ${item.url}\n`;
       });
+
+      mediaEmbedText += '\n\n**IMPORTANT**: Use the EXACT URLs above as the src attribute in your img/video tags. Do NOT use placeholder URLs like "https://gemini.image/...".\n';
     }
-
-    const mediaSection = mediaItems && mediaItems.length > 0 ? `
-**⚠️ CRITICAL: USER-PROVIDED MEDIA ASSETS ⚠️**
-The user has provided ${mediaItems.length} media file(s).
-${isPdf && mediaItems.length >= 3 ? "**MODE: PURE ASSET USAGE**. You MUST use ONLY these provided assets. DO NOT create AI_GEN placeholders." : "You MUST use these instead of placeholders where appropriate."}
-
-${hostedMedia.length > 0 ? `### 🌐 HOSTED MEDIA (PRIORITIZE THESE):
-${hostedMedia.join('\n')}
-` : ''}
-
-${dataMedia.length > 0 ? `### 📄 DATA URIs (USE IF NO HOSTED VERSION AVAILABLE):
-${dataMedia.join('\n\n')}
-` : ''}
-
-**INSTRUCTIONS**:
-1. USE the EXACT URLs listed above for all img src and video src attributes.
-2. DO NOT use "https://gemini.image/..." or "https://unsplash.com/..." when user media is available.
-3. ${isPdf ? "For PDF generation, these public URLs are optimized for inclusion." : "If it is a VIDEO, use a <video src=\"...\" controls class=\"...\"></video> tag."}
-4. If it is an IMAGE, use an <img src="..." class="..." /> tag.
-` : '';
-
-    // Use a clearer structure for the system prompt regarding images
-    let imageGenerationInstruction = '';
-    const mediaCount = mediaItems?.length || 0;
-
-    if (isPdf) {
-      if (mediaCount >= 3) {
-        // Mode 3: Pure Asset Mode (User provided 3+ images)
-        imageGenerationInstruction = `
-**⚠️ CRITICAL IMAGE STRATEGY: USER ASSETS ONLY ⚠️**
-- The user has provided ${mediaCount} high-quality media assets.
-- You MUST use the provided "MEDIA_X" URLs for ALL imagery in this document.
-- **ABSOLUTE RULE**: DO NOT generate any new AI images.
-- **ABSOLUTE RULE**: DO NOT use placeholders like "AI_GEN_X".
-- **ABSOLUTE RULE**: DO NOT append an "IMAGE PROMPT LIST" at the end of your response.
-- Focus exclusively on professional layout and effective placement of user assets.`;
-      } else if (mediaCount > 0) {
-        // Mode 2: Hybrid Mode (User provided 1-2 images)
-        imageGenerationInstruction = `
-**⚠️ CRITICAL IMAGE STRATEGY: HYBRID (ASSETS + GENERATION) ⚠️**
-- The user has provided ${mediaCount} image(s). You MUST feature these prominently as primary visuals.
-- You MUST ALSO generate 1-3 additional AI images to fill layout gaps using placeholders.
-- **FOR USER IMAGES**: Use <img src="MEDIA_1" />, <img src="MEDIA_2" />, etc.
-- **FOR AI-GENERATED IMAGES**: Use <img src="AI_GEN_1" alt="..." />, <img src="AI_GEN_2" alt="..." />, etc.
-- **MANDATORY OUTPUT REQUIREMENT**: After your HTML (after </html>), you MUST provide an image prompt list in EXACTLY this format:
-  **AI_GEN_1**: [Detailed prompt for a professional, high-quality image]
-  **AI_GEN_2**: [Detailed prompt for a professional, high-quality image]
-- Without this list, images WILL NOT be generated. This is non-negotiable.`;
-      } else {
-        // Mode 1: Full Generation Mode (No user images)
-        imageGenerationInstruction = `
-**⚠️ CRITICAL IMAGE STRATEGY: FULL AI GENERATION ⚠️**
-- No user media was provided. You MUST generate 2-4 professional AI images for this document.
-- Use image placeholders in your HTML: <img src="AI_GEN_1" alt="..." />, <img src="AI_GEN_2" alt="..." />, etc.
-- **MANDATORY OUTPUT REQUIREMENT**: After your HTML (after </html>), you MUST provide an image prompt list in EXACTLY this format:
-  **AI_GEN_1**: [Detailed prompt for a professional, high-quality image, e.g., "A sleek, modern office interior with natural lighting, minimalist furniture, and a large floor-to-ceiling window overlooking a city skyline."]
-  **AI_GEN_2**: [Detailed prompt for another professional image]
-- Without this list, NO IMAGES will appear in the final PDF. This is non-negotiable.
-- Do NOT use Unsplash, Pexels, or any external image URLs.`;
-      }
-    } else {
-      // Non-PDF mode
-      imageGenerationInstruction = `MISSION: Create an AWARD-WINNING digital experience. Use interactivity, glassmorphism, and cinematic layouts.`;
-    }
-
-    const systemInstruction = `${isPdf ? "You are a WORLD-CLASS Document Designer and Print Architect specializing in high-end PDF reports, whitepapers, and brand books." : "You are an AWARD-WINNING Frontend Architect and UI/UX Designer."}
-
-${visualAnalysis ? `
-**🔍 PRE-GENERATION VISUAL ANALYSIS (CRITICAL) 🔍**
-You have already seen and understood the following media assets. Use this analysis to order them INTENTIONALLY and write professional, context-accurate captions:
-${visualAnalysis}
-
-**PLACEMENT DIRECTIVE**: Use the "Suggested Layout Role" from the analysis above to decide where images belong (Hero, Sidebar, Evidence, etc.).
-` : ''}
-
-${mediaSection || (isPdf ? "No user media provided. You MUST generate professional visuals." : "No user media.")}
-
-${imageGenerationInstruction}
-
-${isPdf ? `
-MANDATORY PDF DESIGN PRINCIPLES:
-
-**🎨 CREATIVE DIRECTION:**
-- Create a STUNNING, VISUALLY RICH document with magazine-quality aesthetics.
-- Use decorative icons (Lucide Icons via CDN) to enhance headings, sections, and callouts.
-- Employ gradient backgrounds, subtle shadows, and color-coded sections for visual hierarchy.
-- Add geometric shapes, accent lines, and decorative elements for polish.
-- Think "Design Portfolio" or "Premium Brochure", not "Plain Report".
-
-**📐 FORMAT-AGNOSTIC LAYOUT:**
-- Design for FLEXIBILITY. The user may print in portrait (8.5x11), landscape (11x8.5), A4, or custom sizes.
-- Use max-width: 100% for the main container, with a reasonable content max-width (e.g., 900px) centered within.
-- Use percentage-based widths, flexbox, and CSS Grid for responsive, reflow-friendly layouts.
-- Avoid fixed pixel heights that prevent content from flowing naturally when resized.
-- Use page-break-inside: avoid on key sections (cards, figures, callouts) to keep them intact.
-- Use page-break-before: always or page-break-after: always for major section dividers.
-
-**🖨️ PRINT OPTIMIZATION:**
-- Include @media print { * { -webkit-print-color-adjust: exact; print-color-adjust: exact; } body { margin: 0.5in; } } for proper backgrounds and margins.
-- Use high-contrast, readable typography: system-ui, -apple-system, or Georgia for serifs.
-- Ensure sufficient padding (24-48px) on content blocks for comfortable reading.
-
-**🚫 RESTRICTIONS:**
-- No JavaScript, animations, or interactivity.
-- CDN allowed: Tailwind CSS, Lucide Icons. No external image URLs unless from MEDIA_X list.` : `
-MANDATORY WEB RULES:
-1. Use advanced animations (GSAP, ScrollTrigger).
-2. Modern UI: Bento grids, glassmorphism, mesh gradients.
-3. Typography: Inter, Outfit, plus Jakarta Sans.`}
-
-FINAL DIRECTIVE: Use the EXACT URLs from the MEDIA_X list. Never use Unsplash or external placeholders when user media is available.`;
 
     const contents = {
       parts: [
+        { text: "You are an AWARD-WINNING Frontend Architect, UI/UX Designer, and Creative Technologist known for creating breathtaking digital experiences." },
+        { text: `INPUT CONTEXT:\n1. **Research Findings**: ${researchContext}\n2. **Current Prototype**: A basic implementation exists that needs a dramatic upgrade.` },
+        { text: themeContext },
+        {
+          text: `YOUR MISSION: Create a STUNNING, WORLD-CLASS 'Step 2' version that transforms this into an unforgettable digital experience.
+
+CREATIVE DIRECTIONS (Choose the best fit):
+- **Interactive Dashboard**: Real-time data viz, animated charts, live counters
+- **Cinematic Story**: Full-screen sections, parallax, scroll-triggered animations
+- **Immersive Experience**: 3D elements, particle effects, WebGL backgrounds
+- **Editorial Magazine**: Beautiful typography, image galleries, pull quotes
+- **Product Showcase**: Hero animations, floating elements, spotlight effects` },
+        {
+          text: `MANDATORY VISUAL ENHANCEMENTS:
+
+1. **ADVANCED ANIMATIONS** (Include ALL):
+   - Scroll-triggered fade-ins using Intersection Observer
+   - Staggered animations for lists/grids (delay each item)
+   - Smooth number counters for statistics
+   - Parallax scrolling effects
+   - Hover 3D transforms (perspective, rotateX/Y)
+   - Loading skeleton screens
+   - Page transition effects
+   
+2. **MODERN UI PATTERNS**:
+   - Bento grid layouts (asymmetric, varied sizes)
+   - Floating/overlapping elements
+   - Gradient mesh backgrounds
+   - Glassmorphism cards (backdrop-blur, transparency)
+   - Neumorphism for interactive elements
+   - Animated gradients (background-position animation)
+   - Custom scrollbars
+   
+3. **TYPOGRAPHY EXCELLENCE**:
+   - Google Fonts: Inter, Plus Jakarta Sans, Outfit, or Sora for body
+   - Display fonts: Clash Display, Cabinet Grotesk for headings
+   - Variable font weights (100-900)
+   - Fluid typography (clamp() for responsive sizing)
+   - Animated text reveals (letter by letter, line by line)
+   
+4. **MICRO-INTERACTIONS**:
+   - Button ripple effects on click
+   - Icon animations on hover
+   - Cursor following effects
+   - Magnetic buttons
+   - Toast notifications
+   - Progress indicators
+   
+5. **ADVANCED COMPONENTS**:
+   - Animated accordions/FAQs
+   - Image comparison sliders
+   - Infinite marquee scrollers
+   - Animated counters/statistics
+   - Interactive timelines
+   - Modal overlays with animations
+   - Tabs with smooth transitions
+   
+6. **PERFORMANCE & POLISH**:
+   - Lazy loading for images
+   - Smooth scroll behavior
+   - Debounced scroll handlers
+   - CSS containment for performance
+   
+CDN RESOURCES TO USE:
+- Tailwind: <script src="https://cdn.tailwindcss.com"></script>
+- GSAP (animations): <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+- ScrollTrigger: <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+- Lucide Icons: <script src="https://unpkg.com/lucide@latest"></script>
+- AOS (Animate on Scroll): Include if needed
+
+REAL-TIME DATA APIS:
+- Crypto: \`https://min-api.cryptocompare.com/data/price?fsym={SYMBOL}&tsyms=USD\`
+- Stocks: \`https://corsproxy.io/?https://query1.finance.yahoo.com/v8/finance/chart/{SYMBOL}?interval=1d&range=1d\`
+
+**USER-PROVIDED MEDIA** (CRITICAL - READ CAREFULLY):
+The user has provided ${mediaItems && mediaItems.length > 0 ? mediaItems.length : 0} media file(s) along with this request.
+${mediaItems && mediaItems.length > 0 ? `
+⚠️ YOU MUST USE THESE MEDIA FILES IN THE GENERATED HTML ⚠️
+
+STEP 1 - ANALYZE THE MEDIA:
+First, look at each image/video I've provided (via the vision parts) and understand what it contains:
+- Is it a product photo, logo, team photo, background texture, hero video, etc.?
+- What colors, mood, and style does it convey?
+- Where would this media item best fit in a website layout?
+
+STEP 2 - EMBED THE MEDIA:
+After analyzing, you MUST embed these files using the EXACT URLs provided in the EMBEDDABLE MEDIA URLs section above.
+- For IMAGES: Use <img src="THE_URL" alt="..." class="..." />
+- For VIDEOS: Use <video src="THE_URL" controls class="..."></video>
+- Place each item where it fits best based on your analysis
+- Hero media goes in hero sections, product shots in galleries, logos in headers, etc.
+
+STEP 3 - VERIFICATION:
+Before outputting, verify that:
+- You have used the provided URLs - NO placeholder URLs like "https://gemini.image/..."
+- NO Unsplash URLs are used when user media is available
+- At least ${Math.min(mediaItems.length, 3)} of these media items are embedded
+` : '- No media was provided by the user, you may use Unsplash placeholders or AI-generated images'}
+
+OUTPUT: Raw HTML only. NO markdown. Create something EXTRAORDINARY.` },
         ...imageParts,
-        { text: `INPUT CONTEXT:\n1. **Research Findings**: ${researchContext}\n2. **Current Goal**: ${isPdf ? 'Generate a professional PDF document.' : 'Upgrade this website to world-class standards.'}` },
-        { text: isPdf ? "DESIGN PRINCIPLES: Professional, clean, high-legibility document." : themeContext },
-        { text: `CURRENT PROTOTYPE/INSTRUCTIONS:\n${currentHtml.substring(0, 50000)}` },
-        { text: "OUTPUT: Raw HTML only. NO markdown. Ensure all media tags use correct src URLs." }
+        ...(mediaEmbedText ? [{ text: mediaEmbedText }] : []),
+        { text: `CURRENT PROTOTYPE CODE:\n${currentHtml.substring(0, 50000)}` }
       ]
     };
 
-    const attemptGeneration = async (targetModelName: string): Promise<any> => {
-      const isG3 = isGemini3(targetModelName);
-      const isNonThinkingImageModel = targetModelName.includes('flash-image');
-      const config: any = {
-        systemInstruction: systemInstruction,
-        temperature: 0.2 // Lower for doc precision
+    const isG3 = isGemini3(modelName);
+    const config: any = {};
+
+    if (isG3) {
+      config.thinkingConfig = {
+        includeThoughts: true,
+        // @ts-ignore
+        thinking_level: budget > 16384 ? 'medium' : 'low'
       };
-
-      if (!isNonThinkingImageModel && isG3) {
-        config.thinkingConfig = { includeThoughts: true };
-      }
-
-      console.log(`[geminiService] Calling ${targetModelName} with ${mediaCount} assets (isPdf: ${isPdf})`);
-
-      return await ai.models.generateContentStream({
-        model: targetModelName,
-        contents: contents,
-        config: config
-      });
-    };
-
-    let response;
-    try {
-      // For PDF, prioritize Gemini 3 Pro Image Preview
-      const targetModel = isPdf ? MODEL_IMAGE_SMART : modelName;
-      response = await attemptGeneration(targetModel);
-    } catch (error: any) {
-      // Fallback for PDF generation if Pro model fails
-      if (isPdf && modelName !== MODEL_IMAGE_FAST) {
-        console.warn(`[refineWebsiteCode] ${MODEL_IMAGE_SMART} failed, falling back to ${MODEL_IMAGE_FAST}`, error);
-        if (onLog) onLog(`[Model Error] ${MODEL_IMAGE_SMART} failed, falling back to faster model...`);
-        response = await attemptGeneration(MODEL_IMAGE_FAST);
-      } else {
-        throw error;
-      }
+    } else {
+      config.thinkingConfig = {
+        includeThoughts: true,
+        thinkingBudget: budget,
+      };
     }
+
+    const response = await ai.models.generateContentStream({
+      model: modelName,
+      contents: contents,
+      config: config
+    });
 
     let fullText = "";
     for await (const chunk of response) {
@@ -4485,11 +4306,6 @@ FINAL DIRECTIVE: Use the EXACT URLs from the MEDIA_X list. Never use Unsplash or
         if (part.thought && part.text) {
           // Log the thought
           if (onLog) onLog(part.text);
-        } else if (part.inlineData) {
-          // Capture native image generation (Nano Banana)
-          const base64 = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-          nativeImages.push(base64);
-          if (onLog) onLog(`[Native Image Captured: ${part.inlineData.mimeType}]`);
         } else if (part.text) {
           // Accumulate content
           fullText += part.text;
@@ -4497,142 +4313,10 @@ FINAL DIRECTIVE: Use the EXACT URLs from the MEDIA_X list. Never use Unsplash or
         }
       }
     }
-
-    // Post-process to extract image descriptions and generate actual images
-    let processedHtml = fullText;
-
-    // Extract image descriptions from the AI's response
-    // Handle formats like: "1. **AI_GEN_1**: description" or "**AI_GEN_1**: description"
-    // The description can span multiple lines until the next numbered item or image marker
-    // Regex to capture AI_GEN_X descriptions.
-    // Enhanced to be more flexible:
-    // - Matches optional numbering (1.)
-    // - Matches optional bolding (**AI_GEN_1** or AI_GEN_1)
-    // - Matches colon and description
-    const imageDescriptionRegex = /(?:^\d+\.\s+)?(?:\*\*|#)?AI_GEN_(\d+)(?:\*\*|:)?\s*[:\-]\s*(.+?)(?=(?:\n\d+\.\s+(?:\*\*|#)?AI_GEN_|\n(?:\*\*|#)?AI_GEN_|$))/gms;
-    const imageDescriptions: { index: number; prompt: string }[] = [];
-    let match;
-
-    if (onLog) onLog('[PDF Image Extraction] Scanning AI output for image descriptions...');
-
-    if (processedHtml.includes('AI_GEN_')) {
-      // Check if we can find any descriptions
-      if (!imageDescriptionRegex.test(fullText)) {
-        // Reset lastIndex because test() advances it
-        imageDescriptionRegex.lastIndex = 0;
-        console.warn("[PDF Image Extraction] 'AI_GEN_' placeholders found in HTML but no descriptions matched the regex.");
-        if (onLog) onLog("[PDF Image Extraction] WARNING: Placeholders found but no image descriptions detected. Images may be broken.");
-      }
-      imageDescriptionRegex.lastIndex = 0; // Reset again just in case
-    }
-
-    while ((match = imageDescriptionRegex.exec(fullText)) !== null) {
-      const index = parseInt(match[1]);
-      let prompt = match[2].trim();
-
-      // Clean up the prompt - remove quotes and extra formatting
-      prompt = prompt.replace(/^["']|["']$/g, '').replace(/["']:?\s*/g, ': ').trim();
-
-      // Take first ~500 characters of the description for the image generation
-      prompt = prompt.substring(0, 500).trim();
-
-      if (prompt) {
-        imageDescriptions.push({ index, prompt });
-        if (onLog) onLog(`[Extracted AI_GEN_${index}]: ${prompt.substring(0, 100)}...`);
-      }
-    }
-
-    // Remove the image description section from the HTML (everything after the closing tag)
-    const lastHtmlTagIndex = processedHtml.lastIndexOf('</html>');
-    if (lastHtmlTagIndex !== -1) {
-      processedHtml = processedHtml.substring(0, lastHtmlTagIndex + 7);
-    }
-
-    // Generate images for PDFs using the extracted prompts
-    if (isPdf && imageDescriptions.length > 0) {
-      if (onLog) onLog(`[Generating ${imageDescriptions.length} images for PDF...]`);
-
-      for (let i = 0; i < imageDescriptions.length; i++) {
-        const { index, prompt } = imageDescriptions[i];
-
-        // Add delay between requests to avoid Vercel rate limiting
-        if (i > 0) {
-          if (onLog) onLog(`[Waiting before generating next image...]`);
-          await new Promise(resolve => setTimeout(resolve, 2000));
-        }
-
-        try {
-          // Call the existing generateImage function
-          const { imageDataUrl } = await generateImage(prompt, {
-            aspectRatio: '16:9',
-            imageSize: '2K',
-            useProModel: true
-          });
-
-          // Convert base64 to Blob and upload to Vercel Blob for hosted URL
-          let hostedUrl = imageDataUrl;
-          try {
-            // Extract base64 data and mime type
-            const matches = imageDataUrl.match(/^data:([^;]+);base64,(.+)$/);
-            if (matches && matches.length === 3) {
-              const mimeType = matches[1];
-              const base64Data = matches[2];
-
-              // Convert base64 to binary
-              const binaryString = atob(base64Data);
-              const bytes = new Uint8Array(binaryString.length);
-              for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-              }
-
-              // Upload to Vercel Blob via media API
-              const extension = mimeType.split('/')[1] || 'png';
-              const filename = `pdf-image-${index}-${Date.now()}.${extension}`;
-
-              const uploadResponse = await fetch(`/api/media?op=upload-blob&projectId=pdf-images&filename=${encodeURIComponent(filename)}&contentType=${encodeURIComponent(mimeType)}`, {
-                method: 'POST',
-                body: bytes.buffer,
-                headers: {
-                  'Content-Type': mimeType
-                }
-              });
-
-              if (uploadResponse.ok) {
-                const uploadResult = await uploadResponse.json();
-                if (uploadResult?.url) {
-                  hostedUrl = uploadResult.url;
-                  if (onLog) onLog(`[Image ${index} uploaded to Vercel Blob: ${hostedUrl}]`);
-                }
-              } else {
-                if (onLog) onLog(`[Image ${index} upload failed, using base64 fallback]`);
-              }
-            }
-          } catch (uploadError: any) {
-            if (onLog) onLog(`[Image ${index} upload error: ${uploadError.message}, using base64 fallback]`);
-          }
-
-          // Replace all instances of this placeholder with the hosted URL (or base64 fallback)
-          const placeholder = `AI_GEN_${index}`;
-          processedHtml = processedHtml.replace(new RegExp(`"${placeholder}"`, 'g'), `"${hostedUrl}"`);
-          processedHtml = processedHtml.replace(new RegExp(placeholder, 'g'), hostedUrl);
-
-          if (onLog) onLog(`[Image ${index} generated and embedded]`);
-        } catch (error: any) {
-          if (onLog) onLog(`[Failed to generate image ${index}: ${error.message}]`);
-          console.error(`Failed to generate image ${index}:`, error);
-        }
-      }
-    } else {
-      // For non-PDF generation, replace with previously captured images (if any)
-      nativeImages.forEach((base64, idx) => {
-        const placeholder = `AI_GEN_${idx + 1}`;
-        processedHtml = processedHtml.replace(new RegExp(placeholder, 'g'), base64);
-      });
-    }
-
-    return processedHtml;
+    return fullText;
   };
 
+  const smartModel = await getSmartModel();
   try {
     return await generate(smartModel, 16384);
   } catch (error) {
@@ -5036,7 +4720,7 @@ Return ONLY valid JSON in this exact shape with double quotes on all keys:
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {
         temperature: 0.8,
-        maxOutputTokens: 16384, // Increased to prevent truncation for multi-page books
+        maxOutputTokens: 4096,
         responseMimeType: "text/plain",
       },
     });
@@ -9432,7 +9116,6 @@ export const uploadFileToGemini = async (
         }
 
         return {
-          id: uploadedFile.name,
           name: uploadedFile.name,
           uri: uploadedFile.uri,
           mimeType: uploadedFile.mimeType,
@@ -10381,58 +10064,8 @@ export interface WebsiteEditResult {
 export async function editWebsiteWithAI(
   currentHtml: string,
   editInstruction: string,
-  projectContext?: string,
-  mediaItems?: WebsiteMedia[]
+  projectContext?: string
 ): Promise<WebsiteEditResult> {
-  const imageParts: any[] = [];
-  const hostedMedia: string[] = [];
-  const dataMedia: string[] = [];
-
-  if (mediaItems && mediaItems.length > 0) {
-    mediaItems.forEach((item, idx) => {
-      // Add for AI vision/analysis
-      const base64Data = item.base64 || (item.url.startsWith('data:') ? item.url : null);
-      if (base64Data) {
-        const matches = base64Data.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/);
-        if (matches && matches.length === 3) {
-          imageParts.push({
-            inlineData: {
-              mimeType: matches[1],
-              data: matches[2]
-            }
-          });
-        }
-      }
-
-      const mediaType = item.type === 'video' ? 'VIDEO' : 'IMAGE';
-      const label = `MEDIA_${idx + 1} (${mediaType}, ${item.mimeType})`;
-      if (item.url.startsWith('http')) {
-        hostedMedia.push(`${label}: ${item.url}`);
-      } else {
-        dataMedia.push(`${label}:\n${item.url}`);
-      }
-    });
-  }
-
-  const mediaSection = mediaItems && mediaItems.length > 0 ? `
-**⚠️ USER-PROVIDED MEDIA ASSETS ⚠️**
-The user has provided ${mediaItems.length} media file(s). You can use these to fulfill the edit instruction.
-
-${hostedMedia.length > 0 ? `### 🌐 HOSTED MEDIA (PRIORITIZE THESE):
-${hostedMedia.join('\n')}
-` : ''}
-
-${dataMedia.length > 0 ? `### 📄 DATA URIs:
-${dataMedia.join('\n\n')}
-` : ''}
-
-**EMBEDDING RULES**:
-1. USE the EXACT URLs listed above for all img src and video src attributes.
-2. DO NOT use "https://gemini.image/..." or "https://unsplash.com/..." when user media is available.
-3. If it is a VIDEO, use a <video src="..." controls class="..."></video> tag.
-4. If it is an IMAGE, use an <img src="..." class="..." /> tag.
-` : '';
-
   const systemInstruction = `You are an expert web developer. Your task is to modify HTML/CSS code based on user instructions.
 
 RULES:
@@ -10442,8 +10075,6 @@ RULES:
 4. If the instruction is unclear, make reasonable assumptions based on context.
 5. Maintain responsive design and accessibility.
 6. Do not add external dependencies unless specifically requested.
-
-${mediaSection}
 
 ${projectContext ? `PROJECT CONTEXT:\n${projectContext}\n` : ''}`;
 
@@ -10459,10 +10090,7 @@ Apply the requested changes and return the complete modified HTML.`;
   try {
     const response = await ai.models.generateContent({
       model: MODEL_FAST,
-      contents: [
-        ...imageParts.map(p => ({ role: 'user', parts: [p] })),
-        { role: 'user', parts: [{ text: userPrompt }] }
-      ],
+      contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
       config: {
         systemInstruction,
         temperature: 0.3, // Lower temperature for more precise edits
