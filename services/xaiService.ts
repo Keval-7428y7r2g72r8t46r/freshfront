@@ -1,9 +1,11 @@
 import { authFetch } from './authFetch';
 
-export interface XAIEditRequest {
+export interface XAIGenerateRequest {
     prompt: string;
-    video_url: string;
     image_url?: string; // Optional image reference
+    duration?: number; // 1-15 seconds
+    aspect_ratio?: '16:9' | '4:3' | '1:1' | '9:16' | '3:4' | '3:2' | '2:3';
+    resolution?: '720p' | '480p';
     model?: 'grok-imagine-video'; // Default
 }
 
@@ -12,10 +14,43 @@ export interface XAIVideoResponse {
     id?: string; // Sometimes returned
     status?: 'processing' | 'completed' | 'failed';
     url?: string; // Final video URL
+    duration?: number;
+    model?: string;
     error?: string;
 }
 
+export interface XAIEditRequest {
+    prompt: string;
+    video_url: string;
+    image_url?: string; // Optional image reference
+    model?: 'grok-imagine-video'; // Default
+}
+
 export const xaiService = {
+    /**
+     * Generate a video using xAI (Grok Imagine)
+     */
+    generateVideo: async (params: XAIGenerateRequest): Promise<XAIVideoResponse> => {
+        const response = await authFetch('/api/media?op=xai-generate-video', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                prompt: params.prompt,
+                image: params.image_url ? { url: params.image_url } : undefined,
+                duration: params.duration,
+                aspect_ratio: params.aspect_ratio,
+                resolution: params.resolution,
+                model: params.model || 'grok-imagine-video'
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(error.error || error.message || `xAI Generation Error: ${response.status}`);
+        }
+        return response.json();
+    },
+
     /**
      * Edit a video using xAI (Grok Imagine)
      */
