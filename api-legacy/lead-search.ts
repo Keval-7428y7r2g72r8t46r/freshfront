@@ -1,5 +1,5 @@
 import { requireAuth } from './_auth.js';
-import { hunterDiscover, hunterDomainSearch } from './hunter-client';
+import { hunterDiscover, hunterDomainSearch } from './hunter-client.js';
 
 type RequestBody = {
     filters?: Record<string, any>;
