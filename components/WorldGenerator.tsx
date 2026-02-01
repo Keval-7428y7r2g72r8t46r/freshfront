@@ -1,12 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import { worldLabsService, OperationResponse } from '../services/worldLabsService';
 import { AssetItem } from '../types';
+import { CreditOperation } from '../services/creditService';
 
 interface WorldGeneratorProps {
     onWorldGenerated: (world: OperationResponse) => void;
     onError: (error: string) => void;
     assets: AssetItem[];
     isDarkMode: boolean;
+    checkCredits: (operation: CreditOperation) => Promise<boolean>;
+    deductCredits: (operation: CreditOperation) => Promise<boolean>;
 }
 
 // Icons
@@ -49,7 +52,7 @@ const Spinner = () => (
     </svg>
 );
 
-export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated, onError, assets, isDarkMode }) => {
+export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated, onError, assets, isDarkMode, checkCredits, deductCredits }) => {
     const [activeTab, setActiveTab] = useState<'text' | 'image' | 'video' | 'multi-image'>('text');
     const [inputMode, setInputMode] = useState<'upload' | 'asset'>('upload');
     const [textPrompt, setTextPrompt] = useState('');
@@ -93,6 +96,16 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
     };
 
     const handleGenerate = async () => {
+        // Credit Check
+        const hasCredits = await checkCredits('worldGeneration');
+        if (!hasCredits) return;
+
+        const success = await deductCredits('worldGeneration');
+        if (!success) {
+            setError('Failed to deduct credits');
+            return;
+        }
+
         setIsGenerating(true);
         setError(null);
         setProgress('Initializing job...');
@@ -285,7 +298,7 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
                                     </div>
                                     <div className={`flex ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} p-1 rounded-full`}>
                                         <button onClick={() => setInputMode('upload')} className={`px-5 py-1.5 text-xs font-bold rounded-full transition-all ${inputMode === 'upload' ? (isDarkMode ? 'bg-gray-700 text-white shadow-lg' : 'bg-white text-indigo-600 shadow-sm') : (isDarkMode ? 'text-gray-500' : 'text-gray-500')}`}>Upload</button>
-                                        <button onClick={() => setInputMode('asset')} className={`px-5 py-1.5 text-xs font-bold rounded-full transition-all ${inputMode === 'asset' ? (isDarkMode ? 'bg-gray-700 text-white shadow-lg' : 'bg-white text-indigo-600 shadow-sm') : (isDarkMode ? 'text-gray-500' : 'text-gray-500')}`}>Store</button>
+                                        <button onClick={() => setInputMode('asset')} className={`px-5 py-1.5 text-xs font-bold rounded-full transition-all ${inputMode === 'asset' ? (isDarkMode ? 'bg-gray-700 text-white shadow-lg' : 'bg-white text-indigo-600 shadow-sm') : (isDarkMode ? 'text-gray-500' : 'text-gray-500')}`}>Assets</button>
                                     </div>
                                 </div>
                             )}
