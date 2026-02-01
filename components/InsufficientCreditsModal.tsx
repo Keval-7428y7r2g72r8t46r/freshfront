@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { CreditOperation, CREDIT_COSTS, getOperationDisplayName } from '../services/creditService';
+import { subscriptionService } from '../services/subscriptionService';
 
 interface InsufficientCreditsModalProps {
     isOpen: boolean;
@@ -20,10 +21,29 @@ export const InsufficientCreditsModal: React.FC<InsufficientCreditsModalProps> =
     currentCredits,
     creditsNeeded,
 }) => {
+    const [loading, setLoading] = useState(false);
+
     if (!isOpen || !operation) return null;
 
     const operationName = getOperationDisplayName(operation);
     const deficit = creditsNeeded - currentCredits;
+
+    const handleGetMoreCredits = async () => {
+        setLoading(true);
+        try {
+            const checkoutUrl = await subscriptionService.createCheckoutSession('monthly');
+            if (checkoutUrl) {
+                window.location.href = checkoutUrl;
+            } else {
+                alert('Failed to start checkout. Please try again.');
+            }
+        } catch (error) {
+            console.error('Checkout error:', error);
+            alert('Failed to start checkout. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -81,10 +101,22 @@ export const InsufficientCreditsModal: React.FC<InsufficientCreditsModalProps> =
                     {/* Actions */}
                     <div className="flex flex-col gap-3">
                         <button
-                            onClick={onUpgrade}
-                            className="w-full py-3 px-4 rounded-xl font-medium bg-gradient-to-r from-iris-500 to-iris-600 text-white hover:opacity-90 transition-opacity shadow-lg shadow-iris-500/25"
+                            onClick={handleGetMoreCredits}
+                            disabled={loading}
+                            className={`w-full py-3 px-4 rounded-xl font-medium bg-gradient-to-r from-iris-500 to-iris-600 text-white hover:opacity-90 transition-opacity shadow-lg shadow-iris-500/25 ${loading ? 'opacity-50 cursor-not-allowed' : ''
+                                }`}
                         >
-                            Get More Credits
+                            {loading ? (
+                                <span className="flex items-center justify-center gap-2">
+                                    <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                    </svg>
+                                    Processing...
+                                </span>
+                            ) : (
+                                'Get More Credits'
+                            )}
                         </button>
 
                         <button
