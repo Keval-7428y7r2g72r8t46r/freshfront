@@ -9983,7 +9983,7 @@ DO NOT use schedule_post for email - use THIS tool instead.`,
             await incrementUsage('website');
             const prompt = (args.prompt || userMessage).toString();
             const result = await generateProjectWebsiteAsset(prompt);
-            const text = `I generated a project website experience "${result.description}" and saved it to your project assets.\n\nYou can view it from the Assets tab under Websites.`;
+            const text = `I generated a project website experience "${result.description}" and saved it to your project assets.\n\nYou can view it from the Assets tab under Sites.`;
             addMessage('model', text);
           } else if (fc.name === 'generate_project_podcast') {
             const podcastCheck = await checkUsageLimit('podcast', isSubscribed);
