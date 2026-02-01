@@ -36,7 +36,7 @@ export const xaiService = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 prompt: params.prompt,
-                image: params.image_url ? { url: params.image_url } : undefined,
+                image_url: params.image_url,
                 duration: params.duration,
                 aspect_ratio: params.aspect_ratio,
                 resolution: params.resolution,
@@ -61,7 +61,7 @@ export const xaiService = {
             body: JSON.stringify({
                 prompt: params.prompt,
                 video: { url: params.video_url },
-                image: params.image_url ? { url: params.image_url } : undefined,
+                image_url: params.image_url,
                 model: params.model || 'grok-imagine-video'
             })
         });
