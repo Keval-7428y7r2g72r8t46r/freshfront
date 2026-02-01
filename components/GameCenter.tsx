@@ -148,7 +148,7 @@ const GAMES: GameOption[] = [
     {
         id: 'breakout',
         name: 'Breakout',
-        icon: '🧱',
+        icon: '🛹',
         srcDoc: BREAKOUT_HTML,
         description: 'Smash the bricks'
     },
@@ -162,7 +162,7 @@ const GAMES: GameOption[] = [
     {
         id: 'snake',
         name: 'Snake',
-        icon: '�',
+        icon: '🐍',
         srcDoc: SNAKE_HTML,
         description: 'Classic arcade snake'
     },
