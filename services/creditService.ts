@@ -56,6 +56,11 @@ export const CREDIT_COSTS = {
 
     // Highest (70 credits)
     videoOverviewGeneration: 70,
+
+    // New Operations
+    videoEdition: 35,
+    worldGeneration: 50,
+    videoLive: 35,
 } as const;
 
 export type CreditOperation = keyof typeof CREDIT_COSTS;
@@ -315,6 +320,9 @@ export function getOperationDisplayName(operation: CreditOperation): string {
         magicProjectGeneration: 'Magic Project',
         deepResearch: 'Deep Research',
         videoOverviewGeneration: 'Video Overview',
+        videoEdition: 'Video Editing',
+        worldGeneration: 'World Generation',
+        videoLive: 'Live Video Session',
     };
     return names[operation] || operation;
 }
