@@ -544,6 +544,23 @@ export const getResearchProjectsFromFirestore = async (uid: string): Promise<Res
 
     const owned: ResearchProject[] = snapshot.docs.map((docSnap) => {
       const data = docSnap.data();
+
+      // Deserialize tables
+      let tables = data.tables || [];
+      if (tables.length > 0) {
+        tables = tables.map((table: any) => {
+          if (typeof table.rows === 'string') {
+            try {
+              return { ...table, rows: JSON.parse(table.rows) };
+            } catch (e) {
+              console.error('[Firebase] Failed to parse table rows:', e);
+              return { ...table, rows: [] };
+            }
+          }
+          return table;
+        });
+      }
+
       return {
         id: docSnap.id,
         name: data.name || '',
@@ -572,6 +589,7 @@ export const getResearchProjectsFromFirestore = async (uid: string): Promise<Res
         theme: data.theme,
         pinnedAssetIds: data.pinnedAssetIds || [],
         worlds: data.worlds || [],
+        tables,
       } as ResearchProject;
     });
 
@@ -593,6 +611,22 @@ export const getResearchProjectsFromFirestore = async (uid: string): Promise<Res
 
       const data = projectDoc.data();
       const role: ProjectAccessRole = refData.role && refData.role !== 'owner' ? refData.role : 'viewer';
+
+      // Deserialize tables
+      let tables = data.tables || [];
+      if (tables.length > 0) {
+        tables = tables.map((table: any) => {
+          if (typeof table.rows === 'string') {
+            try {
+              return { ...table, rows: JSON.parse(table.rows) };
+            } catch (e) {
+              console.error('[Firebase] Failed to parse table rows:', e);
+              return { ...table, rows: [] };
+            }
+          }
+          return table;
+        });
+      }
 
       shared.push({
         id: projectDoc.id,
@@ -624,6 +658,7 @@ export const getResearchProjectsFromFirestore = async (uid: string): Promise<Res
         theme: (refData as any).theme || data.theme,
         pinnedAssetIds: data.pinnedAssetIds || [],
         worlds: data.worlds || [],
+        tables,
       } as ResearchProject);
     }
 
@@ -804,6 +839,30 @@ export const getResearchProjectFromFirestore = async (
         researchSessions.sort((a, b) => b.timestamp - a.timestamp);
       }
 
+      // Deserialize tables - convert JSON-stringified rows back to arrays
+      let tables = data.tables || [];
+      if (tables.length > 0) {
+        tables = tables.map((table: any) => {
+          // If rows is a string, parse it back to an array
+          if (typeof table.rows === 'string') {
+            try {
+              return {
+                ...table,
+                rows: JSON.parse(table.rows)
+              };
+            } catch (e) {
+              console.error('[Firebase] Failed to parse table rows:', e);
+              return {
+                ...table,
+                rows: []
+              };
+            }
+          }
+          // Already an array (backward compatibility)
+          return table;
+        });
+      }
+
       const project = {
         id: projectDoc.id,
         name: data.name || '',
@@ -832,6 +891,7 @@ export const getResearchProjectFromFirestore = async (
         theme: data.theme,
         pinnedAssetIds: data.pinnedAssetIds || [],
         worlds: data.worlds || [],
+        tables, // Add deserialized tables
       } as ResearchProject;
 
       return project;
