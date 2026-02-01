@@ -58,7 +58,7 @@ async function handleGenerateVideo(request: Request): Promise<Response> {
         }
 
         const body = await request.json();
-        const { prompt, image, duration, aspect_ratio, resolution, model = 'grok-imagine-video' } = body;
+        const { prompt, image, image_url, duration, aspect_ratio, resolution, model = 'grok-imagine-video' } = body;
 
         if (!prompt) {
             return new Response(JSON.stringify({ error: 'Prompt is required' }), {
@@ -72,7 +72,8 @@ async function handleGenerateVideo(request: Request): Promise<Response> {
             model,
         };
 
-        if (image?.url) xaiBody.image = { url: image.url };
+        const xai_ref_image_url = image_url || image?.url;
+        if (xai_ref_image_url) xaiBody.image_url = xai_ref_image_url;
         if (duration) xaiBody.duration = duration;
         if (aspect_ratio) xaiBody.aspect_ratio = aspect_ratio;
         if (resolution) xaiBody.resolution = resolution;
@@ -143,7 +144,7 @@ async function handleEditVideo(request: Request): Promise<Response> {
         }
 
         const body = await request.json();
-        const { prompt, video, image, model = 'grok-imagine-video' } = body;
+        const { prompt, video, image, image_url, model = 'grok-imagine-video' } = body;
 
         if (!prompt) {
             return new Response(JSON.stringify({ error: 'Prompt is required' }), {
@@ -174,9 +175,10 @@ async function handleEditVideo(request: Request): Promise<Response> {
         };
 
         // Add optional image reference if provided
-        if (image?.url) {
-            xaiBody.image = { url: image.url };
-            console.log('[xAI Video] Including image reference:', image.url.substring(0, 100));
+        const xai_ref_image_url = image_url || image?.url;
+        if (xai_ref_image_url) {
+            xaiBody.image_url = xai_ref_image_url;
+            console.log('[xAI Video] Including image reference:', xai_ref_image_url.substring(0, 100));
         }
 
         // Call xAI API
