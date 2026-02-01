@@ -944,6 +944,24 @@ export const storageService = {
           };
         }
 
+        // Tables also contain nested arrays (rows is an array of arrays).
+        // Serialize rows to JSON string to avoid Firestore nested array limitation.
+        if (updates.tables) {
+          firestoreUpdates = {
+            ...firestoreUpdates,
+            tables: updates.tables.map((table: any) => ({
+              id: String(table?.id || ''),
+              title: String(table?.title || ''),
+              description: table?.description ? String(table.description) : undefined,
+              columns: Array.isArray(table?.columns) ? table.columns : [],
+              rows: JSON.stringify(Array.isArray(table?.rows) ? table.rows : []),
+              createdAt: typeof table?.createdAt === 'number' ? table.createdAt : Date.now(),
+              googleSpreadsheetId: table?.googleSpreadsheetId,
+              googleSheetTitle: table?.googleSheetTitle,
+            })) as any,
+          };
+        }
+
         // If 'theme' is being updated and we are NOT the owner, update our private
         // shared project reference instead of the global project doc.
         if (updates.theme !== undefined && updatedProject.ownerUid && updatedProject.ownerUid !== currentUserUid) {
