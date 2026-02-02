@@ -60,6 +60,7 @@ interface EmailBuilderProps {
     projectName?: string;
     projectDescription?: string;
     logoUrl?: string;
+    initialFocus?: boolean;
 }
 
 // ============================================================================
@@ -346,6 +347,7 @@ export const EmailBuilder: React.FC<EmailBuilderProps> = ({
     projectName = '',
     projectDescription = '',
     logoUrl = '',
+    initialFocus = false,
 }) => {
     // State
     const [blocks, setBlocks] = useState<EmailBlock[]>([]);
@@ -360,6 +362,14 @@ export const EmailBuilder: React.FC<EmailBuilderProps> = ({
     const [showAssetSelector, setShowAssetSelector] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
     const [aiPrompt, setAiPrompt] = useState('');
+    const aiPromptRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (initialFocus && aiPromptRef.current) {
+            aiPromptRef.current.focus();
+        }
+    }, [initialFocus]);
+
     const [isGeneratingFullEmail, setIsGeneratingFullEmail] = useState(false);
     const [showMobileAiPrompt, setShowMobileAiPrompt] = useState(false);
 
@@ -907,6 +917,7 @@ export const EmailBuilder: React.FC<EmailBuilderProps> = ({
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                     </svg>
                     <input
+                        ref={aiPromptRef}
                         type="text"
                         value={aiPrompt}
                         onChange={(e) => setAiPrompt(e.target.value)}
