@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown';
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
 import { createPcmBlob, decode, decodeAudioData } from '../services/audioUtils';
+import { LiveAssistantButton } from './LiveAssistantButton';
 
 type AssistantMode = 'chat' | 'voice';
 
@@ -301,31 +302,11 @@ export const HomePageAssistant: React.FC<HomePageAssistantProps> = ({ isDarkMode
   return (
     <div className="fixed bottom-4 right-4 z-50">
       {!isOpen ? (
-        <button
+        <LiveAssistantButton
           onClick={() => setIsOpen(true)}
-          className="group relative w-14 h-14 rounded-full focus:outline-none"
-          title="Ask about FreshFront"
-          aria-label="Ask about FreshFront"
-        >
-          <span className="absolute inset-0 rounded-full bg-gradient-to-tr from-[#0a84ff] via-[#38bdf8] to-[#1d4ed8] opacity-80 blur-[14px] transition-all group-hover:opacity-100 group-hover:blur-[18px]" />
-          <span className="absolute -inset-[2px] rounded-full bg-gradient-to-tr from-white/30 via-white/10 to-white/0 opacity-50 blur-[2px]" />
-
-          <span
-            className={`relative flex h-full w-full items-center justify-center rounded-full border shadow-2xl backdrop-blur-xl transition-all group-active:scale-[0.98] ${isDarkMode
-              ? 'bg-[#061225]/65 border-white/10 text-white'
-              : 'bg-[#0a84ff] border-white/20 text-white'
-              } focus:ring-4 focus:ring-[#0a84ff]/30`}
-          >
-            <span className="absolute -inset-[3px] rounded-full opacity-100 homePageAssistantShine pointer-events-none" />
-            <span className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_30%_25%,rgba(255,255,255,0.35),transparent_55%)] pointer-events-none" />
-
-            <svg className="w-6 h-6 relative" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 3a9 9 0 00-9 9c0 2.2.8 4.2 2.1 5.8L4 21l3.4-1.1c1.3.7 2.9 1.1 4.6 1.1a9 9 0 000-18z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8.5 11.8h.01M12 11.8h.01M15.5 11.8h.01" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M18.6 5.9l.7-1.4.7 1.4 1.4.7-1.4.7-.7 1.4-.7-1.4-1.4-.7 1.4-.7z" />
-            </svg>
-          </span>
-        </button>
+          isDarkMode={isDarkMode}
+          className={`${isDarkMode ? 'bg-[#061225]/85 border-white/10 text-white' : 'bg-[#0a84ff] border-white/20 text-white'}`}
+        />
       ) : (
         <div className={`w-[92vw] max-w-[380px] h-[70vh] max-h-[560px] rounded-3xl shadow-2xl border overflow-hidden flex flex-col ${panelClasses}`}>
           <div className={`px-4 py-3 border-b flex items-center justify-between ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}>
