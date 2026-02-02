@@ -64,7 +64,7 @@ const App: React.FC = () => {
     if (saved && ['light', 'dark', 'orange', 'green', 'blue', 'purple', 'khaki', 'pink'].includes(saved)) {
       return saved as any;
     }
-    // Migration from old dark mode setting
+    // Migration from old dark mode settings
     const oldDarkMode = localStorage.getItem('theme-dark-mode');
     return oldDarkMode === 'true' ? 'dark' : 'light';
   });
@@ -1223,3 +1223,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+
