@@ -5212,16 +5212,41 @@ DO NOT use schedule_post for email - use THIS tool instead.`,
                       }
 
                       // Find video from attachments or conversation media
+                      // xAI requires a PUBLICLY ACCESSIBLE URL
                       let resolvedVideoUrl: string | null = null;
 
-                      // Priority 1: Check pending attachments (user just attached a video)
+                      // Priority 1: Check pending attachments - upload to KB for public URL
                       const videoAttachment = readyAttachments.find(a =>
-                        a.uploaded?.mimeType?.startsWith('video/') && a.uploaded?.uri
+                        a.file?.type?.startsWith('video/')
                       );
 
-                      if (videoAttachment?.uploaded?.uri) {
-                        resolvedVideoUrl = videoAttachment.uploaded.uri;
-                        console.log('[edit_video_with_xai] Using attached video');
+                      if (videoAttachment?.file) {
+                        // Upload to KB storage to get a public URL (xAI can't access Gemini file URIs)
+                        try {
+                          console.log('[edit_video_with_xai] Uploading attached video to KB...');
+                          const kbFile = await storageService.uploadKnowledgeBaseFile(projectRef.current.id, videoAttachment.file);
+                          resolvedVideoUrl = kbFile.url;
+                          console.log('[edit_video_with_xai] Uploaded video to KB, got public URL');
+
+                          // Also save to project KB
+                          const existingKb = projectRef.current.knowledgeBase || [];
+                          const updatedKnowledgeBase = [...existingKb, kbFile];
+                          await storageService.updateResearchProject(projectRef.current.id, { knowledgeBase: updatedKnowledgeBase });
+                          const updatedProject = { ...projectRef.current, knowledgeBase: updatedKnowledgeBase, lastModified: Date.now() };
+                          onProjectUpdate?.(updatedProject);
+                          projectRef.current = updatedProject;
+
+                          // Track for future use
+                          trackConversationMedia({ id: kbFile.id, url: resolvedVideoUrl, type: 'video', source: 'attached', name: videoAttachment.file.name });
+                        } catch (uploadErr) {
+                          console.error('[edit_video_with_xai] Failed to upload video:', uploadErr);
+                          functionResponses.push({
+                            id: fc.id,
+                            name: fc.name,
+                            response: { success: false, error: 'Failed to upload video for editing. Please try again.' }
+                          });
+                          continue;
+                        }
                       }
 
                       // Priority 2: Check conversation media (recently dropped/attached)
@@ -10640,20 +10665,38 @@ DO NOT use schedule_post for email - use THIS tool instead.`,
               const instruction = (args.instruction || '').toString();
               const videoUrlArg = (args.videoUrl || '').toString();
 
-              // Find video URL
+              // Find video URL - xAI requires a PUBLICLY ACCESSIBLE URL
               let resolvedVideoUrl: string | null = null;
 
-              // Check pending attachments
+              // Check pending attachments - need to upload to KB first for public URL
               const videoAtt = pendingAttachments.find(a =>
-                a.file?.type?.startsWith('video/') && a.status === 'ready' && a.uploaded?.uri
+                a.file?.type?.startsWith('video/') && a.status === 'ready'
               );
 
-              if (videoAtt?.uploaded?.uri) {
-                resolvedVideoUrl = videoAtt.uploaded.uri;
-                console.log('[edit_project_video] Using attached video');
+              if (videoAtt?.file) {
+                // Upload to KB storage to get a public URL (xAI can't access Gemini file URIs)
+                try {
+                  addMessage('model', '📤 Uploading video for editing...');
+                  const kbFile = await storageService.uploadKnowledgeBaseFile(project.id, videoAtt.file);
+                  resolvedVideoUrl = kbFile.url;
+                  console.log('[edit_project_video] Uploaded video to KB, got public URL:', resolvedVideoUrl);
+
+                  // Also save to project KB
+                  const existingKb = projectRef.current.knowledgeBase || [];
+                  const updatedKnowledgeBase = [...existingKb, kbFile];
+                  await storageService.updateResearchProject(project.id, { knowledgeBase: updatedKnowledgeBase });
+                  const updatedProject = { ...projectRef.current, knowledgeBase: updatedKnowledgeBase, lastModified: Date.now() };
+                  onProjectUpdate?.(updatedProject);
+                  projectRef.current = updatedProject;
+                } catch (uploadErr) {
+                  console.error('[edit_project_video] Failed to upload video:', uploadErr);
+                  addMessage('model', 'Failed to upload video for editing. Please try again.');
+                  setIsProcessing(false);
+                  continue;
+                }
               }
 
-              // Fallback to lastGeneratedAsset
+              // Fallback to lastGeneratedAsset (should already have public URL)
               if (!resolvedVideoUrl && lastGeneratedAsset?.type === 'video') {
                 resolvedVideoUrl = lastGeneratedAsset.url;
                 console.log('[edit_project_video] Using lastGeneratedAsset');
