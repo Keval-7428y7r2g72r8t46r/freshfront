@@ -4055,7 +4055,11 @@ ${socialConnectionStatus}${voiceGeneratedMediaContext}`;
       // --- TOOL: Stripe Product Creation ---
       const createStripeProductTool = {
         name: 'create_stripe_product',
-        description: 'Create a Stripe product with a payment link for selling. IMPORTANT: First check if user has Stripe connected. If not, respond asking them to click the "Connect Stripe" button before proceeding. Ask for product name, description, and price before calling.',
+        description: `Create a Stripe product with a payment link for selling. IMPORTANT WORKFLOW:
+1. First check if user has Stripe connected - if not, a "Connect Stripe" button will appear
+2. Ask for: product name, description, and price
+3. For product image, you can: use an attached image, use an asset from knowledge base, use last generated image, or proceed without
+4. Product will be saved to Assets → Products with payment link`,
         parameters: {
           type: Type.OBJECT,
           properties: {
@@ -4069,7 +4073,7 @@ ${socialConnectionStatus}${voiceGeneratedMediaContext}`;
             },
             price: {
               type: Type.NUMBER,
-              description: 'Price in cents (e.g., 4999 for $49.99).'
+              description: 'Price in dollars (e.g., 29.99, 199). NOT in cents.'
             },
             currency: {
               type: Type.STRING,
@@ -4078,7 +4082,15 @@ ${socialConnectionStatus}${voiceGeneratedMediaContext}`;
             },
             imageUrl: {
               type: Type.STRING,
-              description: 'URL of product image (optional).'
+              description: 'Direct URL for product image (optional).'
+            },
+            assetName: {
+              type: Type.STRING,
+              description: 'Name of an image in the knowledge base to use as product image (fuzzy match).'
+            },
+            useLastGenerated: {
+              type: Type.BOOLEAN,
+              description: 'Use the most recently generated image as the product image.'
             }
           },
           required: ['name', 'price']
@@ -6214,12 +6226,14 @@ DO NOT use schedule_post for email - use THIS tool instead.`,
                       });
                     }
                   } else if (fc.name === 'create_stripe_product') {
-                    // --- Stripe Product Creation Handler ---
+                    // --- Stripe Product Creation Handler (Chat Mode) ---
                     const productName = String(args.name || '').trim();
                     const description = String(args.description || '').trim();
                     const price = Number(args.price) || 0;
                     const currency = String(args.currency || 'usd').toLowerCase();
-                    const imageUrl = String(args.imageUrl || '').trim();
+                    let imageUrl = String(args.imageUrl || '').trim();
+                    const assetName = String(args.assetName || '').trim();
+                    const useLastGenerated = Boolean(args.useLastGenerated);
 
                     try {
                       if (!productName) throw new Error('Product name is required');
@@ -6237,45 +6251,127 @@ DO NOT use schedule_post for email - use THIS tool instead.`,
                           response: {
                             success: false,
                             needsStripeConnect: true,
-                            error: 'Stripe is not connected. Please click the "Connect Stripe" button to set up payments before creating products.'
+                            error: 'Stripe is not connected. Please click the "Connect Stripe" button below to set up payments before creating products.'
                           }
                         });
 
                         // Set state to show Stripe connect button
-                        setShowStripeConnectPrompt?.(true);
+                        setShowStripeConnectPrompt(true);
                         continue;
                       }
 
+                      // Resolve image URL from various sources
+                      if (!imageUrl && useLastGenerated && lastGeneratedAsset) {
+                        imageUrl = typeof lastGeneratedAsset === 'string' ? lastGeneratedAsset : lastGeneratedAsset.url;
+                        console.log('[create_stripe_product] Using last generated asset:', imageUrl);
+                      }
+
+                      if (!imageUrl && assetName) {
+                        // Search knowledge base for matching asset
+                        const kb = project.knowledgeBase || [];
+                        const match = kb.find((f: KnowledgeBaseFile) =>
+                          f.type?.startsWith('image/') &&
+                          f.name?.toLowerCase().includes(assetName.toLowerCase())
+                        );
+                        if (match) {
+                          imageUrl = match.url;
+                          console.log('[create_stripe_product] Found asset by name:', assetName, '->', match.name);
+                        }
+                      }
+
+                      // Check conversation media for recent images
+                      if (!imageUrl && currentConversationMedia.length > 0) {
+                        const recentImage = currentConversationMedia.find(m => m.type === 'image');
+                        if (recentImage) {
+                          imageUrl = recentImage.publicUrl || recentImage.url;
+                          console.log('[create_stripe_product] Using conversation media:', imageUrl);
+                        }
+                      }
+
+                      // Use attached file if available
+                      if (!imageUrl && pendingAttachments.length > 0) {
+                        const imageAttachment = pendingAttachments.find(a =>
+                          a.file?.type?.startsWith('image/') && a.status === 'ready'
+                        );
+                        if (imageAttachment?.uploaded?.url) {
+                          imageUrl = imageAttachment.uploaded.url;
+                          console.log('[create_stripe_product] Using attached image:', imageUrl);
+                        }
+                      }
+
                       // Create product via API
-                      const res = await authFetch('/api/stripe?op=create-product', {
+                      const productRes = await authFetch('/api/stripe?op=create-product', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
+                          accountId: stripeAccountId,
                           name: productName,
-                          description,
-                          priceInCents: price,
+                          description: description || undefined,
+                          price: price, // API expects dollars, converts to cents
                           currency,
-                          imageUrl,
-                          stripeAccountId
+                          images: imageUrl ? [imageUrl] : undefined,
                         })
                       });
 
-                      if (!res.ok) {
-                        const errData = await res.json().catch(() => ({}));
+                      if (!productRes.ok) {
+                        const errData = await productRes.json().catch(() => ({}));
                         throw new Error(errData.error || 'Failed to create product');
                       }
 
-                      const productData = await res.json();
+                      const productData = await productRes.json();
+
+                      // Create payment link
+                      let paymentLinkUrl = '';
+                      try {
+                        const linkRes = await authFetch('/api/stripe?op=create-payment-link', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            accountId: stripeAccountId,
+                            priceId: productData.priceId,
+                            quantity: 1,
+                          })
+                        });
+
+                        if (linkRes.ok) {
+                          const linkData = await linkRes.json();
+                          paymentLinkUrl = linkData.url || '';
+                        }
+                      } catch (linkErr) {
+                        console.warn('[create_stripe_product] Payment link creation failed:', linkErr);
+                      }
+
+                      // Save product to project
+                      const newProduct = {
+                        id: productData.id,
+                        name: productData.name,
+                        description: productData.description || undefined,
+                        priceId: productData.priceId,
+                        active: true,
+                        unitAmount: productData.unitAmount,
+                        currency: productData.currency,
+                        createdAt: Date.now(),
+                        images: productData.images || (imageUrl ? [imageUrl] : []),
+                        paymentLinkUrl,
+                      };
+
+                      const updatedProducts = [...(project.stripeProducts || []), newProduct];
+                      await storageService.updateResearchProject(project.id, { stripeProducts: updatedProducts });
+
+                      // Update project state
+                      const updatedProject = { ...project, stripeProducts: updatedProducts };
+                      onProjectUpdate?.(updatedProject);
 
                       functionResponses.push({
                         id: fc.id,
                         name: fc.name,
                         response: {
                           success: true,
-                          productId: productData.productId,
-                          productName,
-                          price: `${(price / 100).toFixed(2)} ${currency.toUpperCase()}`,
-                          paymentLinkUrl: productData.paymentLinkUrl
+                          productId: productData.id,
+                          productName: productData.name,
+                          price: `$${(productData.unitAmount / 100).toFixed(2)} ${productData.currency.toUpperCase()}`,
+                          paymentLinkUrl: paymentLinkUrl || 'Available in Products tab',
+                          savedToAssets: true
                         }
                       });
                     } catch (e: any) {
@@ -14113,6 +14209,85 @@ You can manage this product in **Assets → Products**.`;
               </div>
             </div>
           )}
+
+          {/* Stripe Connect Prompt */}
+          {showStripeConnectPrompt && (
+            <div className={`flex items-center gap-3 p-3 rounded-xl mb-2 ${isDarkMode ? 'bg-[#635BFF]/10 border border-[#635BFF]/30' : 'bg-[#635BFF]/5 border border-[#635BFF]/20'}`}>
+              <svg className="w-6 h-6 text-[#635BFF] flex-shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z" />
+              </svg>
+              <div className="flex-1">
+                <p className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Connect Stripe to sell products</p>
+                <p className={`text-xs ${isDarkMode ? 'text-[#86868b]' : 'text-gray-500'}`}>Set up payments to start selling</p>
+              </div>
+              <button
+                onClick={async () => {
+                  try {
+                    const userProfile = (window as any).__userProfile as UserProfile | undefined;
+                    // Create a new Stripe Connect account
+                    const res = await authFetch('/api/stripe?op=create-account', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        email: userProfile?.email || '',
+                        country: 'US', // Default, user can change in Stripe onboarding
+                      }),
+                    });
+                    const data = await res.json();
+
+                    if (data.accountId) {
+                      // Save to user profile
+                      await storageService.updateUserProfile({
+                        stripeConnect: {
+                          accountId: data.accountId,
+                          chargesEnabled: data.chargesEnabled || false,
+                          payoutsEnabled: data.payoutsEnabled || false,
+                          detailsSubmitted: data.detailsSubmitted || false,
+                          createdAt: Date.now(),
+                        },
+                      });
+
+                      // Create onboarding link and redirect
+                      const linkRes = await authFetch('/api/stripe?op=create-account-link', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          accountId: data.accountId,
+                          returnUrl: window.location.href,
+                          refreshUrl: window.location.href,
+                        }),
+                      });
+                      const linkData = await linkRes.json();
+
+                      if (linkData.url) {
+                        window.location.href = linkData.url;
+                      }
+                    }
+                  } catch (e) {
+                    console.error('Failed to create Stripe account:', e);
+                    addMessage('model', '❌ Failed to set up Stripe. Please try again or connect via Assets → Products tab.');
+                  }
+                  setShowStripeConnectPrompt(false);
+                }}
+                className="px-4 py-2 bg-[#635BFF] text-white text-sm font-medium rounded-lg hover:bg-[#5851db] transition-colors flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z" />
+                </svg>
+                Connect Stripe
+              </button>
+              <button
+                onClick={() => setShowStripeConnectPrompt(false)}
+                className={`p-1 rounded-full ${isDarkMode ? 'hover:bg-white/10' : 'hover:bg-black/5'}`}
+                aria-label="Dismiss"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          )}
+
           <div className="flex items-end gap-2 sm:gap-3">
             <input
               ref={attachmentsInputRef}
