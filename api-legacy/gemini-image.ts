@@ -5,7 +5,8 @@ const MODEL_IMAGE_FAST = 'gemini-2.5-flash-image';
 const MODEL_IMAGE_SMART = 'gemini-3-pro-image-preview';
 
 type ImageReference = {
-  base64: string;
+  base64?: string;
+  fileUri?: string;
   mimeType?: string;
 };
 
@@ -105,13 +106,21 @@ async function generateImage(
   if (mode === 'edit') {
     if (references.length) {
       references.slice(0, 5).forEach((ref) => {
-        if (!ref?.base64) return;
-        parts.push({
-          inlineData: {
-            data: ref.base64,
-            mimeType: ref.mimeType || 'image/png',
-          },
-        });
+        if (ref.fileUri) {
+          parts.push({
+            fileData: {
+              fileUri: ref.fileUri,
+              mimeType: ref.mimeType || 'image/png',
+            },
+          });
+        } else if (ref.base64) {
+          parts.push({
+            inlineData: {
+              data: ref.base64,
+              mimeType: ref.mimeType || 'image/png',
+            },
+          });
+        }
       });
     }
     parts.push({ text: normalizedPrompt });
@@ -119,13 +128,21 @@ async function generateImage(
     parts.push({ text: normalizedPrompt });
     if (references.length) {
       references.slice(0, 5).forEach((ref) => {
-        if (!ref?.base64) return;
-        parts.push({
-          inlineData: {
-            data: ref.base64,
-            mimeType: ref.mimeType || 'image/png',
-          },
-        });
+        if (ref.fileUri) {
+          parts.push({
+            fileData: {
+              fileUri: ref.fileUri,
+              mimeType: ref.mimeType || 'image/png',
+            },
+          });
+        } else if (ref.base64) {
+          parts.push({
+            inlineData: {
+              data: ref.base64,
+              mimeType: ref.mimeType || 'image/png',
+            },
+          });
+        }
       });
     }
   }
@@ -139,8 +156,12 @@ async function generateImage(
       },
     };
 
-    // Enable thinking for Gemini 3 Pro Image Preview - REMOVED (Invalid for Image Models)
-    // if (model === MODEL_IMAGE_SMART) { ... }
+    // Enable thinking for Gemini 3 Pro Image Preview
+    if (model === MODEL_IMAGE_SMART) {
+      config.thinkingConfig = {
+        thinkingLevel: 'high' as any,
+      };
+    }
 
     const response = await client.models.generateContent({
       model,
