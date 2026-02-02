@@ -10,6 +10,7 @@ interface WorldGeneratorProps {
     isDarkMode: boolean;
     checkCredits: (operation: CreditOperation) => Promise<boolean>;
     deductCredits: (operation: CreditOperation) => Promise<boolean>;
+    autoFocus?: boolean;
 }
 
 // Icons
@@ -52,10 +53,18 @@ const Spinner = () => (
     </svg>
 );
 
-export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated, onError, assets, isDarkMode, checkCredits, deductCredits }) => {
+export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated, onError, assets, isDarkMode, checkCredits, deductCredits, autoFocus }) => {
     const [activeTab, setActiveTab] = useState<'text' | 'image' | 'video' | 'multi-image'>('text');
     const [inputMode, setInputMode] = useState<'upload' | 'asset'>('upload');
     const [textPrompt, setTextPrompt] = useState('');
+    const inputRef = React.useRef<HTMLTextAreaElement>(null);
+
+    React.useEffect(() => {
+        if (autoFocus && inputRef.current) {
+            inputRef.current.focus();
+        }
+    }, [autoFocus]);
+
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [selectedAsset, setSelectedAsset] = useState<AssetItem | null>(null);
     const [selectedAssets, setSelectedAssets] = useState<AssetItem[]>([]);
@@ -228,6 +237,7 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
                         </div>
 
                         <textarea
+                            ref={inputRef}
                             value={textPrompt}
                             onChange={(e) => setTextPrompt(e.target.value)}
                             placeholder="Describe your world in detail (e.g., 'A bioluminescent forest at night with floating crystals and neon flora'...)"
