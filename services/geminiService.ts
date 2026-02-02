@@ -206,7 +206,8 @@ export const getPexelsImage = async (query: string): Promise<string> => {
 };
 
 export interface ImageReference {
-  base64: string;
+  base64?: string;
+  fileUri?: string;
   mimeType: string;
 }
 
@@ -250,7 +251,7 @@ const postGeminiImage = async (payload: Record<string, any>): Promise<{ imageDat
     return { imageDataUrl: data.imageDataUrl };
   }
 
-  throw new Error('Gemini image API returned unexpected format');
+  throw new Error('Invalid response from Gemini image API');
 };
 
 export const generateImage = async (
@@ -262,6 +263,7 @@ export const generateImage = async (
   }
   return postGeminiImage({
     prompt: prompt.trim(),
+    mode: 'generate',
     ...(options?.aspectRatio ? { aspectRatio: options.aspectRatio } : {}),
     ...(options?.imageSize ? { imageSize: options.imageSize } : {}),
     useProModel: options?.useProModel ?? true,
@@ -274,13 +276,15 @@ export const generateImageWithReferences = async (
   options?: { aspectRatio?: string; imageSize?: '1K' | '2K' | '4K'; useProModel?: boolean }
 ): Promise<{ imageDataUrl: string; parts?: any[] }> => {
   if (!references || references.length === 0) {
-    return generateImage(prompt, options);
+    throw new Error('Reference image is required for image generation');
   }
 
   return postGeminiImage({
     prompt: prompt.trim(),
+    mode: 'generate',
     references: references.map((ref) => ({
       base64: ref.base64,
+      fileUri: ref.fileUri,
       mimeType: ref.mimeType,
     })),
     ...(options?.aspectRatio ? { aspectRatio: options.aspectRatio } : {}),
@@ -303,6 +307,7 @@ export const editImageWithReferences = async (
     mode: 'edit',
     references: references.map((ref) => ({
       base64: ref.base64,
+      fileUri: ref.fileUri,
       mimeType: ref.mimeType,
     })),
     ...(options?.aspectRatio ? { aspectRatio: options.aspectRatio } : {}),
