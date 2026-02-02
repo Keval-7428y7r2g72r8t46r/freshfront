@@ -22,6 +22,7 @@ import { uploadFileToStorage } from '../services/firebase';
 import { UserProfile } from '../types';
 import { ThoughtProcess } from './ThoughtProcess';
 import { generateEmailHtml } from './EmailBuilder';
+import { worldLabsService, WorldGenerationRequest } from '../services/worldLabsService';
 
 interface ExtendedChatMessage extends ContextChatMessage {
   imageUrl?: string;
@@ -2102,6 +2103,7 @@ Return JSON ONLY:
           })()
           : await generateTableFromProjectContext(project, userPrompt);
 
+      // Create Table Asset
       const tableAsset: TableAsset = {
         id: typeof crypto !== 'undefined' && (crypto as any).randomUUID
           ? (crypto as any).randomUUID()
@@ -2123,6 +2125,54 @@ Return JSON ONLY:
       return tableAsset;
     },
     [project]
+  );
+
+  const refineProjectTableAsset = useCallback(
+    async (currentTable: any, instruction: string): Promise<any> => {
+      // Use Gemini to refine the table data
+      const prompt = `
+You are a data editor. I have a JSON table and an instruction to modify it.
+Process the instruction and output the NEW JSON table structure.
+Maintain integrity of data that is not changing.
+Follow the instruction precisely (e.g. valid instructions: "simplify column X", "add row", "delete duplicate rows").
+
+CURRENT TABLE JSON:
+${JSON.stringify({ title: currentTable.title, columns: currentTable.columns, rows: currentTable.rows }, null, 2)}
+
+INSTRUCTION: "${instruction}"
+
+OUTPUT FORMAT:
+Return ONLY valid JSON with this structure:
+{
+  "title": "...",
+  "description": "...",
+  "columns": ["Col1", "Col2"...],
+  "rows": [["Row1Col1", "Row1Col2"...], ...]
+}
+Do not include markdown triple backticks.
+`;
+
+      const result = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: { temperature: 0.1 } // Low temp for precise data manipulation
+      });
+
+      const responseText = result.text || '';
+      const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+
+      try {
+        const newTableSpec = JSON.parse(cleanJson);
+        if (!Array.isArray(newTableSpec.columns) || !Array.isArray(newTableSpec.rows)) {
+          throw new Error('Invalid table structure returned');
+        }
+        return newTableSpec;
+      } catch (e) {
+        console.error('Failed to parse refined table JSON:', responseText);
+        throw new Error('Failed to process table update. Please try again.');
+      }
+    },
+    []
   );
 
   const saveTableToLatestSession = useCallback(
@@ -3198,6 +3248,17 @@ SOCIAL MEDIA CONNECTION STATUS (REAL-TIME):
 - YouTube: ${youtubeConnected ? '✓ CONNECTED' : '✗ NOT CONNECTED'}
 - LinkedIn: ${linkedinConnected ? '✓ CONNECTED' : '✗ NOT CONNECTED'}
 
+STRIPE PAYMENT CONNECTION STATUS (REAL-TIME):
+- Stripe: ${((window as any).__userProfile as UserProfile | undefined)?.stripeConnect?.accountId ? '✓ CONNECTED' : '✗ NOT CONNECTED - User must click "Connect Stripe" button to set up payments'}
+${((window as any).__userProfile as UserProfile | undefined)?.stripeConnect?.chargesEnabled ? '  - Charges: ✓ Enabled (can accept payments)' : ''}
+${((window as any).__userProfile as UserProfile | undefined)?.stripeConnect?.accountId && !((window as any).__userProfile as UserProfile | undefined)?.stripeConnect?.chargesEnabled ? '  - Charges: ✗ Pending (onboarding incomplete)' : ''}
+
+IMPORTANT: Stripe is SEPARATE from social media connections. When user wants to CREATE A PRODUCT or SELL something:
+1. Check the STRIPE CONNECTION STATUS above (NOT social media)
+2. If Stripe is NOT CONNECTED, tell them to click the "Connect Stripe" button that will appear
+3. If Stripe IS CONNECTED, proceed with the create_stripe_product tool
+4. Do NOT show social media connect buttons for product creation
+
 === GUIDED SOCIAL MEDIA SHARING FLOW ===
 
 When the user expresses ANY intent to share on social media (keywords: "post", "share", "publish", "put this on", "upload to", "social media", "instagram", "tiktok", "facebook", "twitter", "x", "linkedin", "youtube"), you MUST guide them through this conversational flow.
@@ -4017,10 +4078,124 @@ ${socialConnectionStatus}${voiceGeneratedMediaContext}`;
         }
       };
 
+      // --- Email Tools ---
+      const sendEmailTool = {
+        name: 'send_email',
+        description: 'Send an email immediately via Gmail or Outlook. IMPORTANT: First check if user has Gmail or Outlook connected. If not connected, tell the user to connect their email in the Email tab first. Ask for recipient email, subject, and what the email should be about before sending.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            provider: {
+              type: Type.STRING,
+              description: 'Email provider to use: "gmail" or "outlook".',
+              enum: ['gmail', 'outlook']
+            },
+            to: {
+              type: Type.STRING,
+              description: 'Recipient email address.'
+            },
+            subject: {
+              type: Type.STRING,
+              description: 'Email subject line.'
+            },
+            body: {
+              type: Type.STRING,
+              description: 'Email body content in HTML format. Can include formatting like <p>, <b>, <ul>, etc.'
+            }
+          },
+          required: ['provider', 'to', 'subject', 'body']
+        }
+      };
+
+      const scheduleEmailTool = {
+        name: 'schedule_email',
+        description: 'Schedule an email to be sent at a specific future time via Gmail or Outlook. Must be at least 10 minutes in the future and within 7 days. Ask for recipient, subject, content, and when to send.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            provider: {
+              type: Type.STRING,
+              description: 'Email provider to use: "gmail" or "outlook".',
+              enum: ['gmail', 'outlook']
+            },
+            to: {
+              type: Type.STRING,
+              description: 'Recipient email address, or comma-separated list for multiple recipients.'
+            },
+            subject: {
+              type: Type.STRING,
+              description: 'Email subject line.'
+            },
+            body: {
+              type: Type.STRING,
+              description: 'Email body content in HTML format.'
+            },
+            scheduledTime: {
+              type: Type.STRING,
+              description: 'When to send the email. Natural language like "tomorrow at 9am", "next Monday at 2pm", "in 2 hours", or ISO 8601 datetime.'
+            }
+          },
+          required: ['provider', 'to', 'subject', 'body', 'scheduledTime']
+        }
+      };
+
+      const sendBulkEmailTool = {
+        name: 'send_bulk_email',
+        description: 'Send an email to multiple recipients from captured leads. Use this when user wants to email leads from their Forms tab. Ask what the email should be about and optionally which lead form to target.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            provider: {
+              type: Type.STRING,
+              description: 'Email provider to use: "gmail" or "outlook".',
+              enum: ['gmail', 'outlook']
+            },
+            formId: {
+              type: Type.STRING,
+              description: 'Optional: ID of a specific lead form to filter recipients. If not provided, sends to all leads.'
+            },
+            subject: {
+              type: Type.STRING,
+              description: 'Email subject line.'
+            },
+            body: {
+              type: Type.STRING,
+              description: 'Email body content in HTML format. Can use {name} placeholder for personalization.'
+            }
+          },
+          required: ['provider', 'subject', 'body']
+        }
+      };
+
+      // --- PDF Generation Tool ---
+      const generatePdfTool = {
+        name: 'generate_pdf',
+        description: 'Generate an illustrated PDF document (ebook, guide, report, brochure, etc.) using project context and AI. This tool has NO usage limits for Pro subscribers - always proceed to generate when requested. Ask user what type of document they want, the topic/focus, and optionally how many pages (4-24). The PDF will be saved to project assets and a download link provided.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            prompt: {
+              type: Type.STRING,
+              description: 'What the PDF should be about - topic, focus, audience, style. Be descriptive.'
+            },
+            pageCount: {
+              type: Type.NUMBER,
+              description: 'Number of pages (4-24). Defaults to 8 if not specified.'
+            },
+            documentType: {
+              type: Type.STRING,
+              description: 'Type of document to generate.',
+              enum: ['ebook', 'guide', 'report', 'brochure', 'presentation', 'whitepaper', 'manual']
+            }
+          },
+          required: ['prompt']
+        }
+      };
+
       // --- TOOL: Lead Form Generation ---
-      const generateLeadFormTool = {
-        name: 'generate_lead_form',
-        description: 'Generate a beautiful lead capture form website with custom fields. The form will be hosted publicly and submissions are saved automatically. Ask the user for form title, fields (name, email, phone, etc), and design preferences before calling.',
+      const generateFormTool = {
+        name: 'generate_form',
+        description: 'Generate a lead capture form website. This tool costs 45 credits. Ask for title, design prompt, and fields (or suggest defaults). The form will be hosted publicly and submissions are saved automatically.',
         parameters: {
           type: Type.OBJECT,
           properties: {
@@ -4052,14 +4227,67 @@ ${socialConnectionStatus}${voiceGeneratedMediaContext}`;
         }
       };
 
+      // --- Email Template Scheduling Tool ---
+      const scheduleTemplateEmailTool = {
+        name: 'schedule_template_email',
+        description: `PRIORITY TOOL for sending emails to email lists. Use this tool FIRST when:
+
+TRIGGER KEYWORDS (high priority):
+- "schedule the [name] email" → templateName: name
+- "send email to leads/table/list"
+- "email the [name] template to [source]"
+- "send newsletter to my prospects table"
+- Any mention of: "email template", "email to leads", "email list", "send to table"
+
+EMAIL LIST SOURCES - always ask which source if not specified:
+- "leads" or "form" → Use captured leads from lead forms
+- "table" → Use a table from Assets > Tables (find email column)
+- "file" → Use uploaded CSV/Excel file
+
+If user doesn't specify source, ASK which email list to use.
+DO NOT use schedule_post for email - use THIS tool instead.`,
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            templateName: {
+              type: Type.STRING,
+              description: 'Name of the email template to use. If not specified, ask user to choose one or create one.'
+            },
+            formName: {
+              type: Type.STRING,
+              description: 'Name of the lead form to use as source (fuzzy match). Use "leads" or "form" keyword.'
+            },
+            tableName: {
+              type: Type.STRING,
+              description: 'Name of the table to use as source (fuzzy match).'
+            },
+            fileName: {
+              type: Type.STRING,
+              description: 'Name of the uploaded file to use as source (fuzzy match).'
+            },
+            emailSource: {
+              type: Type.STRING,
+              description: 'Explicit source type: "form", "table", "file", or "ask".',
+              enum: ['form', 'table', 'file', 'ask']
+            },
+            scheduledAt: {
+              type: Type.STRING,
+              description: 'When to send the email (natural language or ISO). Default: "now".'
+            }
+          },
+          required: ['templateName']
+        }
+      };
+
       // --- TOOL: Stripe Product Creation ---
       const createStripeProductTool = {
         name: 'create_stripe_product',
-        description: `Create a Stripe product with a payment link for selling. IMPORTANT WORKFLOW:
-1. First check if user has Stripe connected - if not, a "Connect Stripe" button will appear
-2. Ask for: product name, description, and price
-3. For product image, you can: use an attached image, use an asset from knowledge base, use last generated image, or proceed without
-4. Product will be saved to Assets → Products with payment link`,
+        description: `Create a Stripe product with a payment link for selling. IMPORTANT:
+1. Check STRIPE PAYMENT CONNECTION STATUS in context (not social media!) - if Stripe is NOT CONNECTED, call this tool anyway and a "Connect Stripe" button will appear
+2. If Stripe IS CONNECTED, just call this tool with the product details - no need to ask permission
+3. Ask for: product name, description, and price before calling
+4. For product image: use an attached image, use an asset from knowledge base, use last generated image, or proceed without
+5. Product will be saved to Assets → Products with payment link`,
         parameters: {
           type: Type.OBJECT,
           properties: {
@@ -4094,6 +4322,49 @@ ${socialConnectionStatus}${voiceGeneratedMediaContext}`;
             }
           },
           required: ['name', 'price']
+        }
+      };
+
+      // --- TOOL: World Generation ---
+      const generateWorldTool = {
+        name: 'generate_world',
+        description: `Generate an immersive 3D world using World Labs AI. WORKFLOW:
+1. Ask user for a detailed text description of the world they want to create (lighting, mood, environment, atmosphere)
+2. Optionally, user can provide an image or video as a reference/structure guide
+3. For image input: use attached images, conversation media, or knowledge base assets
+4. For video input: use attached videos or conversation media
+5. Generation takes ~5 minutes - world will appear in Assets → Worlds when ready
+6. Call this tool with the prompt and inputType to start generation`,
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            prompt: {
+              type: Type.STRING,
+              description: 'Detailed description of the world (e.g., "A bioluminescent forest at night with floating crystals and neon flora")'
+            },
+            inputType: {
+              type: Type.STRING,
+              enum: ['text', 'image', 'video'],
+              description: 'Type of input: text-only, image-guided, or video-guided'
+            },
+            imageUrl: {
+              type: Type.STRING,
+              description: 'URL of image to use as structure guide (optional)'
+            },
+            videoUrl: {
+              type: Type.STRING,
+              description: 'URL of video to use as structure guide (optional)'
+            },
+            assetName: {
+              type: Type.STRING,
+              description: 'Name of an asset in knowledge base to use as guide (fuzzy match)'
+            },
+            useLastGenerated: {
+              type: Type.BOOLEAN,
+              description: 'Use the most recently generated image/video as guide'
+            }
+          },
+          required: ['prompt', 'inputType']
         }
       };
 
@@ -4164,8 +4435,17 @@ ${socialConnectionStatus}${voiceGeneratedMediaContext}`;
                 getProjectOverviewTool,
                 getProjectFileTool,
                 generateProjectBookTool,
-                generateLeadFormTool,
+
                 createStripeProductTool,
+                generateWorldTool,
+                // Email Tools
+                sendEmailTool,
+                scheduleEmailTool,
+                sendBulkEmailTool,
+                scheduleTemplateEmailTool,
+                // PDF & Form Tools
+                generatePdfTool,
+                generateFormTool,
                 // Get connected accounts tool
                 {
                   name: 'get_connected_accounts',
@@ -5592,41 +5872,71 @@ DO NOT use schedule_post for email - use THIS tool instead.`,
 
                       await incrementUsage('video');
 
-                      // Resolve image URL from asset references if not provided directly
-                      if (!imageUrl && (assetId || assetName)) {
-                        const knowledgeBase = project.knowledgeBase || [];
-                        let matchedAsset = null;
+                      await incrementUsage('video');
 
-                        if (assetId) {
-                          matchedAsset = knowledgeBase.find((kb) => kb.id === assetId);
-                        } else if (assetName) {
-                          // Fuzzy match by name (case-insensitive, partial match)
-                          const searchTerm = assetName.toLowerCase();
-                          matchedAsset = knowledgeBase.find((kb) => {
-                            const name = (kb.name || '').toLowerCase();
-                            return name.includes(searchTerm) || searchTerm.includes(name);
-                          });
+                      // Resolve image URL from various sources
+                      if (!imageUrl) {
+                        // 1. Check UseLastGenerated / Asset Name
+                        if (assetId || assetName) {
+                          const knowledgeBase = project.knowledgeBase || [];
+                          let matchedAsset = null;
+                          if (assetId) {
+                            matchedAsset = knowledgeBase.find((kb) => kb.id === assetId);
+                          } else if (assetName) {
+                            const searchTerm = assetName.toLowerCase();
+                            matchedAsset = knowledgeBase.find((kb) => (kb.name || '').toLowerCase().includes(searchTerm));
+                          }
+                          if (matchedAsset && matchedAsset.url) imageUrl = matchedAsset.url;
                         }
 
-                        if (matchedAsset && matchedAsset.url) {
-                          imageUrl = matchedAsset.url;
-                        } else {
-                          throw new Error(`Could not find asset matching ${assetId ? `ID: ${assetId}` : `name: ${assetName}`}`);
+                        // 2. Check Last Generated Asset
+                        if (!imageUrl && lastGeneratedAsset && lastGeneratedAsset.type.startsWith('image')) {
+                          imageUrl = typeof lastGeneratedAsset === 'string' ? lastGeneratedAsset : lastGeneratedAsset.url;
+                          console.log('[generate_video_from_image] Using last generated asset:', imageUrl);
+                        }
+
+                        // 3. Check Conversation Media
+                        if (!imageUrl && currentConversationMedia.length > 0) {
+                          const media = currentConversationMedia.find(m => m.type === 'image');
+                          if (media) {
+                            imageUrl = media.publicUrl || media.url;
+                            console.log('[generate_video_from_image] Using conversation media:', imageUrl);
+                          }
+                        }
+
+                        // 4. Check Attachments
+                        if (!imageUrl && (pendingAttachments.length > 0 || readyAttachments.length > 0)) {
+                          const allAttachments = [...(readyAttachments || []), ...pendingAttachments];
+                          const attachment = allAttachments.find((a: any) => {
+                            const mimeType = a.file?.type || a.uploaded?.mimeType || '';
+                            return mimeType.startsWith('image/');
+                          });
+                          if (attachment?.uploaded?.url) {
+                            imageUrl = attachment.uploaded.url;
+                            console.log('[generate_video_from_image] Using attached image:', imageUrl);
+                          }
                         }
                       }
 
                       if (!imageUrl) {
-                        throw new Error('An image source is required. Provide imageUrl, assetId, or assetName.');
+                        throw new Error('No image found to animate. Please attach an image, refer to a previous image, or provide an image URL.');
                       }
 
                       // Fetch the image and wrap it in a File
                       const imageRes = await fetch(imageUrl);
+                      if (!imageRes.ok) throw new Error(`Failed to fetch input image: ${imageRes.statusText}`);
+
                       const imageBlob = await imageRes.blob();
+                      if (!imageBlob.type.startsWith('image/') && !imageBlob.type.includes('octet-stream')) {
+                        throw new Error(`Invalid image type: ${imageBlob.type}. Please use a valid image file.`);
+                      }
+
                       const imageFile = new File(
                         [imageBlob],
                         `chat-video-image-${Date.now()}.png`,
                         { type: imageBlob.type || 'image/png' }
                       );
+
 
                       const model = mode === 'quality' ? 'sora-2-pro' : 'sora-2';
                       let videoBlob: Blob | null = null;
@@ -6098,6 +6408,34 @@ DO NOT use schedule_post for email - use THIS tool instead.`,
                         response: { success: false, error: String(e?.message || e) },
                       });
                     }
+                  } else if (fc.name === 'edit_project_table') {
+                    try {
+                      const instruction = String(args.instruction || '').trim();
+                      const bridge = getTableEditorBridge();
+                      if (!bridge) throw new Error('Table editor unavailable. Open Assets > Tables first.');
+
+                      const cur = bridge.getTable();
+                      if (!cur || !cur.table) throw new Error('No table currently loaded.');
+
+                      const newTableSpec = await refineProjectTableAsset(cur.table, instruction);
+
+                      bridge.setTableTitle(newTableSpec.title || cur.table.title || 'Table');
+                      bridge.setTableDescription(newTableSpec.description || cur.table.description || '');
+                      bridge.setColumns(newTableSpec.columns);
+                      bridge.setRows(newTableSpec.rows);
+
+                      functionResponses.push({
+                        id: fc.id,
+                        name: fc.name,
+                        response: { success: true, message: 'Table updated successfully.' },
+                      });
+                    } catch (e: any) {
+                      functionResponses.push({
+                        id: fc.id,
+                        name: fc.name,
+                        response: { success: false, error: String(e?.message || e) },
+                      });
+                    }
                   } else if (fc.name === 'save_project_table') {
                     try {
                       const bridge = getTableEditorBridge();
@@ -6375,6 +6713,143 @@ DO NOT use schedule_post for email - use THIS tool instead.`,
                         }
                       });
                     } catch (e: any) {
+                      functionResponses.push({
+                        id: fc.id,
+                        name: fc.name,
+                        response: { success: false, error: String(e?.message || e) }
+                      });
+                    }
+                  } else if (fc.name === 'generate_world') {
+                    // ========== World Generation Handler (Chat Mode) ==========
+                    try {
+                      const prompt = String(args.prompt || '').trim();
+                      const inputType = String(args.inputType || 'text').toLowerCase() as 'text' | 'image' | 'video';
+                      let imageUrl = String(args.imageUrl || '').trim();
+                      let videoUrl = String(args.videoUrl || '').trim();
+                      const assetName = String(args.assetName || '').trim();
+                      const useLastGenerated = Boolean(args.useLastGenerated);
+
+                      if (!prompt) {
+                        functionResponses.push({
+                          id: fc.id,
+                          name: fc.name,
+                          response: { success: false, error: 'Please describe the world you want to create.' }
+                        });
+                        continue;
+                      }
+
+                      // Credit Check
+                      const hasCredits = await checkCredits('worldGeneration');
+                      if (!hasCredits) {
+                        functionResponses.push({
+                          id: fc.id,
+                          name: fc.name,
+                          response: { success: false, error: 'Insufficient credits', cancelled: true }
+                        });
+                        continue;
+                      }
+
+                      const success = await deductCredits('worldGeneration');
+                      if (!success) throw new Error('Failed to deduct credits');
+
+                      // Resolve media URL from various sources
+                      let mediaUrl = inputType === 'video' ? videoUrl : imageUrl;
+
+                      if (!mediaUrl && useLastGenerated && lastGeneratedAsset) {
+                        mediaUrl = typeof lastGeneratedAsset === 'string' ? lastGeneratedAsset : lastGeneratedAsset.url;
+                        console.log('[generate_world] Using last generated asset:', mediaUrl);
+                      }
+
+                      if (!mediaUrl && assetName) {
+                        const kb = projectRef.current.knowledgeBase || [];
+                        const isVideo = inputType === 'video';
+                        const match = kb.find((f: KnowledgeBaseFile) => {
+                          const typeMatch = isVideo ? f.type?.startsWith('video/') : f.type?.startsWith('image/');
+                          return typeMatch && f.name?.toLowerCase().includes(assetName.toLowerCase());
+                        });
+                        if (match) {
+                          mediaUrl = match.url;
+                          console.log('[generate_world] Found asset by name:', assetName, '->', match.name);
+                        }
+                      }
+
+                      // Check conversation media
+                      if (!mediaUrl && currentConversationMedia.length > 0) {
+                        const targetType = inputType === 'video' ? 'video' : 'image';
+                        const media = currentConversationMedia.find(m => m.type === targetType);
+                        if (media) {
+                          mediaUrl = media.publicUrl || media.url;
+                          console.log('[generate_world] Using conversation media:', mediaUrl);
+                        }
+                      }
+
+                      // Check attachments
+                      if (!mediaUrl && pendingAttachments.length > 0) {
+                        const isVideo = inputType === 'video';
+                        const attachment = pendingAttachments.find(a => {
+                          const mimeType = a.file?.type || a.uploaded?.mimeType || '';
+                          return isVideo ? mimeType.startsWith('video/') : mimeType.startsWith('image/');
+                        });
+                        if (attachment?.uploaded?.url) {
+                          mediaUrl = attachment.uploaded.url;
+                          console.log('[generate_world] Using attached media:', mediaUrl);
+                        }
+                      }
+
+                      // Validate media for non-text types
+                      if ((inputType === 'image' || inputType === 'video') && !mediaUrl) {
+                        functionResponses.push({
+                          id: fc.id,
+                          name: fc.name,
+                          response: { success: false, error: `Please provide ${inputType === 'video' ? 'a video' : 'an image'} to use as a structure guide, or specify inputType: "text" for text-only generation.` }
+                        });
+                        continue;
+                      }
+
+                      // Build request
+                      const request: WorldGenerationRequest = {
+                        world_prompt: {
+                          type: inputType,
+                          text_prompt: prompt,
+                        }
+                      };
+
+                      if (inputType === 'image' && mediaUrl) {
+                        request.world_prompt.image_prompt = { source: 'uri', uri: mediaUrl };
+                      } else if (inputType === 'video' && mediaUrl) {
+                        request.world_prompt.video_prompt = { source: 'uri', uri: mediaUrl };
+                      }
+
+                      // Start generation
+                      const operation = await worldLabsService.generateWorld(request);
+
+                      // Save to project with 'generating' status
+                      const newWorld = {
+                        id: operation.operation_id,
+                        prompt,
+                        status: 'generating' as const,
+                        createdAt: Date.now(),
+                        previewUrl: '',
+                        data: { operation_id: operation.operation_id }
+                      };
+                      const updatedWorlds = [newWorld, ...(projectRef.current.worlds || [])];
+                      await storageService.updateResearchProject(projectRef.current.id, { worlds: updatedWorlds });
+                      onProjectUpdate?.({ ...projectRef.current, worlds: updatedWorlds });
+
+                      functionResponses.push({
+                        id: fc.id,
+                        name: fc.name,
+                        response: {
+                          success: true,
+                          message: 'World generation started! It will appear in Assets → Worlds when ready (~5 minutes).',
+                          operationId: operation.operation_id,
+                          prompt: prompt.substring(0, 100) + (prompt.length > 100 ? '...' : ''),
+                          inputType,
+                          hasMediaGuide: !!mediaUrl
+                        }
+                      });
+                    } catch (e: any) {
+                      console.error('generate_world error:', e);
                       functionResponses.push({
                         id: fc.id,
                         name: fc.name,
@@ -8330,6 +8805,17 @@ SOCIAL MEDIA CONNECTION STATUS (REAL-TIME):
 - YouTube: ${youtubeConnected ? '✓ CONNECTED' : '✗ NOT CONNECTED'}
 - LinkedIn: ${linkedinConnected ? '✓ CONNECTED' : '✗ NOT CONNECTED'}
 
+STRIPE PAYMENT CONNECTION STATUS (REAL-TIME):
+- Stripe: ${((window as any).__userProfile as UserProfile | undefined)?.stripeConnect?.accountId ? '✓ CONNECTED' : '✗ NOT CONNECTED - User must click "Connect Stripe" button to set up payments'}
+${((window as any).__userProfile as UserProfile | undefined)?.stripeConnect?.chargesEnabled ? '  - Charges: ✓ Enabled (can accept payments)' : ''}
+${((window as any).__userProfile as UserProfile | undefined)?.stripeConnect?.accountId && !((window as any).__userProfile as UserProfile | undefined)?.stripeConnect?.chargesEnabled ? '  - Charges: ✗ Pending (onboarding incomplete)' : ''}
+
+IMPORTANT: Stripe is SEPARATE from social media connections. When user wants to CREATE A PRODUCT or SELL something:
+1. Check the STRIPE CONNECTION STATUS above (NOT social media)
+2. If Stripe is NOT CONNECTED, tell them a "Connect Stripe" button will appear and they should click it
+3. If Stripe IS CONNECTED, proceed with the create_stripe_product tool immediately
+4. Do NOT show social media connect buttons for product creation - Stripe has its OWN connect button
+
 ================================================================================
 INTELLIGENT TOOL SELECTION - REASON BEFORE ACTING
 ================================================================================
@@ -9471,13 +9957,31 @@ IMPORTANT: Use this context to understand what "it", "this", "that" refer to in 
 
       const generateProjectTableTool = {
         name: 'generate_project_table',
-        description: 'Generate a new table using your project context and load it into the Assets > Tables editor.',
+        description: 'Generate a NEW table based on a prompt (e.g., "leads for software companies"). SAVES to Assets > Tables automatically. The generated table will be returned and opened.',
         parameters: {
           type: Type.OBJECT,
           properties: {
-            prompt: { type: Type.STRING, description: 'What the table should contain.' }
+            prompt: {
+              type: Type.STRING,
+              description: 'Description of the table to generate (e.g., "List of top 10 tech companies with revenue and CEO").'
+            }
           },
           required: ['prompt']
+        }
+      };
+
+      const editProjectTableTool = {
+        name: 'edit_project_table',
+        description: 'Modify the currently open table based on instructions (e.g., "simplify column A", "add row for X", "delete duplicates"). Use this when the user wants to EDIT existing table data.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            instruction: {
+              type: Type.STRING,
+              description: 'Clear instruction on how to modify the table data.'
+            }
+          },
+          required: ['instruction']
         }
       };
 
@@ -9888,18 +10392,18 @@ Set useLastGenerated=true when user says "this" or "the image/video".`,
       // --- Stripe Product Creation Tool ---
       const createStripeProductTool = {
         name: 'create_stripe_product',
-        description: `Create a Stripe product with payment link for selling digital products. IMPORTANT WORKFLOW:
-1. First check if Stripe is connected - if not, tell user to connect from Products tab
-2. Help user identify the product type (digital download, service, course, ebook, etc.)
-3. Ask for: product name, description, price
-4. For product image, you can: use an attached image, generate one with generate_project_image, use an asset from knowledge base, or proceed without
-5. After creation, provide the payment link URL
+        description: `Create a Stripe product with payment link for selling. IMPORTANT:
+1. Check STRIPE PAYMENT CONNECTION STATUS in context (NOT social media connections!) 
+2. If Stripe is NOT CONNECTED: Call this tool anyway - a "Connect Stripe" button will automatically appear for the user. Do NOT show X/Twitter or other social media connect buttons.
+3. If Stripe IS CONNECTED: Just call this tool with the product details
+4. Ask for: product name, description, and price before calling
+5. For product image: use an attached image, use an asset from knowledge base, use last generated image, or proceed without
+6. Product will be saved to Assets → Products with payment link
 
 BRAINSTORMING: Help users think through:
 - What makes their product unique?
 - Ideal price point for their audience
-- Compelling product description
-- Whether to use an existing asset (PDF, image they uploaded) or create new marketing materials`,
+- Compelling product description`,
         parameters: {
           type: Type.OBJECT,
           properties: {
@@ -9934,6 +10438,49 @@ BRAINSTORMING: Help users think through:
             }
           },
           required: ['name', 'price']
+        }
+      };
+
+      // --- World Generation Tool ---
+      const generateWorldTool = {
+        name: 'generate_world',
+        description: `Generate an immersive 3D world using World Labs AI. WORKFLOW:
+1. Ask user for a detailed text description of the world they want to create (lighting, mood, environment, atmosphere)
+2. Optionally, user can provide an image or video as a reference/structure guide
+3. For image input: use attached images, dropped images, conversation media, or knowledge base assets
+4. For video input: use attached videos or conversation media
+5. Generation takes ~5 minutes - world will appear in Assets → Worlds when ready
+6. Call this tool with the prompt and inputType to start generation`,
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            prompt: {
+              type: Type.STRING,
+              description: 'Detailed description of the world (e.g., "A bioluminescent forest at night with floating crystals and neon flora")'
+            },
+            inputType: {
+              type: Type.STRING,
+              enum: ['text', 'image', 'video'],
+              description: 'Type of input: text-only, image-guided, or video-guided'
+            },
+            imageUrl: {
+              type: Type.STRING,
+              description: 'URL of image to use as structure guide (optional)'
+            },
+            videoUrl: {
+              type: Type.STRING,
+              description: 'URL of video to use as structure guide (optional)'
+            },
+            assetName: {
+              type: Type.STRING,
+              description: 'Name of an asset in knowledge base to use as guide (fuzzy match)'
+            },
+            useLastGenerated: {
+              type: Type.BOOLEAN,
+              description: 'Use the most recently generated image/video as guide'
+            }
+          },
+          required: ['prompt', 'inputType']
         }
       };
 
@@ -10040,6 +10587,7 @@ DO NOT use schedule_post for email - use THIS tool instead.`,
             setTableRowTool,
             setTableColumnTool,
             generateProjectTableTool,
+            editProjectTableTool,
             saveProjectTableTool,
             saveProjectTableToGoogleSheetTool,
             getConnectedAccountsTool,
@@ -10064,6 +10612,8 @@ DO NOT use schedule_post for email - use THIS tool instead.`,
             generateFormTool,
             // Stripe Product Creation
             createStripeProductTool,
+            // World Generation
+            generateWorldTool,
             // Email Template Scheduling
             scheduleTemplateEmailTool,
           ]
@@ -11205,6 +11755,27 @@ DO NOT use schedule_post for email - use THIS tool instead.`,
               addMessage('model', `Generated a new table and loaded it into Assets > Tables: "${table.title}".`);
             } catch (e: any) {
               addMessage('model', `Failed to generate table: ${String(e?.message || e)}`);
+            }
+          } else if (fc.name === 'edit_project_table') {
+            const instruction = String(args.instruction || '').trim();
+            try {
+              const bridge = getTableEditorBridge();
+              if (!bridge) throw new Error('Table editor unavailable. Open Assets > Tables and load a table first.');
+              const cur = bridge.getTable();
+              if (!cur || !cur.table) throw new Error('No table loaded.');
+
+              addMessage('model', `Refining table data: "${instruction}"...`);
+
+              const newTableSpec = await refineProjectTableAsset(cur.table, instruction);
+
+              bridge.setTableTitle(newTableSpec.title || cur.table.title || 'Table');
+              bridge.setTableDescription(newTableSpec.description || cur.table.description || '');
+              bridge.setColumns(newTableSpec.columns);
+              bridge.setRows(newTableSpec.rows);
+
+              addMessage('model', 'Table updated successfully based on your instructions.');
+            } catch (e: any) {
+              addMessage('model', `Failed to edit table: ${String(e?.message || e)}`);
             }
           } else if (fc.name === 'save_project_table') {
             try {
@@ -13008,6 +13579,120 @@ You can manage this product in **Assets → Products**.`;
             } catch (e: any) {
               console.error('create_stripe_product error:', e);
               addMessage('model', `❌ Failed to create product: ${e?.message || 'Unknown error'}`);
+            }
+
+            // ========== World Generation Handler ==========
+          } else if (fc.name === 'generate_world') {
+            try {
+              const prompt = String(args.prompt || '').trim();
+              const inputType = String(args.inputType || 'text').toLowerCase() as 'text' | 'image' | 'video';
+              let imageUrl = String(args.imageUrl || '').trim();
+              let videoUrl = String(args.videoUrl || '').trim();
+              const assetName = String(args.assetName || '').trim();
+              const useLastGenerated = Boolean(args.useLastGenerated);
+
+              if (!prompt) {
+                addMessage('model', 'Please describe the world you want to create.');
+                continue;
+              }
+
+              // Credit Check
+              const hasCredits = await checkCredits('worldGeneration');
+              if (!hasCredits) continue;
+
+              const success = await deductCredits('worldGeneration');
+              if (!success) {
+                addMessage('model', '❌ Failed to deduct credits for world generation.');
+                continue;
+              }
+
+              // Resolve media URL from various sources
+              let mediaUrl = inputType === 'video' ? videoUrl : imageUrl;
+
+              if (!mediaUrl && useLastGenerated && lastGeneratedAsset) {
+                mediaUrl = typeof lastGeneratedAsset === 'string' ? lastGeneratedAsset : lastGeneratedAsset.url;
+                console.log('[generate_world] Using last generated asset:', mediaUrl);
+              }
+
+              if (!mediaUrl && assetName) {
+                const kb = project.knowledgeBase || [];
+                const isVideo = inputType === 'video';
+                const match = kb.find((f: KnowledgeBaseFile) => {
+                  const typeMatch = isVideo ? f.type?.startsWith('video/') : f.type?.startsWith('image/');
+                  return typeMatch && f.name?.toLowerCase().includes(assetName.toLowerCase());
+                });
+                if (match) {
+                  mediaUrl = match.url;
+                  console.log('[generate_world] Found asset by name:', assetName, '->', match.name);
+                }
+              }
+
+              // Check conversation media
+              if (!mediaUrl && currentConversationMedia.length > 0) {
+                const targetType = inputType === 'video' ? 'video' : 'image';
+                const media = currentConversationMedia.find(m => m.type === targetType);
+                if (media) {
+                  mediaUrl = media.publicUrl || media.url;
+                  console.log('[generate_world] Using conversation media:', mediaUrl);
+                }
+              }
+
+              // Check attachments
+              if (!mediaUrl && readyAttachments.length > 0) {
+                const isVideo = inputType === 'video';
+                const attachment = readyAttachments.find((a: any) => {
+                  const mimeType = a.file?.type || a.uploaded?.mimeType || '';
+                  return isVideo ? mimeType.startsWith('video/') : mimeType.startsWith('image/');
+                });
+                if (attachment?.uploaded?.url) {
+                  mediaUrl = attachment.uploaded.url;
+                  console.log('[generate_world] Using attached media:', mediaUrl);
+                }
+              }
+
+              // Validate media for non-text types
+              if ((inputType === 'image' || inputType === 'video') && !mediaUrl) {
+                addMessage('model', `Please provide ${inputType === 'video' ? 'a video' : 'an image'} to use as a structure guide, or switch to text-only mode.`);
+                continue;
+              }
+
+              addMessage('model', `🌍 Starting world generation...\n\n**Prompt:** ${prompt.substring(0, 100)}${prompt.length > 100 ? '...' : ''}\n**Type:** ${inputType}${mediaUrl ? '\n**Guide:** ✓ Using media reference' : ''}\n\n_Generation takes ~5 minutes. You'll see the world in Assets → Worlds when ready!_`);
+
+              // Build request
+              const request: WorldGenerationRequest = {
+                world_prompt: {
+                  type: inputType,
+                  text_prompt: prompt,
+                }
+              };
+
+              if (inputType === 'image' && mediaUrl) {
+                request.world_prompt.image_prompt = { source: 'uri', uri: mediaUrl };
+              } else if (inputType === 'video' && mediaUrl) {
+                request.world_prompt.video_prompt = { source: 'uri', uri: mediaUrl };
+              }
+
+              // Start generation
+              const operation = await worldLabsService.generateWorld(request);
+
+              // Save to project with 'generating' status
+              const newWorld = {
+                id: operation.operation_id,
+                prompt,
+                status: 'generating' as const,
+                createdAt: Date.now(),
+                previewUrl: '',
+                data: { operation_id: operation.operation_id }
+              };
+              const updatedWorlds = [newWorld, ...(project.worlds || [])];
+              await storageService.updateResearchProject(project.id, { worlds: updatedWorlds });
+              onProjectUpdate?.({ ...project, worlds: updatedWorlds });
+
+              addMessage('model', `✅ World generation started!\n\nYour world is being generated and will appear in **Assets → Worlds** when ready (~5 minutes).\n\nYou can continue working on other things while it generates.`);
+
+            } catch (e: any) {
+              console.error('generate_world error:', e);
+              addMessage('model', `❌ Failed to start world generation: ${e?.message || 'Unknown error'}`);
             }
 
             // ========== Email Template Scheduling Handler ==========
