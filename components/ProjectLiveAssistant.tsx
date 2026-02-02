@@ -3655,20 +3655,39 @@ ${socialConnectionStatus}${voiceGeneratedMediaContext}`;
 
       const editImageTool = {
         name: 'edit_image_with_gemini',
-        description: 'Edit an existing image using a text instruction. Implemented as a new generation informed by the original image and instruction.',
+        description: 'Edit an existing image using Gemini AI. AUTOMATICALLY DETECTS attached or dropped images - no URL needed for recently attached/dropped media. Use this when user wants to modify, enhance, or change an existing image (e.g., "make it daytime", "add clouds", "change the background", "remove the person").',
         parameters: {
           type: Type.OBJECT,
           properties: {
             imageUrl: {
               type: Type.STRING,
-              description: 'URL of the existing image to use as a reference.'
+              description: 'Optional URL of image to edit. If omitted, uses the most recently attached or dropped image.'
             },
             instruction: {
               type: Type.STRING,
-              description: 'How to edit or change the image.'
+              description: 'How to edit or change the image (e.g., "make it daytime", "add a sunset sky").'
             }
           },
-          required: ['imageUrl', 'instruction']
+          required: ['instruction']
+        }
+      };
+
+      const editVideoTool = {
+        name: 'edit_video_with_xai',
+        description: 'Edit an existing video using xAI Grok. AUTOMATICALLY DETECTS attached or dropped videos. Max input video length: 8.7 seconds. Use this when user wants to modify an existing video (e.g., "make it slow motion", "zoom in", "add effects").',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            videoUrl: {
+              type: Type.STRING,
+              description: 'Optional URL of video to edit. If omitted, uses the most recently attached or dropped video.'
+            },
+            instruction: {
+              type: Type.STRING,
+              description: 'How to edit or change the video.'
+            }
+          },
+          required: ['instruction']
         }
       };
 
@@ -4088,6 +4107,7 @@ ${socialConnectionStatus}${voiceGeneratedMediaContext}`;
                 searchKnowledgeBaseTool,
                 generateImageTool,
                 editImageTool,
+                editVideoTool,
                 generateVideoFromImageTool,
                 generateVideoFromPromptTool,
                 generateVideoOverviewTool,
@@ -5169,6 +5189,154 @@ DO NOT use schedule_post for email - use THIS tool instead.`,
                         response: {
                           success: false,
                           error: editError?.message || 'Failed to edit image with Gemini',
+                          instruction
+                        }
+                      });
+                    }
+                  } else if (fc.name === 'edit_video_with_xai') {
+                    // Edit video using xAI Grok
+                    const videoUrl = (args.videoUrl || '').toString();
+                    const instruction = (args.instruction || '').toString();
+
+                    try {
+                      // Credit Check for video editing
+                      const hasCredits = await checkCredits('videoEditXai');
+                      if (!hasCredits) {
+                        functionResponses.push({
+                          id: fc.id,
+                          name: fc.name,
+                          response: { success: false, error: 'Insufficient credits for video editing' }
+                        });
+                        continue;
+                      }
+
+                      // Find video from attachments or conversation media
+                      let resolvedVideoUrl: string | null = null;
+
+                      // Priority 1: Check pending attachments (user just attached a video)
+                      const videoAttachment = readyAttachments.find(a =>
+                        a.uploaded?.mimeType?.startsWith('video/') && a.uploaded?.uri
+                      );
+
+                      if (videoAttachment?.uploaded?.uri) {
+                        resolvedVideoUrl = videoAttachment.uploaded.uri;
+                        console.log('[edit_video_with_xai] Using attached video');
+                      }
+
+                      // Priority 2: Check conversation media (recently dropped/attached)
+                      if (!resolvedVideoUrl && currentConversationMedia.length > 0) {
+                        const recentVideo = currentConversationMedia.find(m => m.type === 'video');
+                        if (recentVideo) {
+                          resolvedVideoUrl = recentVideo.publicUrl || recentVideo.url;
+                          console.log('[edit_video_with_xai] Using tracked conversation media');
+                        }
+                      }
+
+                      // Priority 3: Try to use the provided videoUrl
+                      if (!resolvedVideoUrl && videoUrl) {
+                        resolvedVideoUrl = videoUrl;
+                        console.log('[edit_video_with_xai] Using URL from args');
+                      }
+
+                      // Priority 4: Check lastGeneratedAsset
+                      if (!resolvedVideoUrl && lastGeneratedAsset?.type === 'video') {
+                        resolvedVideoUrl = lastGeneratedAsset.publicUrl || lastGeneratedAsset.url;
+                        console.log('[edit_video_with_xai] Using lastGeneratedAsset');
+                      }
+
+                      if (!resolvedVideoUrl) {
+                        functionResponses.push({
+                          id: fc.id,
+                          name: fc.name,
+                          response: { success: false, error: 'No video found to edit. Please attach or drop a video first (max 8.7 seconds).' }
+                        });
+                        continue;
+                      }
+
+                      // Deduct credits
+                      const success = await deductCredits('videoEditXai');
+                      if (!success) {
+                        functionResponses.push({
+                          id: fc.id,
+                          name: fc.name,
+                          response: { success: false, error: 'Failed to deduct credits' }
+                        });
+                        continue;
+                      }
+
+                      // Use xAI Grok video editing
+                      const { xaiService } = await import('../services/xaiService');
+
+                      addMessage('model', `🎬 Editing video with xAI Grok...\n\n*Instruction: "${instruction}"*`);
+
+                      const editResponse = await xaiService.editVideo({
+                        prompt: instruction,
+                        video_url: resolvedVideoUrl
+                      });
+
+                      if (!editResponse.request_id) {
+                        throw new Error('No request ID returned from xAI');
+                      }
+
+                      // Poll for completion
+                      const result = await xaiService.pollUntilComplete(
+                        editResponse.request_id,
+                        (status) => console.log(`[edit_video_with_xai] Poll status: ${status}`)
+                      );
+
+                      if (!result.url) {
+                        throw new Error('Video editing failed - no output URL');
+                      }
+
+                      // Download and save to knowledge base
+                      let kbFileId: string | undefined;
+                      try {
+                        const res = await fetch(result.url);
+                        const blob = await res.blob();
+                        const file = new File([blob], `live-video-edit-${Date.now()}.mp4`, { type: 'video/mp4' });
+                        const kb = await storageService.uploadKnowledgeBaseFile(project.id, file);
+                        kbFileId = kb.id;
+
+                        // Persist to project
+                        const existingKb = projectRef.current.knowledgeBase || [];
+                        const updatedKnowledgeBase = [...existingKb, kb];
+                        await storageService.updateResearchProject(project.id, { knowledgeBase: updatedKnowledgeBase });
+
+                        const updatedProject = { ...projectRef.current, knowledgeBase: updatedKnowledgeBase, lastModified: Date.now() };
+                        onProjectUpdate?.(updatedProject);
+                        projectRef.current = updatedProject;
+
+                        // Track the edited video for future posts/scheduling
+                        trackConversationMedia({
+                          id: kbFileId,
+                          url: kb.url,
+                          publicUrl: kb.url,
+                          type: 'video',
+                          source: 'generated',
+                          name: `Edited: ${instruction.slice(0, 30)}`
+                        });
+                      } catch (saveError) {
+                        console.error('Failed to save edited video to project:', saveError);
+                      }
+
+                      functionResponses.push({
+                        id: fc.id,
+                        name: fc.name,
+                        response: {
+                          success: true,
+                          videoUrl: result.url,
+                          instruction,
+                          kbFileId
+                        }
+                      });
+                    } catch (editError: any) {
+                      console.error('Live video edit error:', editError);
+                      functionResponses.push({
+                        id: fc.id,
+                        name: fc.name,
+                        response: {
+                          success: false,
+                          error: editError?.message || 'Failed to edit video with xAI',
                           instruction
                         }
                       });
