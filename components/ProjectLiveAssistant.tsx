@@ -5044,7 +5044,7 @@ DO NOT use schedule_post for email - use THIS tool instead.`,
                       }
 
                       // First, try to find the image from attachments or conversation media
-                      let imageReference: { base64: string; mimeType: string } | null = null;
+                      let imageReference: { base64?: string; fileUri?: string; mimeType: string } | null = null;
 
                       // Priority 1: Check pending attachments (user just attached an image)
                       const imageAttachment = readyAttachments.find(a =>
@@ -5069,11 +5069,24 @@ DO NOT use schedule_post for email - use THIS tool instead.`,
                         if (recentImage) {
                           try {
                             const url = recentImage.publicUrl || recentImage.url;
-                            const res = await fetch(url);
-                            const blob = await res.blob();
-                            const base64 = await blobToBase64(blob);
-                            imageReference = { base64, mimeType: blob.type || 'image/png' };
-                            console.log('[edit_image_with_gemini] Using tracked conversation media');
+
+                            // Check if it's a Gemini URI (matches https://generativelanguage... or starts with gs://)
+                            // or if it's a known Gemini URI format from our app
+                            const isGeminiUri = url.includes('generativelanguage.googleapis.com') || url.startsWith('gs://');
+
+                            if (isGeminiUri) {
+                              // Use fileUri directly
+                              imageReference = { fileUri: url, mimeType: 'image/png' }; // Default to png if unknown, will be overwritten if available
+                              console.log('[edit_image_with_gemini] Using tracked conversation media (Gemini URI)');
+                            } else {
+                              // Regular URL, fetch it
+                              const res = await fetch(url);
+                              if (!res.ok) throw new Error(`Failed to fetch image: ${res.status}`);
+                              const blob = await res.blob();
+                              const base64 = await blobToBase64(blob);
+                              imageReference = { base64, mimeType: blob.type || 'image/png' };
+                              console.log('[edit_image_with_gemini] Using tracked conversation media (fetched)');
+                            }
                           } catch (e) {
                             console.warn('[edit_image_with_gemini] Failed to fetch tracked media:', e);
                           }
