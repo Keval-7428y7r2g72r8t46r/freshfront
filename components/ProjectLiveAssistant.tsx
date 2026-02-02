@@ -10583,7 +10583,7 @@ DO NOT use schedule_post for email - use THIS tool instead.`,
               const imageUrlArg = (args.imageUrl || '').toString();
 
               // Find image from pending attachments (has the actual File object)
-              let imageReference: { base64: string; mimeType: string } | null = null;
+              let imageReference: { base64?: string; fileUri?: string; mimeType: string } | null = null;
 
               // Check pending attachments - use the file directly
               const imageAtt = pendingAttachments.find(a =>
@@ -10594,6 +10594,34 @@ DO NOT use schedule_post for email - use THIS tool instead.`,
                 const base64 = await blobToBase64(imageAtt.file);
                 imageReference = { base64, mimeType: imageAtt.file.type || 'image/png' };
                 console.log('[edit_project_image] Using attached image file');
+              }
+
+              // Priority 2: Check conversation media (recently dropped/attached)
+              if (!imageReference && currentConversationMedia.length > 0) {
+                const recentImage = currentConversationMedia.find(m => m.type === 'image');
+                if (recentImage) {
+                  try {
+                    const url = recentImage.publicUrl || recentImage.url;
+
+                    // Check if it's a Gemini URI
+                    const isGeminiUri = url.includes('generativelanguage.googleapis.com') || url.startsWith('gs://');
+
+                    if (isGeminiUri) {
+                      imageReference = { fileUri: url, mimeType: 'image/png' } as any;
+                      console.log('[edit_project_image] Using tracked conversation media (Gemini URI)');
+                    } else {
+                      const res = await fetch(url);
+                      if (res.ok) {
+                        const blob = await res.blob();
+                        const base64 = await blobToBase64(blob);
+                        imageReference = { base64, mimeType: blob.type || 'image/png' };
+                        console.log('[edit_project_image] Using tracked conversation media (fetched)');
+                      }
+                    }
+                  } catch (e) {
+                    console.warn('[edit_project_image] Failed to fetch tracked media:', e);
+                  }
+                }
               }
 
               // Fallback to lastGeneratedAsset
@@ -10627,7 +10655,7 @@ DO NOT use schedule_post for email - use THIS tool instead.`,
               }
 
               if (!imageReference) {
-                addMessage('model', 'No image found to edit. Please attach an image first.');
+                addMessage('model', 'No image found to edit. Please attach or drop an image first.');
                 setIsProcessing(false);
                 continue;
               }
