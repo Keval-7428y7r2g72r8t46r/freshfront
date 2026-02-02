@@ -787,6 +787,11 @@ ROUTING RULES:
    - If recent history shows AI asked "What caption?" or similar, user's current message IS the caption.
    - Set intent to "other" and recommendedTools to [] to let main agent use it as content.
 
+4. WEB SEARCH / GROUNDING:
+   - If request requires real-time info, facts, news, or external knowledge -> TOOL: google_search
+   - Keywords: "search", "find", "latest", "news", "current", "who is", "price of", "weather"
+   - If unrelated to project/documents and requires external knowledge -> TOOL: google_search
+
 Output JSON ONLY:
 {
   "thoughtProcess": "Brief reasoning...",
