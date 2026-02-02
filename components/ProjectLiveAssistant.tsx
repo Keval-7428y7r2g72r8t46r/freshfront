@@ -11344,13 +11344,40 @@ DO NOT use schedule_post for email - use THIS tool instead.`,
                 continue;
               }
 
-              // Media Resolution Logic (enhanced with assetName and useLastGenerated)
-              const referenceWords = ['this', 'that', 'it', 'the image', 'the video', 'the file', 'my image', 'my video', 'the attachment', 'attached', 'uploaded'];
-              const lowerText = text.toLowerCase().trim();
-              const isTextReferenceToMedia = referenceWords.some(w => lowerText === w || lowerText.includes(w));
-
+              // 🧠 INTELLIGENT MEDIA TARGETING for chat mode scheduling
+              // Only invoke if we have conversation media and no explicit mediaUrl/assetId was provided
               let resolvedMediaUrl = mediaUrl;
               let resolvedContentType = contentType;
+
+              if (!resolvedMediaUrl && !assetId && !assetName && currentConversationMedia.length > 0 && contentType !== 'text') {
+                try {
+                  console.log('[schedule_post chat] 🧠 Invoking analyzeMediaIntent with', currentConversationMedia.length, 'tracked media items');
+                  const mediaAnalysis = await analyzeMediaIntent(
+                    text || 'schedule this post',
+                    currentConversationMedia,
+                    messages.slice(-10).map(m => ({ role: m.role, text: m.text || '', imageUrl: m.imageUrl }))
+                  );
+                  console.log('[schedule_post chat] 🧠 AI Media Analysis:', mediaAnalysis);
+
+                  if (mediaAnalysis.targetMediaUrl && mediaAnalysis.confidence !== 'low') {
+                    resolvedMediaUrl = mediaAnalysis.targetMediaUrl;
+                    resolvedContentType = mediaAnalysis.targetMediaType || 'image';
+                    console.log('[schedule_post chat] 🎯 AI selected media:', resolvedMediaUrl);
+                  } else if (mediaAnalysis.confidence === 'low' && currentConversationMedia.length > 1) {
+                    const mediaList = currentConversationMedia.slice(0, 5).map((m, i) => `${i + 1}. ${m.name} (${m.type})`).join('\n');
+                    addMessage('model', `I'm not sure which media to schedule. Please specify:\n\n${mediaList}`);
+                    continue;
+                  }
+                } catch (aiError) {
+                  console.error('[schedule_post chat] analyzeMediaIntent failed:', aiError);
+                }
+              }
+
+              // --- HEURISTIC FALLBACK (if AI analysis didn't resolve media) ---
+              // Media Resolution Logic (enhanced with assetName and useLastGenerated)
+              const referenceWords = ['this', 'that', 'it', 'the image', 'the video', 'the file', 'my image', 'my video', 'the attachment', 'attached', 'uploaded'];
+              const lowerText2 = text.toLowerCase().trim();
+              const isTextReferenceToMedia = referenceWords.some(w => lowerText2 === w || lowerText2.includes(w));
 
               // 1. Check assetName (fuzzy match)
               if (!resolvedMediaUrl && assetName && contentType !== 'text') {
