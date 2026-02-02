@@ -4962,6 +4962,7 @@ DO NOT use schedule_post for email - use THIS tool instead.`,
                         }
                       });
                     }
+                  } else if (fc.name === 'generate_image_with_gemini') {
                     const prompt = (args.prompt || '').toString();
                     const refUrl = args.referenceImageUrl ? String(args.referenceImageUrl) : undefined;
 
@@ -8885,6 +8886,44 @@ IMPORTANT: Use this context to understand what "it", "this", "that" refer to in 
         }
       };
 
+      const editProjectImageTool = {
+        name: 'edit_project_image',
+        description: 'Edit an existing/attached image using Gemini AI. AUTOMATICALLY DETECTS attached images - no URL needed. Use this when user wants to MODIFY an existing image (e.g., "make it daytime", "add clouds", "change the background", "remove the person", "make it brighter"). Do NOT use for generating NEW images.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            instruction: {
+              type: Type.STRING,
+              description: 'How to edit or change the image (e.g., "make it daytime", "add clouds").'
+            },
+            imageUrl: {
+              type: Type.STRING,
+              description: 'Optional URL of image to edit. If omitted, uses the most recently attached image.'
+            }
+          },
+          required: ['instruction']
+        }
+      };
+
+      const editProjectVideoTool = {
+        name: 'edit_project_video',
+        description: 'Edit an existing/attached video using xAI Grok. AUTOMATICALLY DETECTS attached videos. Max input video: 8.7 seconds. Use when user wants to MODIFY an existing video.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            instruction: {
+              type: Type.STRING,
+              description: 'How to edit or change the video.'
+            },
+            videoUrl: {
+              type: Type.STRING,
+              description: 'Optional URL of video to edit. If omitted, uses the most recently attached video.'
+            }
+          },
+          required: ['instruction']
+        }
+      };
+
       const generateProjectVideoTool = {
         name: 'generate_project_video',
         description: 'Generate a short Sora video. Can generate from text OR animate an existing image. To animate an image, set imageUrl or useLastGenerated=true when user refers to an image ("animate this", "make a video of the image").',
@@ -9832,6 +9871,8 @@ DO NOT use schedule_post for email - use THIS tool instead.`,
             getProjectOverviewTool,
             getProjectFileTool,
             generateProjectImageTool,
+            editProjectImageTool,
+            editProjectVideoTool,
             generateProjectVideoTool,
             generateProjectBlogTool,
             generateProjectWebsiteTool,
@@ -10489,6 +10530,204 @@ DO NOT use schedule_post for email - use THIS tool instead.`,
               console.error('Image generation failed:', err);
               addMessage('model', `Failed to generate image: ${err.message || 'Unknown error'}`);
               setIsProcessing(false); // Force unlock UI
+            }
+          } else if (fc.name === 'edit_project_image') {
+            // Edit attached image using Gemini
+            try {
+              const instruction = (args.instruction || '').toString();
+              const imageUrlArg = (args.imageUrl || '').toString();
+
+              // Find image from pending attachments (has the actual File object)
+              let imageReference: { base64: string; mimeType: string } | null = null;
+
+              // Check pending attachments - use the file directly
+              const imageAtt = pendingAttachments.find(a =>
+                a.file?.type?.startsWith('image/') && a.status === 'ready'
+              );
+
+              if (imageAtt?.file) {
+                const base64 = await blobToBase64(imageAtt.file);
+                imageReference = { base64, mimeType: imageAtt.file.type || 'image/png' };
+                console.log('[edit_project_image] Using attached image file');
+              }
+
+              // Fallback to lastGeneratedAsset
+              if (!imageReference && lastGeneratedAsset?.type === 'image') {
+                try {
+                  const res = await fetch(lastGeneratedAsset.url);
+                  if (res.ok) {
+                    const blob = await res.blob();
+                    const base64 = await blobToBase64(blob);
+                    imageReference = { base64, mimeType: blob.type || 'image/png' };
+                    console.log('[edit_project_image] Using lastGeneratedAsset');
+                  }
+                } catch (e) {
+                  console.warn('[edit_project_image] Failed to fetch lastGeneratedAsset:', e);
+                }
+              }
+
+              // Fallback to provided URL
+              if (!imageReference && imageUrlArg) {
+                try {
+                  const res = await fetch(imageUrlArg);
+                  if (res.ok) {
+                    const blob = await res.blob();
+                    const base64 = await blobToBase64(blob);
+                    imageReference = { base64, mimeType: blob.type || 'image/png' };
+                    console.log('[edit_project_image] Using URL from args');
+                  }
+                } catch (e) {
+                  console.warn('[edit_project_image] Failed to fetch imageUrl:', e);
+                }
+              }
+
+              if (!imageReference) {
+                addMessage('model', 'No image found to edit. Please attach an image first.');
+                setIsProcessing(false);
+                continue;
+              }
+
+              // Credit check
+              const hasCredits = await checkCredits('imageGenerationFast');
+              if (!hasCredits) {
+                addMessage('model', 'Insufficient credits for image editing.');
+                setIsProcessing(false);
+                continue;
+              }
+              await deductCredits('imageGenerationFast');
+
+              // Use Gemini's native image editing
+              const { editImageWithReferences } = await import('../services/geminiService');
+              const editResult = await editImageWithReferences(
+                instruction,
+                [imageReference],
+                { useProModel: true }
+              );
+
+              const editedUrl = editResult.imageDataUrl;
+
+              // Save to KB
+              try {
+                const res = await fetch(editedUrl);
+                const blob = await res.blob();
+                const file = new File([blob], `voice-image-edit-${Date.now()}.png`, { type: 'image/png' });
+                const kb = await storageService.uploadKnowledgeBaseFile(project.id, file);
+
+                const existingKb = projectRef.current.knowledgeBase || [];
+                const updatedKnowledgeBase = [...existingKb, kb];
+                await storageService.updateResearchProject(project.id, { knowledgeBase: updatedKnowledgeBase });
+
+                const updatedProject = { ...projectRef.current, knowledgeBase: updatedKnowledgeBase, lastModified: Date.now() };
+                onProjectUpdate?.(updatedProject);
+                projectRef.current = updatedProject;
+
+                setLastGeneratedAsset({ url: editedUrl, type: 'image', name: instruction.slice(0, 50), timestamp: Date.now() });
+              } catch (saveError) {
+                console.error('Failed to save edited image:', saveError);
+              }
+
+              setMessages(prev => prev.filter(m => m.id !== streamingMessageId));
+              addMessage('model', `I edited the image: "${instruction}"`, editedUrl);
+              setIsProcessing(false);
+            } catch (err: any) {
+              console.error('Image edit failed:', err);
+              addMessage('model', `Failed to edit image: ${err.message || 'Unknown error'}`);
+              setIsProcessing(false);
+            }
+          } else if (fc.name === 'edit_project_video') {
+            // Edit attached video using xAI Grok
+            try {
+              const instruction = (args.instruction || '').toString();
+              const videoUrlArg = (args.videoUrl || '').toString();
+
+              // Find video URL
+              let resolvedVideoUrl: string | null = null;
+
+              // Check pending attachments
+              const videoAtt = pendingAttachments.find(a =>
+                a.file?.type?.startsWith('video/') && a.status === 'ready' && a.uploaded?.uri
+              );
+
+              if (videoAtt?.uploaded?.uri) {
+                resolvedVideoUrl = videoAtt.uploaded.uri;
+                console.log('[edit_project_video] Using attached video');
+              }
+
+              // Fallback to lastGeneratedAsset
+              if (!resolvedVideoUrl && lastGeneratedAsset?.type === 'video') {
+                resolvedVideoUrl = lastGeneratedAsset.url;
+                console.log('[edit_project_video] Using lastGeneratedAsset');
+              }
+
+              // Fallback to provided URL
+              if (!resolvedVideoUrl && videoUrlArg) {
+                resolvedVideoUrl = videoUrlArg;
+                console.log('[edit_project_video] Using URL from args');
+              }
+
+              if (!resolvedVideoUrl) {
+                addMessage('model', 'No video found to edit. Please attach a video first (max 8.7 seconds).');
+                setIsProcessing(false);
+                continue;
+              }
+
+              // Credit check
+              const hasCredits = await checkCredits('videoEditXai');
+              if (!hasCredits) {
+                addMessage('model', 'Insufficient credits for video editing.');
+                setIsProcessing(false);
+                continue;
+              }
+              await deductCredits('videoEditXai');
+
+              addMessage('model', `🎬 Editing video with xAI Grok...\n\n*Instruction: "${instruction}"*`);
+
+              const { xaiService } = await import('../services/xaiService');
+              const editResponse = await xaiService.editVideo({
+                prompt: instruction,
+                video_url: resolvedVideoUrl
+              });
+
+              if (!editResponse.request_id) {
+                throw new Error('No request ID returned from xAI');
+              }
+
+              const result = await xaiService.pollUntilComplete(
+                editResponse.request_id,
+                (status) => console.log(`[edit_project_video] Poll status: ${status}`)
+              );
+
+              if (!result.url) {
+                throw new Error('Video editing failed - no output URL');
+              }
+
+              // Save to KB
+              try {
+                const res = await fetch(result.url);
+                const blob = await res.blob();
+                const file = new File([blob], `voice-video-edit-${Date.now()}.mp4`, { type: 'video/mp4' });
+                const kb = await storageService.uploadKnowledgeBaseFile(project.id, file);
+
+                const existingKb = projectRef.current.knowledgeBase || [];
+                const updatedKnowledgeBase = [...existingKb, kb];
+                await storageService.updateResearchProject(project.id, { knowledgeBase: updatedKnowledgeBase });
+
+                const updatedProject = { ...projectRef.current, knowledgeBase: updatedKnowledgeBase, lastModified: Date.now() };
+                onProjectUpdate?.(updatedProject);
+                projectRef.current = updatedProject;
+
+                setLastGeneratedAsset({ url: result.url, type: 'video', name: instruction.slice(0, 50), timestamp: Date.now() });
+              } catch (saveError) {
+                console.error('Failed to save edited video:', saveError);
+              }
+
+              setMessages(prev => prev.filter(m => m.id !== streamingMessageId));
+              addMessage('model', `I edited the video: "${instruction}"\n\n[View edited video](${result.url})`);
+              setIsProcessing(false);
+            } catch (err: any) {
+              console.error('Video edit failed:', err);
+              addMessage('model', `Failed to edit video: ${err.message || 'Unknown error'}`);
+              setIsProcessing(false);
             }
           } else if (fc.name === 'generate_project_video') {
             try {
