@@ -11349,7 +11349,19 @@ DO NOT use schedule_post for email - use THIS tool instead.`,
               let resolvedMediaUrl = mediaUrl;
               let resolvedContentType = contentType;
 
-              if (!resolvedMediaUrl && !assetId && !assetName && currentConversationMedia.length > 0 && contentType !== 'text') {
+              // DEBUG: Log state to understand what's happening
+              console.log('[schedule_post chat] 🧠 Media targeting check:', {
+                resolvedMediaUrl,
+                assetId,
+                assetName,
+                conversationMediaCount: currentConversationMedia.length,
+                contentType,
+                conversationMedia: currentConversationMedia.map(m => ({ name: m.name, type: m.type, source: m.source }))
+              });
+
+              // Always try AI analysis if there's conversation media and no explicit media was provided
+              // Removed contentType check - the AI should determine the correct type based on tracked media
+              if (!resolvedMediaUrl && !assetId && !assetName && currentConversationMedia.length > 0) {
                 try {
                   console.log('[schedule_post chat] 🧠 Invoking analyzeMediaIntent with', currentConversationMedia.length, 'tracked media items');
                   const mediaAnalysis = await analyzeMediaIntent(
@@ -11367,9 +11379,22 @@ DO NOT use schedule_post for email - use THIS tool instead.`,
                     const mediaList = currentConversationMedia.slice(0, 5).map((m, i) => `${i + 1}. ${m.name} (${m.type})`).join('\n');
                     addMessage('model', `I'm not sure which media to schedule. Please specify:\n\n${mediaList}`);
                     continue;
+                  } else if (currentConversationMedia.length === 1) {
+                    // If there's only one item, just use it
+                    const singleMedia = currentConversationMedia[0];
+                    resolvedMediaUrl = singleMedia.publicUrl || singleMedia.url;
+                    resolvedContentType = singleMedia.type;
+                    console.log('[schedule_post chat] 🎯 Using only tracked media:', resolvedMediaUrl);
                   }
                 } catch (aiError) {
                   console.error('[schedule_post chat] analyzeMediaIntent failed:', aiError);
+                  // Fallback: if there's only one tracked media, use it
+                  if (currentConversationMedia.length === 1) {
+                    const singleMedia = currentConversationMedia[0];
+                    resolvedMediaUrl = singleMedia.publicUrl || singleMedia.url;
+                    resolvedContentType = singleMedia.type;
+                    console.log('[schedule_post chat] 🎯 Fallback to only tracked media:', resolvedMediaUrl);
+                  }
                 }
               }
 
