@@ -5009,9 +5009,118 @@ DO NOT use schedule_post for email - use THIS tool instead.`,
                   } else if (fc.name === 'edit_image_with_gemini') {
                     const imageUrl = (args.imageUrl || '').toString();
                     const instruction = (args.instruction || '').toString();
-                    const prompt = `${instruction} (based on reference image: ${imageUrl})`;
+
                     try {
-                      const editedUrl = await generateImageWithContext(prompt);
+                      // Credit Check for image editing
+                      const hasCredits = await checkCredits('imageGenerationFast');
+                      if (!hasCredits) {
+                        functionResponses.push({
+                          id: fc.id,
+                          name: fc.name,
+                          response: { success: false, error: 'Insufficient credits for image editing' }
+                        });
+                        continue;
+                      }
+
+                      // First, try to find the image from attachments or conversation media
+                      let imageReference: { base64: string; mimeType: string } | null = null;
+
+                      // Priority 1: Check pending attachments (user just attached an image)
+                      const imageAttachment = readyAttachments.find(a =>
+                        a.uploaded?.mimeType?.startsWith('image/') && a.previewUrl
+                      );
+
+                      if (imageAttachment?.previewUrl) {
+                        try {
+                          const res = await fetch(imageAttachment.previewUrl);
+                          const blob = await res.blob();
+                          const base64 = await blobToBase64(blob);
+                          imageReference = { base64, mimeType: blob.type || 'image/png' };
+                          console.log('[edit_image_with_gemini] Using attached image');
+                        } catch (e) {
+                          console.warn('[edit_image_with_gemini] Failed to fetch attachment preview:', e);
+                        }
+                      }
+
+                      // Priority 2: Check conversation media (recently dropped/attached)
+                      if (!imageReference && currentConversationMedia.length > 0) {
+                        const recentImage = currentConversationMedia.find(m => m.type === 'image');
+                        if (recentImage) {
+                          try {
+                            const url = recentImage.publicUrl || recentImage.url;
+                            const res = await fetch(url);
+                            const blob = await res.blob();
+                            const base64 = await blobToBase64(blob);
+                            imageReference = { base64, mimeType: blob.type || 'image/png' };
+                            console.log('[edit_image_with_gemini] Using tracked conversation media');
+                          } catch (e) {
+                            console.warn('[edit_image_with_gemini] Failed to fetch tracked media:', e);
+                          }
+                        }
+                      }
+
+                      // Priority 3: Try to fetch from the provided imageUrl
+                      if (!imageReference && imageUrl) {
+                        try {
+                          const res = await fetch(imageUrl);
+                          if (res.ok) {
+                            const blob = await res.blob();
+                            const base64 = await blobToBase64(blob);
+                            imageReference = { base64, mimeType: blob.type || 'image/png' };
+                            console.log('[edit_image_with_gemini] Using URL from args');
+                          }
+                        } catch (e) {
+                          console.warn('[edit_image_with_gemini] Failed to fetch imageUrl:', e);
+                        }
+                      }
+
+                      // Priority 4: Check lastGeneratedAsset
+                      if (!imageReference && lastGeneratedAsset?.type === 'image') {
+                        try {
+                          const url = lastGeneratedAsset.publicUrl || lastGeneratedAsset.url;
+                          const res = await fetch(url);
+                          if (res.ok) {
+                            const blob = await res.blob();
+                            const base64 = await blobToBase64(blob);
+                            imageReference = { base64, mimeType: blob.type || 'image/png' };
+                            console.log('[edit_image_with_gemini] Using lastGeneratedAsset');
+                          }
+                        } catch (e) {
+                          console.warn('[edit_image_with_gemini] Failed to fetch lastGeneratedAsset:', e);
+                        }
+                      }
+
+                      if (!imageReference) {
+                        functionResponses.push({
+                          id: fc.id,
+                          name: fc.name,
+                          response: { success: false, error: 'No image found to edit. Please attach or drop an image first.' }
+                        });
+                        continue;
+                      }
+
+                      // Deduct credits
+                      const success = await deductCredits('imageGenerationFast');
+                      if (!success) {
+                        functionResponses.push({
+                          id: fc.id,
+                          name: fc.name,
+                          response: { success: false, error: 'Failed to deduct credits' }
+                        });
+                        continue;
+                      }
+
+                      // Use Gemini's native image editing with the reference
+                      const { editImageWithReferences } = await import('../services/geminiService');
+                      const editResult = await editImageWithReferences(
+                        instruction,
+                        [imageReference],
+                        { useProModel: true }
+                      );
+
+                      const editedUrl = editResult.imageDataUrl;
+
+                      // Save to knowledge base
                       let kbFileId: string | undefined;
                       try {
                         const res = await fetch(editedUrl);
@@ -5028,6 +5137,16 @@ DO NOT use schedule_post for email - use THIS tool instead.`,
                         const updatedProject = { ...projectRef.current, knowledgeBase: updatedKnowledgeBase, lastModified: Date.now() };
                         onProjectUpdate?.(updatedProject);
                         projectRef.current = updatedProject;
+
+                        // Track the edited image for future posts/scheduling
+                        trackConversationMedia({
+                          id: kbFileId,
+                          url: kb.url,
+                          publicUrl: kb.url,
+                          type: 'image',
+                          source: 'generated',
+                          name: `Edited: ${instruction.slice(0, 30)}`
+                        });
                       } catch (saveError) {
                         console.error('Failed to save edited image to project:', saveError);
                       }
@@ -5042,14 +5161,14 @@ DO NOT use schedule_post for email - use THIS tool instead.`,
                           kbFileId
                         }
                       });
-                    } catch (editError) {
+                    } catch (editError: any) {
                       console.error('Live image edit error:', editError);
                       functionResponses.push({
                         id: fc.id,
                         name: fc.name,
                         response: {
                           success: false,
-                          error: 'Failed to edit image with Gemini',
+                          error: editError?.message || 'Failed to edit image with Gemini',
                           instruction
                         }
                       });
