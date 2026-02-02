@@ -61,6 +61,7 @@ export const CREDIT_COSTS = {
     videoEdition: 35,
     worldGeneration: 50,
     videoLive: 35,
+    videoEditXai: 35,
 } as const;
 
 export type CreditOperation = keyof typeof CREDIT_COSTS;
@@ -323,6 +324,7 @@ export function getOperationDisplayName(operation: CreditOperation): string {
         videoEdition: 'Video Editing',
         worldGeneration: 'World Generation',
         videoLive: 'Live Video Session',
+        videoEditXai: 'Video Editing (xAI)',
     };
     return names[operation] || operation;
 }
