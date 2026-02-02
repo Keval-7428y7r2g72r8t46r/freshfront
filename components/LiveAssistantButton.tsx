@@ -24,7 +24,8 @@ export const LiveAssistantButton: React.FC<LiveAssistantButtonProps> = ({ onClic
 
             // Calculate distance and angle
             const angle = Math.atan2(dy, dx);
-            const distance = Math.min(3, Math.hypot(dx, dy) / 20); // Max 3px movement
+            // More sensitive tracking: Divisor 4 instead of 20, Max 6px instead of 3px
+            const distance = Math.min(6, Math.hypot(dx, dy) / 4);
 
             const x = Math.cos(angle) * distance;
             const y = Math.sin(angle) * distance;
