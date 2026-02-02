@@ -11,6 +11,7 @@ import { generateMagicProjectPlan, generateDraftResearchTopicsAlt, generateSeoSe
 import { HomeLiveAssistant } from './HomeLiveAssistant';
 import { authFetch } from '../services/authFetch';
 import { useCredits } from '../hooks/useCredits';
+import { LiveAssistantButton } from './LiveAssistantButton';
 import { CreditInfoModal } from './CreditInfoModal';
 import { CreditBalanceDisplay } from './InsufficientCreditsModal';
 
@@ -1250,18 +1251,14 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ onSelectProject, isD
         </div>
       </div>
 
-      <button
+      <LiveAssistantButton
         onClick={() => setShowHomeAssistant(true)}
-        className="fixed bottom-24 sm:bottom-6 right-4 sm:right-6 w-12 h-12 sm:w-14 sm:h-14 bg-[#0071e3] hover:bg-[#0077ed] text-white rounded-full shadow-lg shadow-[#0071e3]/40 hover:shadow-[#0071e3]/60 transition-all duration-300 hover:scale-110 active:scale-95 flex items-center justify-center group z-40"
-        title="Chat with AI about your workspace"
+        className={`fixed bottom-24 sm:bottom-6 right-4 sm:right-6 bg-[#0071e3] hover:bg-[#0077ed] shadow-[#0071e3]/40 hover:shadow-[#0071e3]/60 ${isDarkMode ? 'text-white' : 'text-white'}`}
       >
-        <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-        </svg>
         <span className="absolute right-full mr-3 px-3 py-1.5 bg-[#1d1d1f] text-white text-sm rounded-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap hidden sm:block border border-[#3d3d3f]/50">
           Ask AI
         </span>
-      </button>
+      </LiveAssistantButton>
 
       {/* Create Project Modal */}
       {showCreateModal && (
