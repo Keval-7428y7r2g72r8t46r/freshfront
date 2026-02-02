@@ -7732,6 +7732,13 @@ Create a visually compelling image that aligns with the project's theme and the 
     e.stopPropagation();
     setIsDraggingAssetOver(false);
 
+    // Check for native file drops (Desktop -> Browser)
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      console.log('[AssetDrop] Detected native file drop:', e.dataTransfer.files.length);
+      handlePickAttachments(e.dataTransfer.files);
+      return;
+    }
+
     // Try to parse dropped asset data
     const assetDataStr = e.dataTransfer.getData('application/json');
     if (!assetDataStr) {
