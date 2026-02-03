@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface LiveAssistantButtonProps {
     onClick: () => void;
@@ -10,6 +11,11 @@ interface LiveAssistantButtonProps {
 export const LiveAssistantButton: React.FC<LiveAssistantButtonProps> = ({ onClick, className = '', isDarkMode = false, children }) => {
     const buttonRef = useRef<HTMLButtonElement>(null);
     const [eyeOffset, setEyeOffset] = useState({ x: 0, y: 0 });
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
@@ -37,16 +43,13 @@ export const LiveAssistantButton: React.FC<LiveAssistantButtonProps> = ({ onClic
         return () => window.removeEventListener('mousemove', handleMouseMove);
     }, []);
 
-    return (
+    const buttonElement = (
         <button
             ref={buttonRef}
             onClick={onClick}
-            className={`relative w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-lg transition-all duration-300 hover:scale-110 active:scale-95 flex items-center justify-center group z-40 ${className}`}
+            className={`fixed bottom-6 right-6 w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-lg transition-all duration-300 hover:scale-110 active:scale-95 flex items-center justify-center group z-[9999] ${className}`}
             title="Chat with AI"
         >
-            {/* Shine effects from Home Assistant (optional, keeping clean for now or adopting based on context) */}
-            {/* We will stick to the clean 'eyes' look for now, matching Dashboard style */}
-
             <div
                 className="flex gap-[6px] items-center justify-center pt-0.5 pointer-events-none"
                 style={{ transform: `translate(${eyeOffset.x}px, ${eyeOffset.y}px)` }}
@@ -57,4 +60,10 @@ export const LiveAssistantButton: React.FC<LiveAssistantButtonProps> = ({ onClic
             {children}
         </button>
     );
+
+    // Use portal to render to document.body, ensuring fixed positioning works correctly
+    // regardless of parent transforms or filters
+    if (!mounted) return null;
+    return createPortal(buttonElement, document.body);
 };
+
