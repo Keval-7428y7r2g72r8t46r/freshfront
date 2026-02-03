@@ -5,8 +5,11 @@ import { ResearchProject, UploadedFile, UserProfile } from '../types';
 import { storageService } from '../services/storageService';
 import { contextService, ChatMessage as ContextChatMessage } from '../services/contextService';
 import { createPcmBlob, decode, decodeAudioData } from '../services/audioUtils';
-import { getFileSearchStoreName, uploadFileToGemini, isUserSubscribed, ComputerUseSession, performComputerUseTask, confirmComputerUseAction, cancelComputerUseSession, generateImage, generateVeoVideo, generatePodcastScript, generatePodcastAudio } from '../services/geminiService';
+import { getFileSearchStoreName, uploadFileToGemini, isUserSubscribed, ComputerUseSession, performComputerUseTask, confirmComputerUseAction, cancelComputerUseSession, generateImage, editImageWithReferences, generateVeoVideo, generatePodcastScript, generatePodcastAudio, ImageReference } from '../services/geminiService';
+import { createVideoFromImageUrl, pollVideoUntilComplete, downloadVideoBlob } from '../services/soraService';
+import { authFetch } from '../services/authFetch';
 import ComputerUseViewer from './ComputerUseViewer';
+
 
 interface ExtendedChatMessage extends ContextChatMessage {
   isGenerating?: boolean;
@@ -75,6 +78,7 @@ export const HomeLiveAssistant: React.FC<HomeLiveAssistantProps> = ({
   const attachmentsInputRef = useRef<HTMLInputElement | null>(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [activeComputerUseMessageId, setActiveComputerUseMessageId] = useState<string | null>(null);
+  const [lastGeneratedAsset, setLastGeneratedAsset] = useState<{ type: 'image' | 'video'; url: string; publicUrl?: string } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const sessionRef = useRef<any>(null);
@@ -536,8 +540,182 @@ export const HomeLiveAssistant: React.FC<HomeLiveAssistantProps> = ({
         }
       };
 
+      // Edit Image Tool
+      const editImageTool = {
+        name: 'edit_image',
+        description: 'Edit an existing image based on a text prompt. Use when user wants to modify, change, or transform an existing image. Requires the image URL.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            imageUrl: {
+              type: Type.STRING,
+              description: 'URL of the image to edit.'
+            },
+            editPrompt: {
+              type: Type.STRING,
+              description: 'Description of the edits to make (e.g., "add a sunset", "remove background", "make it look vintage").'
+            },
+            useLastGenerated: {
+              type: Type.BOOLEAN,
+              description: 'Set to true to edit the most recently generated image. Use when user says "edit this image" or "change the image".'
+            }
+          },
+          required: ['editPrompt']
+        }
+      };
+
+      // Generate Video from Image Tool
+      const generateVideoFromImageTool = {
+        name: 'generate_video_from_image',
+        description: 'Generate a video starting from an existing image with motion. Use when user wants to animate an image or create video from a still image.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            imageUrl: {
+              type: Type.STRING,
+              description: 'URL of the source image.'
+            },
+            motionPrompt: {
+              type: Type.STRING,
+              description: 'Description of the motion/animation to apply (e.g., "camera slowly zooms in", "leaves start blowing in the wind").'
+            },
+            useLastGenerated: {
+              type: Type.BOOLEAN,
+              description: 'Set to true to use the most recently generated image. Use when user says "animate this" or "make this into a video".'
+            }
+          },
+          required: ['motionPrompt']
+        }
+      };
+
+      // Generate PDF Tool
+      const generatePdfTool = {
+        name: 'generate_pdf',
+        description: 'Generate a PDF document with formatted content. Use when user asks to create a PDF, document, or report.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            title: {
+              type: Type.STRING,
+              description: 'Title of the PDF document.'
+            },
+            content: {
+              type: Type.STRING,
+              description: 'The main content/body of the PDF in markdown format.'
+            },
+            style: {
+              type: Type.STRING,
+              description: 'Visual style of the PDF.',
+              enum: ['professional', 'modern', 'minimal', 'colorful']
+            }
+          },
+          required: ['title', 'content']
+        }
+      };
+
+      // Get Connected Accounts Tool
+      const getConnectedAccountsTool = {
+        name: 'get_connected_accounts',
+        description: 'Get the list of connected social media accounts. Use this BEFORE posting to get available pages/accounts.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            platform: {
+              type: Type.STRING,
+              description: 'Platform to check connections for.',
+              enum: ['facebook', 'instagram', 'x', 'tiktok', 'youtube', 'linkedin', 'all']
+            }
+          },
+          required: ['platform']
+        }
+      };
+
+      // Post to Social Tool
+      const postToSocialTool = {
+        name: 'post_to_social',
+        description: 'Post content to social media platforms. If not connected, tell user to connect in a project Social tab.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            platforms: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+              description: 'Platforms to post to: facebook, instagram, x, tiktok, youtube, linkedin'
+            },
+            contentType: {
+              type: Type.STRING,
+              description: 'Type of content.',
+              enum: ['text', 'image', 'video']
+            },
+            text: {
+              type: Type.STRING,
+              description: 'Caption or post text.'
+            },
+            mediaUrl: {
+              type: Type.STRING,
+              description: 'URL of media to post.'
+            },
+            useLastGenerated: {
+              type: Type.BOOLEAN,
+              description: 'Set to true to use the most recently generated image/video.'
+            }
+          },
+          required: ['platforms', 'contentType']
+        }
+      };
+
+      // Schedule Post Tool
+      const schedulePostTool = {
+        name: 'schedule_post',
+        description: 'Schedule a social media post for later. Use when user says "schedule", "post at", "post tomorrow", etc.',
+        parameters: {
+          type: Type.OBJECT,
+          properties: {
+            platforms: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+              description: 'Platforms to schedule for: facebook, instagram, x, tiktok, youtube, linkedin'
+            },
+            scheduledAt: {
+              type: Type.STRING,
+              description: 'ISO 8601 datetime or natural language (e.g., "tomorrow at 2pm", "2025-12-24T14:00:00").'
+            },
+            contentType: {
+              type: Type.STRING,
+              description: 'Type of content.',
+              enum: ['text', 'image', 'video']
+            },
+            text: {
+              type: Type.STRING,
+              description: 'Caption or post text.'
+            },
+            mediaUrl: {
+              type: Type.STRING,
+              description: 'URL of media to schedule.'
+            },
+            useLastGenerated: {
+              type: Type.BOOLEAN,
+              description: 'Set to true to use the most recently generated image/video.'
+            }
+          },
+          required: ['platforms', 'scheduledAt', 'contentType']
+        }
+      };
+
       const tools: any[] = [
-        { functionDeclarations: [generateImageTool, generateVideoTool, generatePodcastTool] }
+        {
+          functionDeclarations: [
+            generateImageTool,
+            generateVideoTool,
+            generatePodcastTool,
+            editImageTool,
+            generateVideoFromImageTool,
+            generatePdfTool,
+            getConnectedAccountsTool,
+            postToSocialTool,
+            schedulePostTool
+          ]
+        }
       ];
 
       try {
@@ -654,6 +832,7 @@ export const HomeLiveAssistant: React.FC<HomeLiveAssistantProps> = ({
               const args = fc.args as any;
               setMessages(prev => prev.map(m => m.id === streamingMessageId ? { ...m, text: m.text + '\n\n🎨 Generating image...' } : m));
               const { imageDataUrl } = await generateImage(args.prompt, { aspectRatio: args.aspectRatio });
+              setLastGeneratedAsset({ type: 'image', url: imageDataUrl });
               setMessages(prev => prev.map(m => m.id === streamingMessageId ? {
                 ...m,
                 imageUrl: imageDataUrl,
@@ -665,6 +844,7 @@ export const HomeLiveAssistant: React.FC<HomeLiveAssistantProps> = ({
               // Use Veo (SoraModel.VEO) for best results
               const videoBlob = await generateVeoVideo(args.prompt, '16:9', 'speed');
               const videoUrl = URL.createObjectURL(videoBlob);
+              setLastGeneratedAsset({ type: 'video', url: videoUrl });
               setMessages(prev => prev.map(m => m.id === streamingMessageId ? {
                 ...m,
                 videoUrl: videoUrl,
@@ -695,6 +875,152 @@ export const HomeLiveAssistant: React.FC<HomeLiveAssistantProps> = ({
                 audioUrl: audioUrl,
                 text: m.text.replace('🎙️ Generating podcast script and audio...', '✅ Podcast generated:')
               } : m));
+            } else if (fc.name === 'edit_image') {
+              const args = fc.args as any;
+              const imageToEdit = args.useLastGenerated && lastGeneratedAsset?.type === 'image'
+                ? lastGeneratedAsset.url
+                : args.imageUrl;
+
+              if (!imageToEdit) {
+                setMessages(prev => prev.map(m => m.id === streamingMessageId ? { ...m, text: m.text + '\n\n❌ No image to edit. Please generate an image first or provide an image URL.' } : m));
+              } else {
+                setMessages(prev => prev.map(m => m.id === streamingMessageId ? { ...m, text: m.text + '\n\n🎨 Editing image...' } : m));
+                // Convert URL to ImageReference format for editImageWithReferences
+                const imageRef: ImageReference = { base64: imageToEdit.startsWith('data:') ? imageToEdit.split(',')[1] : undefined, fileUri: imageToEdit.startsWith('data:') ? undefined : imageToEdit, mimeType: 'image/png' };
+                const { imageDataUrl } = await editImageWithReferences(args.editPrompt, [imageRef]);
+                setLastGeneratedAsset({ type: 'image', url: imageDataUrl });
+                setMessages(prev => prev.map(m => m.id === streamingMessageId ? {
+                  ...m,
+                  imageUrl: imageDataUrl,
+                  text: m.text.replace('🎨 Editing image...', '✅ Image edited:')
+                } : m));
+              }
+            } else if (fc.name === 'generate_video_from_image') {
+              const args = fc.args as any;
+              const sourceImage = args.useLastGenerated && lastGeneratedAsset?.type === 'image'
+                ? lastGeneratedAsset.url
+                : args.imageUrl;
+
+              if (!sourceImage) {
+                setMessages(prev => prev.map(m => m.id === streamingMessageId ? { ...m, text: m.text + '\n\n❌ No image to animate. Please generate or provide an image first.' } : m));
+              } else {
+                setMessages(prev => prev.map(m => m.id === streamingMessageId ? { ...m, text: m.text + '\n\n🎬 Generating video from image (this may take a minute)...' } : m));
+                try {
+                  const generation = await createVideoFromImageUrl({ prompt: args.motionPrompt || 'Animate this image with subtle motion', model: 'sora-2' }, sourceImage);
+                  const completed = await pollVideoUntilComplete(generation.id);
+                  const videoBlob = await downloadVideoBlob(completed.id);
+                  const videoUrl = URL.createObjectURL(videoBlob);
+                  setLastGeneratedAsset({ type: 'video', url: videoUrl });
+                  setMessages(prev => prev.map(m => m.id === streamingMessageId ? {
+                    ...m,
+                    videoUrl: videoUrl,
+                    text: m.text.replace('🎬 Generating video from image (this may take a minute)...', '✅ Video generated from image:')
+                  } : m));
+                } catch (err: any) {
+                  setMessages(prev => prev.map(m => m.id === streamingMessageId ? { ...m, text: m.text.replace('🎬 Generating video from image (this may take a minute)...', `❌ Video generation failed: ${err.message}`) } : m));
+                }
+              }
+            } else if (fc.name === 'generate_pdf') {
+              const args = fc.args as any;
+              setMessages(prev => prev.map(m => m.id === streamingMessageId ? { ...m, text: m.text + '\n\n📄 Generating PDF...' } : m));
+              try {
+                const response = await authFetch('/api/pdf/generate', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    title: args.title,
+                    content: args.content,
+                    style: args.style || 'professional'
+                  })
+                });
+                if (!response.ok) throw new Error('PDF generation failed');
+                const blob = await response.blob();
+                const pdfUrl = URL.createObjectURL(blob);
+                setMessages(prev => prev.map(m => m.id === streamingMessageId ? {
+                  ...m,
+                  text: m.text.replace('📄 Generating PDF...', `✅ PDF generated: [Download PDF](${pdfUrl})`)
+                } : m));
+              } catch (err: any) {
+                setMessages(prev => prev.map(m => m.id === streamingMessageId ? { ...m, text: m.text.replace('📄 Generating PDF...', `❌ PDF generation failed: ${err.message}`) } : m));
+              }
+            } else if (fc.name === 'get_connected_accounts') {
+              // Note: Social connections are managed per-project in the Social tab
+              // From the Home assistant, we inform the user to check a project's Social tab
+              setMessages(prev => prev.map(m => m.id === streamingMessageId ? { ...m, text: m.text + '\n\n📱 To check and manage social account connections, please open a project and go to the Social tab. Social posting from the Home assistant requires accounts to be connected in a project first.' } : m));
+            } else if (fc.name === 'post_to_social') {
+              const args = fc.args as any;
+              const platforms = args.platforms || [args.platform];
+              const mediaUrl = args.useLastGenerated && lastGeneratedAsset ? lastGeneratedAsset.url : args.mediaUrl;
+
+              setMessages(prev => prev.map(m => m.id === streamingMessageId ? { ...m, text: m.text + `\n\n📤 Posting to ${platforms.join(', ')}...` } : m));
+
+              try {
+                const results: string[] = [];
+                for (const platform of platforms) {
+                  const response = await authFetch('/api/social/post', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      platform,
+                      contentType: args.contentType,
+                      text: args.text || '',
+                      mediaUrl
+                    })
+                  });
+                  const data = await response.json();
+                  if (data.success) {
+                    results.push(`✅ ${platform}: Posted successfully`);
+                  } else if (data.error?.includes('not connected')) {
+                    results.push(`⚠️ ${platform}: Not connected. Please connect in a project's Social tab.`);
+                  } else {
+                    results.push(`❌ ${platform}: ${data.error || 'Failed'}`);
+                  }
+                }
+                setMessages(prev => prev.map(m => m.id === streamingMessageId ? {
+                  ...m,
+                  text: m.text.replace(`📤 Posting to ${platforms.join(', ')}...`, results.join('\n'))
+                } : m));
+              } catch (err: any) {
+                setMessages(prev => prev.map(m => m.id === streamingMessageId ? { ...m, text: m.text.replace(`📤 Posting to ${platforms.join(', ')}...`, `❌ Error posting: ${err.message}`) } : m));
+              }
+            } else if (fc.name === 'schedule_post') {
+              const args = fc.args as any;
+              const platforms = args.platforms || [];
+              const mediaUrl = args.useLastGenerated && lastGeneratedAsset ? lastGeneratedAsset.url : args.mediaUrl;
+
+              setMessages(prev => prev.map(m => m.id === streamingMessageId ? { ...m, text: m.text + `\n\n📅 Scheduling post for ${args.scheduledAt}...` } : m));
+
+              try {
+                // Parse natural language time if needed
+                let scheduledTime = args.scheduledAt;
+                if (!/^\d{4}-\d{2}-\d{2}/.test(scheduledTime)) {
+                  // Simple natural language parsing
+                  const now = new Date();
+                  if (/tomorrow/i.test(scheduledTime)) {
+                    now.setDate(now.getDate() + 1);
+                  }
+                  const timeMatch = scheduledTime.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
+                  if (timeMatch) {
+                    let hours = parseInt(timeMatch[1]);
+                    const minutes = parseInt(timeMatch[2] || '0');
+                    const ampm = timeMatch[3]?.toLowerCase();
+                    if (ampm === 'pm' && hours < 12) hours += 12;
+                    if (ampm === 'am' && hours === 12) hours = 0;
+                    now.setHours(hours, minutes, 0, 0);
+                  }
+                  scheduledTime = now.toISOString();
+                }
+
+                // Note: Scheduled posts are stored per-project
+                // For cross-project scheduling, inform user to use a specific project
+                const formattedTime = new Date(scheduledTime).toLocaleString();
+                setMessages(prev => prev.map(m => m.id === streamingMessageId ? {
+                  ...m,
+                  text: m.text.replace(`📅 Scheduling post for ${args.scheduledAt}...`, `⚠️ Post scheduling requires a project context. Please open a specific project and use the assistant there to schedule posts for ${formattedTime} to ${platforms.join(', ')}.`)
+                } : m));
+              } catch (err: any) {
+                setMessages(prev => prev.map(m => m.id === streamingMessageId ? { ...m, text: m.text.replace(`📅 Scheduling post for ${args.scheduledAt}...`, `❌ Error scheduling: ${err.message}`) } : m));
+              }
             }
           } catch (err: any) {
             console.error(`Error executing tool ${fc.name}:`, err);
