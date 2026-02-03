@@ -766,8 +766,7 @@ export const HomeLiveAssistant: React.FC<HomeLiveAssistantProps> = ({
             postToSocialTool,
             schedulePostTool
           ]
-        },
-        { googleSearch: {} }
+        }
       ];
 
       try {
