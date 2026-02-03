@@ -56,6 +56,57 @@ const scoreByTokens = (text: string, tokens: string[]) => {
   return score;
 };
 
+const uploadToBlob = async (blob: Blob, filename: string): Promise<string> => {
+  try {
+    const { upload } = await import('@vercel/blob/client');
+    const newBlob = await upload(filename, blob, {
+      access: 'public',
+      handleUploadUrl: '/api/media?op=upload-token',
+    });
+    return newBlob.url;
+  } catch (error) {
+    console.error('Blob upload failed:', error);
+    throw error;
+  }
+};
+
+const dataUrlToBlob = (dataUrl: string): Blob => {
+  const arr = dataUrl.split(',');
+  const mimeMatch = arr[0].match(/:(.*?);/);
+  const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new Blob([u8arr], { type: mime });
+};
+
+const ensureImageRef = async (input: string): Promise<ImageReference> => {
+  if (input.startsWith('data:')) {
+    const arr = input.split(',');
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+    return { base64: arr[1], mimeType: mime };
+  } else {
+    // It's a URL (e.g. Vercel Blob), fetch it and convert to base64
+    const res = await fetch(input);
+    if (!res.ok) throw new Error(`Failed to fetch image from URL: ${input}`);
+    const blob = await res.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        const base64 = result.split(',')[1];
+        resolve({ base64, mimeType: blob.type || 'image/png' });
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+};
+
 export const HomeLiveAssistant: React.FC<HomeLiveAssistantProps> = ({
   projects,
   scheduledPosts = [],
@@ -715,7 +766,8 @@ export const HomeLiveAssistant: React.FC<HomeLiveAssistantProps> = ({
             postToSocialTool,
             schedulePostTool
           ]
-        }
+        },
+        { googleSearchRetrieval: {} }
       ];
 
       try {
@@ -832,23 +884,27 @@ export const HomeLiveAssistant: React.FC<HomeLiveAssistantProps> = ({
               const args = fc.args as any;
               setMessages(prev => prev.map(m => m.id === streamingMessageId ? { ...m, text: m.text + '\n\n🎨 Generating image...' } : m));
               const { imageDataUrl } = await generateImage(args.prompt, { aspectRatio: args.aspectRatio });
-              setLastGeneratedAsset({ type: 'image', url: imageDataUrl });
+              setMessages(prev => prev.map(m => m.id === streamingMessageId ? { ...m, text: m.text.replace('🎨 Generating image...', '☁️ Uploading to storage...') } : m));
+              const blob = dataUrlToBlob(imageDataUrl);
+              const vercelUrl = await uploadToBlob(blob, `generated-image-${Date.now()}.png`);
+              setLastGeneratedAsset({ type: 'image', url: vercelUrl });
               setMessages(prev => prev.map(m => m.id === streamingMessageId ? {
                 ...m,
-                imageUrl: imageDataUrl,
-                text: m.text.replace('🎨 Generating image...', '✅ Image generated:')
+                imageUrl: vercelUrl,
+                text: m.text.replace('☁️ Uploading to storage...', '✅ Image generated:')
               } : m));
             } else if (fc.name === 'generate_video') {
               const args = fc.args as any;
               setMessages(prev => prev.map(m => m.id === streamingMessageId ? { ...m, text: m.text + '\n\n🎥 Generating video (this may take a minute)...' } : m));
               // Use Veo (SoraModel.VEO) for best results
               const videoBlob = await generateVeoVideo(args.prompt, '16:9', 'speed');
-              const videoUrl = URL.createObjectURL(videoBlob);
-              setLastGeneratedAsset({ type: 'video', url: videoUrl });
+              setMessages(prev => prev.map(m => m.id === streamingMessageId ? { ...m, text: m.text.replace('🎥 Generating video (this may take a minute)...', '☁️ Uploading to storage...') } : m));
+              const vercelUrl = await uploadToBlob(videoBlob, `veo-video-${Date.now()}.mp4`);
+              setLastGeneratedAsset({ type: 'video', url: vercelUrl });
               setMessages(prev => prev.map(m => m.id === streamingMessageId ? {
                 ...m,
-                videoUrl: videoUrl,
-                text: m.text.replace('🎥 Generating video (this may take a minute)...', '✅ Video generated:')
+                videoUrl: vercelUrl,
+                text: m.text.replace('☁️ Uploading to storage...', '✅ Video generated:')
               } : m));
             } else if (fc.name === 'generate_podcast') {
               const args = fc.args as any;
@@ -868,12 +924,14 @@ export const HomeLiveAssistant: React.FC<HomeLiveAssistantProps> = ({
 
               // 2. Generate Audio
               const { audioData, mimeType } = await generatePodcastAudio(script);
-              const audioUrl = `data:${mimeType};base64,${audioData}`;
+              setMessages(prev => prev.map(m => m.id === streamingMessageId ? { ...m, text: m.text.replace('🎙️ Generating podcast script and audio...', '☁️ Uploading audio to storage...') } : m));
+              const audioBlob = dataUrlToBlob(`data:${mimeType};base64,${audioData}`);
+              const vercelUrl = await uploadToBlob(audioBlob, `podcast-${Date.now()}.mp3`);
 
               setMessages(prev => prev.map(m => m.id === streamingMessageId ? {
                 ...m,
-                audioUrl: audioUrl,
-                text: m.text.replace('🎙️ Generating podcast script and audio...', '✅ Podcast generated:')
+                audioUrl: vercelUrl,
+                text: m.text.replace('☁️ Uploading audio to storage...', '✅ Podcast generated:')
               } : m));
             } else if (fc.name === 'edit_image') {
               const args = fc.args as any;
@@ -886,13 +944,16 @@ export const HomeLiveAssistant: React.FC<HomeLiveAssistantProps> = ({
               } else {
                 setMessages(prev => prev.map(m => m.id === streamingMessageId ? { ...m, text: m.text + '\n\n🎨 Editing image...' } : m));
                 // Convert URL to ImageReference format for editImageWithReferences
-                const imageRef: ImageReference = { base64: imageToEdit.startsWith('data:') ? imageToEdit.split(',')[1] : undefined, fileUri: imageToEdit.startsWith('data:') ? undefined : imageToEdit, mimeType: 'image/png' };
+                const imageRef = await ensureImageRef(imageToEdit);
                 const { imageDataUrl } = await editImageWithReferences(args.editPrompt, [imageRef]);
-                setLastGeneratedAsset({ type: 'image', url: imageDataUrl });
+                setMessages(prev => prev.map(m => m.id === streamingMessageId ? { ...m, text: m.text.replace('🎨 Editing image...', '☁️ Uploading to storage...') } : m));
+                const blob = dataUrlToBlob(imageDataUrl);
+                const vercelUrl = await uploadToBlob(blob, `edited-image-${Date.now()}.png`);
+                setLastGeneratedAsset({ type: 'image', url: vercelUrl });
                 setMessages(prev => prev.map(m => m.id === streamingMessageId ? {
                   ...m,
-                  imageUrl: imageDataUrl,
-                  text: m.text.replace('🎨 Editing image...', '✅ Image edited:')
+                  imageUrl: vercelUrl,
+                  text: m.text.replace('☁️ Uploading to storage...', '✅ Image edited:')
                 } : m));
               }
             } else if (fc.name === 'generate_video_from_image') {
@@ -909,12 +970,13 @@ export const HomeLiveAssistant: React.FC<HomeLiveAssistantProps> = ({
                   const generation = await createVideoFromImageUrl({ prompt: args.motionPrompt || 'Animate this image with subtle motion', model: 'sora-2' }, sourceImage);
                   const completed = await pollVideoUntilComplete(generation.id);
                   const videoBlob = await downloadVideoBlob(completed.id);
-                  const videoUrl = URL.createObjectURL(videoBlob);
-                  setLastGeneratedAsset({ type: 'video', url: videoUrl });
+                  setMessages(prev => prev.map(m => m.id === streamingMessageId ? { ...m, text: m.text.replace('🎬 Generating video from image (this may take a minute)...', '☁️ Uploading to storage...') } : m));
+                  const vercelUrl = await uploadToBlob(videoBlob, `sora-video-${Date.now()}.mp4`);
+                  setLastGeneratedAsset({ type: 'video', url: vercelUrl });
                   setMessages(prev => prev.map(m => m.id === streamingMessageId ? {
                     ...m,
-                    videoUrl: videoUrl,
-                    text: m.text.replace('🎬 Generating video from image (this may take a minute)...', '✅ Video generated from image:')
+                    videoUrl: vercelUrl,
+                    text: m.text.replace('☁️ Uploading to storage...', '✅ Video generated from image:')
                   } : m));
                 } catch (err: any) {
                   setMessages(prev => prev.map(m => m.id === streamingMessageId ? { ...m, text: m.text.replace('🎬 Generating video from image (this may take a minute)...', `❌ Video generation failed: ${err.message}`) } : m));
@@ -935,10 +997,11 @@ export const HomeLiveAssistant: React.FC<HomeLiveAssistantProps> = ({
                 });
                 if (!response.ok) throw new Error('PDF generation failed');
                 const blob = await response.blob();
-                const pdfUrl = URL.createObjectURL(blob);
+                setMessages(prev => prev.map(m => m.id === streamingMessageId ? { ...m, text: m.text.replace('📄 Generating PDF...', '☁️ Uploading PDF to storage...') } : m));
+                const vercelUrl = await uploadToBlob(blob, `${args.title || 'document'}-${Date.now()}.pdf`);
                 setMessages(prev => prev.map(m => m.id === streamingMessageId ? {
                   ...m,
-                  text: m.text.replace('📄 Generating PDF...', `✅ PDF generated: [Download PDF](${pdfUrl})`)
+                  text: m.text.replace('☁️ Uploading PDF to storage...', `✅ PDF generated: [Download PDF](${vercelUrl})`)
                 } : m));
               } catch (err: any) {
                 setMessages(prev => prev.map(m => m.id === streamingMessageId ? { ...m, text: m.text.replace('📄 Generating PDF...', `❌ PDF generation failed: ${err.message}`) } : m));
@@ -1255,6 +1318,24 @@ export const HomeLiveAssistant: React.FC<HomeLiveAssistantProps> = ({
                         <ReactMarkdown className={`${isDarkMode ? 'prose prose-invert' : 'prose'} max-w-none prose-pre:overflow-x-auto prose-code:break-all`}>
                           {message.text}
                         </ReactMarkdown>
+
+                        {message.imageUrl && (
+                          <div className="mt-3 rounded-xl overflow-hidden border border-black/10 dark:border-white/10 shadow-sm">
+                            <img src={message.imageUrl} alt="Generated asset" className="w-full h-auto max-h-[400px] object-cover" />
+                          </div>
+                        )}
+
+                        {message.videoUrl && (
+                          <div className="mt-3 rounded-xl overflow-hidden border border-black/10 dark:border-white/10 bg-black shadow-sm">
+                            <video src={message.videoUrl} controls className="w-full h-auto max-h-[400px]" />
+                          </div>
+                        )}
+
+                        {message.audioUrl && (
+                          <div className="mt-3">
+                            <audio src={message.audioUrl} controls className="w-full" />
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1324,6 +1405,24 @@ export const HomeLiveAssistant: React.FC<HomeLiveAssistantProps> = ({
                           <ReactMarkdown className={isDarkMode ? 'prose prose-invert max-w-none' : 'prose max-w-none'}>
                             {message.text}
                           </ReactMarkdown>
+
+                          {message.imageUrl && (
+                            <div className="mt-3 rounded-xl overflow-hidden border border-black/10 dark:border-white/10 shadow-sm">
+                              <img src={message.imageUrl} alt="Generated asset" className="w-full h-auto max-h-[400px] object-cover" />
+                            </div>
+                          )}
+
+                          {message.videoUrl && (
+                            <div className="mt-3 rounded-xl overflow-hidden border border-black/10 dark:border-white/10 bg-black shadow-sm">
+                              <video src={message.videoUrl} controls className="w-full h-auto max-h-[400px]" />
+                            </div>
+                          )}
+
+                          {message.audioUrl && (
+                            <div className="mt-3">
+                              <audio src={message.audioUrl} controls className="w-full" />
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
