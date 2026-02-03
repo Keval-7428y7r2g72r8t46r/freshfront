@@ -1083,7 +1083,7 @@ const App: React.FC = () => {
     return (
       <HomePage
         isDarkMode={isDarkMode}
-        toggleTheme={cycleTheme}
+        toggleTheme={toggleLightDark}
         onAuth={() => setLoggedOutView('auth')}
         onOpenTerms={() => {
           setLoggedOutReturnView('home');
