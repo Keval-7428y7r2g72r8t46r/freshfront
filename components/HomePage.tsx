@@ -1652,6 +1652,27 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
                   <div className="flex items-center gap-2"><span className="text-indigo-500">🎬</span> Export for marketing & storytelling</div>
                 </div>
               </div>
+
+              {/* Browser Automation */}
+              <div
+                className={
+                  'rounded-2xl border p-5 ' +
+                  (isDarkMode ? 'border-white/[0.06] bg-white/5' : 'border-gray-200 bg-white')
+                }
+              >
+                <div className="flex items-center gap-4 mb-4">
+                  <div className={'w-16 h-16 rounded-2xl flex items-center justify-center text-3xl ' + (isDarkMode ? 'bg-amber-500/20' : 'bg-amber-100')}>
+                    🤖
+                  </div>
+                  <div className={'font-semibold ' + (isDarkMode ? 'text-white' : 'text-gray-900')}>Browser Automation</div>
+                </div>
+                <div className={'text-xs space-y-2 ' + (isDarkMode ? 'text-[#a1a1a6]' : 'text-gray-600')}>
+                  <div className="flex items-center gap-2"><span className="text-amber-500">🖱️</span> Navigate websites like a human</div>
+                  <div className="flex items-center gap-2"><span className="text-amber-500">📝</span> Autocomplete forms & signups</div>
+                  <div className="flex items-center gap-2"><span className="text-amber-500">📥</span> Scrape & structure web data</div>
+                  <div className="flex items-center gap-2"><span className="text-amber-500">🔄</span> Automate repetitive web tasks</div>
+                </div>
+              </div>
             </div>
 
             {/* Voice + Chat Modes */}
