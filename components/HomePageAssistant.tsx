@@ -300,161 +300,162 @@ export const HomePageAssistant: React.FC<HomePageAssistantProps> = ({ isDarkMode
     : 'bg-white border-gray-200 text-gray-900';
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
-      {!isOpen ? (
+    <>
+      {!isOpen && (
         <LiveAssistantButton
           onClick={() => setIsOpen(true)}
           isDarkMode={isDarkMode}
           className={`${isDarkMode ? 'bg-[#061225]/85 border-white/10 text-white' : 'bg-[#0a84ff] border-white/20 text-white'}`}
         />
-      ) : (
-        <div className={`w-[92vw] max-w-[380px] h-[70vh] max-h-[560px] rounded-3xl shadow-2xl border overflow-hidden flex flex-col ${panelClasses}`}>
-          <div className={`px-4 py-3 border-b flex items-center justify-between ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}>
-            <div className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-2xl flex items-center justify-center ${isDarkMode ? 'bg-[#0071e3]/20' : 'bg-blue-50'}`}>
-                <svg className={`w-4 h-4 ${isDarkMode ? 'text-[#63b3ff]' : 'text-[#0071e3]'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="min-w-0">
-                <div className="text-sm font-semibold truncate">FreshFront Assistant</div>
-                <div className={`text-[11px] ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  {mode === 'chat' ? 'AI Chat' : 'Voice'}
+      )}
+      {isOpen && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <div className={`w-[92vw] max-w-[380px] h-[70vh] max-h-[560px] rounded-3xl shadow-2xl border overflow-hidden flex flex-col ${panelClasses}`}>
+            <div className={`px-4 py-3 border-b flex items-center justify-between ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}>
+              <div className="flex items-center gap-2">
+                <div className={`w-8 h-8 rounded-2xl flex items-center justify-center ${isDarkMode ? 'bg-[#0071e3]/20' : 'bg-blue-50'}`}>
+                  <svg className={`w-4 h-4 ${isDarkMode ? 'text-[#63b3ff]' : 'text-[#0071e3]'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold truncate">FreshFront Assistant</div>
+                  <div className={`text-[11px] ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {mode === 'chat' ? 'AI Chat' : 'Voice'}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  setMode(prev => (prev === 'chat' ? 'voice' : 'chat'));
-                  setError(null);
-                }}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${isDarkMode
-                  ? 'bg-white/10 hover:bg-white/20'
-                  : 'bg-gray-100 hover:bg-gray-200'
-                  }`}
-                title={mode === 'chat' ? 'Switch to voice' : 'Switch to chat'}
-              >
-                {mode === 'chat' ? 'Voice' : 'Chat'}
-              </button>
-
-              {mode === 'voice' && (
+              <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
-                    if (connectionStatus === 'connected') {
-                      disconnectVoice();
-                    } else {
-                      connectVoice();
-                    }
+                    setMode(prev => (prev === 'chat' ? 'voice' : 'chat'));
+                    setError(null);
                   }}
-                  className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${connectionStatus === 'connected'
-                    ? 'bg-red-500 text-white hover:bg-red-600'
-                    : isDarkMode ? 'bg-[#0071e3] text-white hover:bg-[#0a84ff]' : 'bg-[#0071e3] text-white hover:bg-[#0a84ff]'
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${isDarkMode
+                    ? 'bg-white/10 hover:bg-white/20'
+                    : 'bg-gray-100 hover:bg-gray-200'
                     }`}
-                  title={connectionStatus === 'connected' ? 'Disconnect voice' : 'Connect voice'}
+                  title={mode === 'chat' ? 'Switch to voice' : 'Switch to chat'}
                 >
-                  {connectionStatus === 'connected' ? (
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h12v12H6z" /></svg>
-                  ) : (
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14a3 3 0 003-3V5a3 3 0 00-6 0v6a3 3 0 003 3z" /><path d="M19 11a7 7 0 01-14 0H3a9 9 0 006 8.65V22h6v-2.35A9 9 0 0021 11h-2z" /></svg>
-                  )}
+                  {mode === 'chat' ? 'Voice' : 'Chat'}
                 </button>
+
+                {mode === 'voice' && (
+                  <button
+                    onClick={() => {
+                      if (connectionStatus === 'connected') {
+                        disconnectVoice();
+                      } else {
+                        connectVoice();
+                      }
+                    }}
+                    className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${connectionStatus === 'connected'
+                      ? 'bg-red-500 text-white hover:bg-red-600'
+                      : isDarkMode ? 'bg-[#0071e3] text-white hover:bg-[#0a84ff]' : 'bg-[#0071e3] text-white hover:bg-[#0a84ff]'
+                      }`}
+                    title={connectionStatus === 'connected' ? 'Disconnect voice' : 'Connect voice'}
+                  >
+                    {connectionStatus === 'connected' ? (
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h12v12H6z" /></svg>
+                    ) : (
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14a3 3 0 003-3V5a3 3 0 00-6 0v6a3 3 0 003 3z" /><path d="M19 11a7 7 0 01-14 0H3a9 9 0 006 8.65V22h6v-2.35A9 9 0 0021 11h-2z" /></svg>
+                    )}
+                  </button>
+                )}
+
+                <button
+                  onClick={() => {
+                    setIsOpen(false);
+                    if (mode === 'voice' && connectionStatus === 'connected') disconnectVoice();
+                  }}
+                  className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${isDarkMode
+                    ? 'hover:bg-white/10 text-white/70 hover:text-white'
+                    : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900'
+                    }`}
+                  title="Close"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+            </div>
+
+            <div className={`flex-1 overflow-y-auto p-4 space-y-3 ${isDarkMode ? 'bg-black' : 'bg-gray-50'}`}>
+              {messages.length === 0 && (
+                <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Ask about pricing, how research works, knowledge base uploads, reports, Note Map, assets, or sharing.
+                </div>
               )}
 
-              <button
-                onClick={() => {
-                  setIsOpen(false);
-                  if (mode === 'voice' && connectionStatus === 'connected') disconnectVoice();
-                }}
-                className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${isDarkMode
-                  ? 'hover:bg-white/10 text-white/70 hover:text-white'
-                  : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900'
-                  }`}
-                title="Close"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-          </div>
-
-          <div className={`flex-1 overflow-y-auto p-4 space-y-3 ${isDarkMode ? 'bg-black' : 'bg-gray-50'}`}>
-            {messages.length === 0 && (
-              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                Ask about pricing, how research works, knowledge base uploads, reports, Note Map, assets, or sharing.
-              </div>
-            )}
-
-            {messages.map(m => (
-              <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm ${m.role === 'user'
-                  ? 'bg-[#0071e3] text-white'
-                  : (isDarkMode ? 'bg-[#2d2d2f] text-[#e5e5ea]' : 'bg-white border border-gray-200 text-gray-900')
-                  }`}>
-                  {m.role === 'model' ? (
-                    <ReactMarkdown className={isDarkMode ? 'prose prose-invert max-w-none' : 'prose max-w-none'}>
-                      {m.text}
-                    </ReactMarkdown>
-                  ) : (
-                    <div className="whitespace-pre-wrap">{m.text}</div>
-                  )}
+              {messages.map(m => (
+                <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm ${m.role === 'user'
+                    ? 'bg-[#0071e3] text-white'
+                    : (isDarkMode ? 'bg-[#2d2d2f] text-[#e5e5ea]' : 'bg-white border border-gray-200 text-gray-900')
+                    }`}>
+                    {m.role === 'model' ? (
+                      <ReactMarkdown className={isDarkMode ? 'prose prose-invert max-w-none' : 'prose max-w-none'}>
+                        {m.text}
+                      </ReactMarkdown>
+                    ) : (
+                      <div className="whitespace-pre-wrap">{m.text}</div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
 
-            {isProcessing && (
-              <div className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-                Thinking...
-              </div>
-            )}
+              {isProcessing && (
+                <div className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                  Thinking...
+                </div>
+              )}
 
-            {mode === 'voice' && connectionStatus === 'connected' && (
-              <div className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-                {isSpeaking ? 'Speaking…' : 'Listening…'}
-              </div>
-            )}
+              {mode === 'voice' && connectionStatus === 'connected' && (
+                <div className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                  {isSpeaking ? 'Speaking…' : 'Listening…'}
+                </div>
+              )}
 
-            {error && (
-              <div className={`text-xs ${isDarkMode ? 'text-red-300' : 'text-red-600'}`}>
-                {error}
-              </div>
-            )}
-          </div>
+              {error && (
+                <div className={`text-xs ${isDarkMode ? 'text-red-300' : 'text-red-600'}`}>
+                  {error}
+                </div>
+              )}
+            </div>
 
-          <div className={`p-3 border-t ${isDarkMode ? 'border-white/10 bg-black/30' : 'border-gray-200 bg-white'}`}>
-            <div className="flex items-center gap-2">
-              <input
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSend();
-                }}
-                placeholder={mode === 'voice' ? 'Type a message (optional)…' : 'Ask about FreshFront…'}
-                className={`flex-1 rounded-xl px-3 py-2 text-sm outline-none border ${isDarkMode
-                  ? 'bg-[#2d2d2f] text-white placeholder-[#636366] border-[#3d3d3f]/50'
-                  : 'bg-gray-100 text-gray-900 placeholder-gray-500 border-gray-200'
-                  }`}
-              />
-              <button
-                disabled={isProcessing}
-                onClick={handleSend}
-                className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isDarkMode
-                  ? 'bg-white/10 hover:bg-white/20 text-white disabled:opacity-40'
-                  : 'bg-[#0071e3] hover:bg-[#0a84ff] text-white disabled:opacity-40'
-                  }`}
-                title="Send"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M22 2L11 13" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M22 2l-7 20-4-9-9-4 20-7z" />
-                </svg>
-              </button>
+            <div className={`p-3 border-t ${isDarkMode ? 'border-white/10 bg-black/30' : 'border-gray-200 bg-white'}`}>
+              <div className="flex items-center gap-2">
+                <input
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSend();
+                  }}
+                  placeholder={mode === 'voice' ? 'Type a message (optional)…' : 'Ask about FreshFront…'}
+                  className={`flex-1 rounded-xl px-3 py-2 text-sm outline-none border ${isDarkMode
+                    ? 'bg-[#2d2d2f] text-white placeholder-[#636366] border-[#3d3d3f]/50'
+                    : 'bg-gray-100 text-gray-900 placeholder-gray-500 border-gray-200'
+                    }`}
+                />
+                <button
+                  disabled={isProcessing}
+                  onClick={handleSend}
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isDarkMode
+                    ? 'bg-white/10 hover:bg-white/20 text-white disabled:opacity-40'
+                    : 'bg-[#0071e3] hover:bg-[#0a84ff] text-white disabled:opacity-40'
+                    }`}
+                  title="Send"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M22 2L11 13" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M22 2l-7 20-4-9-9-4 20-7z" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
 
-      <style>{`
+          <style>{`
         @keyframes homePageAssistantShineRotate {
           0% { transform: rotate(0deg); opacity: 0; }
           2% { opacity: 0.85; }
@@ -484,6 +485,9 @@ export const HomePageAssistant: React.FC<HomePageAssistantProps> = ({ isDarkMode
           filter: blur(0.8px);
         }
       `}</style>
-    </div>
+        </div>
+      )}
+    </>
   );
 };
+
