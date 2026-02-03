@@ -19,17 +19,10 @@ export const LiveAssistantButton: React.FC<LiveAssistantButtonProps> = ({
     const buttonRef = useRef<HTMLButtonElement>(null);
     const [eyeOffset, setEyeOffset] = useState({ x: 0, y: 0 });
     const [mounted, setMounted] = useState(false);
-    const [isClicked, setIsClicked] = useState(false);
 
     useEffect(() => {
         setMounted(true);
     }, []);
-
-    useEffect(() => {
-        if (!visible) {
-            setIsClicked(false);
-        }
-    }, [visible]);
 
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
@@ -57,18 +50,13 @@ export const LiveAssistantButton: React.FC<LiveAssistantButtonProps> = ({
         return () => window.removeEventListener('mousemove', handleMouseMove);
     }, []);
 
-    const handleClick = () => {
-        setIsClicked(true);
-        onClick();
-    };
-
-    // Don't render if not visible or not mounted or just clicked
-    if (!mounted || !visible || isClicked) return null;
+    // Don't render if not visible or not mounted
+    if (!mounted || !visible) return null;
 
     const buttonElement = (
         <button
             ref={buttonRef}
-            onClick={handleClick}
+            onClick={onClick}
             className={`fixed bottom-6 right-6 w-12 h-12 sm:w-14 sm:h-14 rounded-full shadow-lg transition-all duration-300 hover:scale-110 active:scale-95 flex items-center justify-center group z-[9999] ${className}`}
             title="Chat with AI"
         >
