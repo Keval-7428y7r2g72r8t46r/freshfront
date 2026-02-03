@@ -1287,14 +1287,14 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
                     <span className={isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}>Interactive 3D Worlds</span>
                   </h2>
                   <p className={'mt-4 text-base sm:text-lg leading-relaxed ' + (isDarkMode ? 'text-gray-300' : 'text-gray-600')}>
-                    Transform ideas into immersive 3D environments. Generate photorealistic scenes from text or images, explore with virtual camera controls, and capture stunning multi-angle renders.
+                    Transform ideas into immersive 3D environments. Generate photorealistic scenes from text or images, explore with virtual game controls, and capture stunning video recordings.
                   </p>
 
                   <div className="mt-6 grid grid-cols-2 gap-4">
                     {[
                       { icon: '🎨', title: 'Text to World', desc: 'Describe your scene' },
                       { icon: '📸', title: 'Image to 3D', desc: 'Upload references' },
-                      { icon: '🎥', title: 'Camera Control', desc: 'Explore freely' },
+                      { icon: '🕹️', title: 'Interactive Controls', desc: 'Explore freely' },
                       { icon: '💎', title: 'Hi-Res Export', desc: 'Production ready' },
                     ].map(item => (
                       <div
@@ -1330,11 +1330,17 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
                       (isDarkMode ? 'border-white/[0.08] shadow-indigo-500/10' : 'border-gray-200 shadow-indigo-200/50')
                     }
                   >
-                    <div className={'aspect-[4/3] flex items-center justify-center ' + (isDarkMode ? 'bg-gradient-to-br from-indigo-900/50 to-purple-900/50' : 'bg-gradient-to-br from-indigo-100 to-purple-100')}>
-                      <div className="text-center p-8">
-                        <div className="text-6xl mb-4">🌌</div>
-                        <div className={'text-lg font-semibold ' + (isDarkMode ? 'text-white' : 'text-gray-900')}>3D World Generator</div>
-                        <div className={'text-sm mt-2 ' + (isDarkMode ? 'text-gray-400' : 'text-gray-600')}>Powered by WorldLabs AI</div>
+                    <div className="aspect-[16/9] w-full bg-black relative">
+                      <video
+                        src="https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/Introducing%20Marble%20by%20World%20Labs%20-%20World%20Labs%20%281080p%2C%20h264%2C%20youtube%29.mp4"
+                        className="w-full h-full object-cover"
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                      />
+                      <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10 text-white text-xs font-medium">
+                        Powered by WorldLabs AI
                       </div>
                     </div>
                   </div>
