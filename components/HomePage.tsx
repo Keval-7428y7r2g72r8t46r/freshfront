@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { HomePageAssistant } from './HomePageAssistant';
+import { AnimatedEyeIcon } from './AnimatedEyeIcon';
 
 interface HomePageProps {
   isDarkMode: boolean;
@@ -1424,7 +1425,7 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
                       </span>
                     </div>
                     <div className="flex flex-col items-center text-center mt-2">
-                      <img src="https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/magic-hat.png" alt="AI Core" className="w-16 h-16 object-contain mb-3" />
+                      <AnimatedEyeIcon className="w-16 h-16 bg-[#0071e3] mb-3" />
                       <span className={"font-bold text-lg " + (isDarkMode ? 'text-white' : 'text-gray-900')}>AI Cofounder</span>
                       <p className={"text-xs mt-2 leading-relaxed " + (isDarkMode ? 'text-gray-400' : 'text-gray-600')}>
                         Understands your intent and dispatches specialized agents.
