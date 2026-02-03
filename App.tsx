@@ -64,7 +64,7 @@ const App: React.FC = () => {
     if (saved && ['light', 'dark', 'orange', 'green', 'blue', 'purple', 'khaki', 'pink'].includes(saved)) {
       return saved as any;
     }
-    // Migration from old dark mode settings
+    // Migration from old dark mode setting
     const oldDarkMode = localStorage.getItem('theme-dark-mode');
     return oldDarkMode === 'true' ? 'dark' : 'light';
   });
@@ -312,8 +312,9 @@ const App: React.FC = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ code, provider: 'gmail' }),
         });
-
-        // Only notify opener on success
+      } catch (e) {
+        console.error('Gmail token exchange failed', e);
+      } finally {
         if (!cancelled) {
           if (window.opener && !window.opener.closed) {
             try {
@@ -324,11 +325,6 @@ const App: React.FC = () => {
               console.error('Failed to notify opener', e);
             }
           }
-          window.location.replace(returnTo);
-        }
-      } catch (e) {
-        console.error('Gmail token exchange failed', e);
-        if (!cancelled) {
           window.location.replace(returnTo);
         }
       }
@@ -382,22 +378,17 @@ const App: React.FC = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ code, provider: 'outlook' }),
         });
-
+      } catch (e) {
+        console.error('Outlook exchange failed', e);
+      } finally {
         if (!cancelled) {
           if (window.opener && !window.opener.closed) {
             try {
               window.opener.postMessage({ type: 'outlook:connected' }, window.location.origin);
               window.close();
               return;
-            } catch (e) {
-              console.error(e);
-            }
+            } catch (e) { console.error(e); }
           }
-          window.location.replace(returnTo);
-        }
-      } catch (e) {
-        console.error('Outlook exchange failed', e);
-        if (!cancelled) {
           window.location.replace(returnTo);
         }
       }
@@ -1076,7 +1067,7 @@ const App: React.FC = () => {
       return (
         <AuthScreen
           isDarkMode={isDarkMode}
-          toggleTheme={toggleLightDark}
+          toggleTheme={cycleTheme}
           onOpenTerms={() => {
             setLoggedOutReturnView('auth');
             navigateLegal('terms');
@@ -1092,7 +1083,7 @@ const App: React.FC = () => {
     return (
       <HomePage
         isDarkMode={isDarkMode}
-        toggleTheme={toggleLightDark}
+        toggleTheme={cycleTheme}
         onAuth={() => setLoggedOutView('auth')}
         onOpenTerms={() => {
           setLoggedOutReturnView('home');
@@ -1139,6 +1130,7 @@ const App: React.FC = () => {
           isDarkMode={isDarkMode}
           toggleTheme={toggleLightDark}
           projectsVersion={projectsVersion}
+          isActive={showProjects}
         />
       </div>
 
@@ -1223,4 +1215,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-
