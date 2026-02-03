@@ -767,7 +767,7 @@ export const HomeLiveAssistant: React.FC<HomeLiveAssistantProps> = ({
             schedulePostTool
           ]
         },
-        { googleSearchRetrieval: {} }
+        { googleSearch: {} }
       ];
 
       try {
@@ -815,7 +815,6 @@ export const HomeLiveAssistant: React.FC<HomeLiveAssistantProps> = ({
           maxOutputTokens: 4096,
           tools,
           toolConfig: { functionCallingConfig: { mode: 'AUTO' as any } },
-          thinkingConfig: { thinkingBudget: 0 },
         },
       });
 
