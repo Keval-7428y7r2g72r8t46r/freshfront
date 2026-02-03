@@ -301,13 +301,12 @@ export const HomePageAssistant: React.FC<HomePageAssistantProps> = ({ isDarkMode
 
   return (
     <>
-      {!isOpen && (
-        <LiveAssistantButton
-          onClick={() => setIsOpen(true)}
-          isDarkMode={isDarkMode}
-          className={`${isDarkMode ? 'bg-[#061225]/85 border-white/10 text-white' : 'bg-[#0a84ff] border-white/20 text-white'}`}
-        />
-      )}
+      <LiveAssistantButton
+        onClick={() => setIsOpen(true)}
+        isDarkMode={isDarkMode}
+        visible={!isOpen}
+        className={`${isDarkMode ? 'bg-[#061225]/85 border-white/10 text-white' : 'bg-[#0a84ff] border-white/20 text-white'}`}
+      />
       {isOpen && (
         <div className="fixed bottom-6 right-6 z-50">
           <div className={`w-[92vw] max-w-[380px] h-[70vh] max-h-[560px] rounded-3xl shadow-2xl border overflow-hidden flex flex-col ${panelClasses}`}>
