@@ -28,8 +28,7 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
   const [isDemoOpen, setIsDemoOpen] = useState(false);
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'annual'>('annual');
 
-  const demoVideoUrl =
-    'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/projects/FreshFront%20Demo.mp4';
+  const demoVideoUrl = 'https://www.youtube.com/embed/d_0_E4pG8fY?autoplay=1';
 
   useEffect(() => {
     if (!isDemoOpen) return;
@@ -658,7 +657,7 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
       imageUrl:
         'https://i8oxklu4tq3i4awc.public.blob.vercel-storage.com/Create%20Social%20Media%20Content%20and%20Documents%20from%20Your%20Research%20%26%20Project%20Data%202.PNG.png',
       darkImageUrl:
-        'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/Create%20Social%20Media%20Content%20and%20Documents%20from%20Your%20Research%20%26%20Project%20Data%20dark.PNG',
+        'https://i8oxklu4tq3i4awc.public.blob.vercel-storage.com/Create%20Social%20Media%20Content%20and%20Documents%20from%20Your%20Research%20%26%20Project%20Data%202.PNG.png',
     },
     {
       title: 'Unified Social Media Publishing & Scheduling',
@@ -1065,7 +1064,7 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
                         : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-900')
                     }
                   >
-                    Watch Demo
+                    Watch Film
                   </button>
                 </div>
 
@@ -1098,16 +1097,15 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
                     (isDarkMode ? 'border-white/[0.06] bg-white/5' : 'border-gray-200 bg-white')
                   }
                 >
-                  <img
-                    src={
-                      isDarkMode
-                        ? 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/Unified%20Dashboard%20for%20Building%20%26%20Managing%20Your%20Projects%202%20dark.PNG'
-                        : 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/Unified%20Dashboard%20for%20Building%20%26%20Managing%20Your%20Projects%202.PNG'
-                    }
-                    alt="Unified dashboard"
-                    className="w-full h-auto object-cover block"
-                    loading="lazy"
-                  />
+                  <div className="w-full aspect-[16/10] bg-black">
+                    <iframe
+                      className="w-full h-full"
+                      src="https://www.youtube.com/embed/e3pvkzMHcvs?autoplay=1&mute=1&loop=1&playlist=e3pvkzMHcvs&controls=0&showinfo=0&rel=0"
+                      title="FreshFront Header Video"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      style={{ border: 'none' }}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -2821,13 +2819,12 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
               </div>
 
               <div className="w-full aspect-video bg-black">
-                <video
+                <iframe
                   className="w-full h-full"
                   src={demoVideoUrl}
-                  controls
-                  autoPlay
-                  playsInline
-                  preload="metadata"
+                  title="FreshFront Film"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
                 />
               </div>
             </div>
