@@ -736,7 +736,7 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
     {
       title: 'Ready to take action',
       description:
-        'There is a widget for every need, tailored to your session.',
+        'There is a widget for every need, tailored to your session. ',
       imageUrl:
         'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/Discover%20Prospects%20%26%20Access%20Realtime%20Opportunities.PNG',
       subFeatures: [
@@ -2879,3 +2879,4 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
     </div >
   );
 };
+
