@@ -23,6 +23,7 @@ import { UserProfile } from '../types';
 import { ThoughtProcess } from './ThoughtProcess';
 import { generateEmailHtml } from './EmailBuilder';
 import { worldLabsService, WorldGenerationRequest } from '../services/worldLabsService';
+import { getFallbackChain, isRetryableError, MODEL_FALLBACK_CHAINS } from '../services/modelSelector';
 
 interface ExtendedChatMessage extends ContextChatMessage {
   imageUrl?: string;
@@ -10822,25 +10823,56 @@ DO NOT use schedule_post for email - use THIS tool instead.`,
 
       console.log(`[ProjectLiveAssistant] Using model: ${targetModel}, Built-in Tools Needed: ${needsBuiltInTools}`);
 
-      const stream = await ai.models.generateContentStream({
-        model: targetModel,
-        contents: conversationHistory,
-        config: {
-          systemInstruction: systemInstruction,
-          // Use low temperature for reliable function calling per Gemini docs
-          temperature: 0,
-          maxOutputTokens: 8192,
-          tools: runtimeTools,
-          // Enable function calling mode - AUTO normally, ANY when scheduling detected
-          // CRITICAL: Do NOT pass toolConfig if using built-in tools (Search), 
-          // as we have removed function declarations in that mode.
-          toolConfig: needsBuiltInTools ? undefined : toolConfig,
-          // Enable thinking for Gemini 3 (if not using built-in tools), disable for 2.5
-          thinkingConfig: targetModel.includes('gemini-3')
-            ? { includeThoughts: true }
-            : { thinkingBudget: 0 },
-        },
-      });
+      // Get fallback chain starting from the target model
+      const fallbackModels = needsBuiltInTools
+        ? MODEL_FALLBACK_CHAINS.standard // 2.5 Flash chain for built-in tools
+        : MODEL_FALLBACK_CHAINS.fast;    // 3 Flash chain for function calling
+
+      let stream: any = null;
+      let lastError: any = null;
+      let usedModel = targetModel;
+
+      for (const modelName of fallbackModels) {
+        try {
+          console.log(`[ProjectLiveAssistant] Trying model: ${modelName}`);
+
+          // Recalculate config for each model attempt
+          const modelConfig: any = {
+            systemInstruction: systemInstruction,
+            temperature: 0,
+            maxOutputTokens: 8192,
+            tools: runtimeTools,
+            toolConfig: needsBuiltInTools ? undefined : toolConfig,
+          };
+
+          // Only add thinkingConfig for Gemini 3 models
+          if (modelName.includes('gemini-3')) {
+            modelConfig.thinkingConfig = { includeThoughts: true };
+          }
+
+          stream = await ai.models.generateContentStream({
+            model: modelName,
+            contents: conversationHistory,
+            config: modelConfig,
+          });
+
+          usedModel = modelName;
+          console.log(`[ProjectLiveAssistant] ✅ Success with model: ${modelName}`);
+          break; // Success, exit loop
+        } catch (err: any) {
+          lastError = err;
+          console.warn(`[ProjectLiveAssistant] Model ${modelName} failed:`, err.message || err);
+          if (!isRetryableError(err)) {
+            // Non-retryable error, don't try other models
+            throw err;
+          }
+          // Continue to next fallback model
+        }
+      }
+
+      if (!stream) {
+        throw lastError || new Error('All fallback models failed');
+      }
 
       let fullText = '';
       const aggregatedFunctionCalls: any[] = [];
