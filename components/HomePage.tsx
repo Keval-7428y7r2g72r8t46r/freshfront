@@ -656,7 +656,7 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
       description:
         'Turn your research into quality shareable output. Generate campaign assets directly from your project data and iterate in the same workspace.',
       imageUrl:
-        'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/Create%20Social%20Media%20Content%20and%20Documents%20from%20Your%20Research%20%26%20Project%20Data%202.PNG',
+        'https://i8oxklu4tq3i4awc.public.blob.vercel-storage.com/Create%20Social%20Media%20Content%20and%20Documents%20from%20Your%20Research%20%26%20Project%20Data%202.PNG.png',
       darkImageUrl:
         'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/Create%20Social%20Media%20Content%20and%20Documents%20from%20Your%20Research%20%26%20Project%20Data%20dark.PNG',
     },
@@ -703,9 +703,9 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
       description:
         'Create stunning interactive 3D environments from text descriptions or reference images. Explore scenes with virtual camera control, generate multi-angle shots, and export high-resolution renders for marketing, gaming, or immersive storytelling.',
       imageUrl:
-        'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/3dworldlight.png',
+        'https://techcrunch.com/wp-content/uploads/2025/08/Prompt-Event.gif?w=480',
       darkImageUrl:
-        'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/3dworlddark.png',
+        'https://techcrunch.com/wp-content/uploads/2025/08/Prompt-Event.gif?w=480',
     },
     {
       title: 'AI Table Generation with Lead Search',
