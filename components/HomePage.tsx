@@ -1619,9 +1619,11 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
                 }
               >
                 <div className="flex items-center gap-4 mb-4">
-                  <div className={'w-16 h-16 rounded-2xl flex items-center justify-center text-3xl ' + (isDarkMode ? 'bg-rose-500/20' : 'bg-rose-100')}>
-                    🎯
-                  </div>
+                  <img
+                    src="https://i8oxklu4tq3i4awc.public.blob.vercel-storage.com/magnet.png"
+                    alt="CRM"
+                    className="w-16 h-16 object-contain"
+                  />
                   <div className={'font-semibold ' + (isDarkMode ? 'text-white' : 'text-gray-900')}>CRM & Lead Management</div>
                 </div>
                 <div className={'text-xs space-y-2 ' + (isDarkMode ? 'text-[#a1a1a6]' : 'text-gray-600')}>
@@ -1640,9 +1642,11 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
                 }
               >
                 <div className="flex items-center gap-4 mb-4">
-                  <div className={'w-16 h-16 rounded-2xl flex items-center justify-center text-3xl ' + (isDarkMode ? 'bg-indigo-500/20' : 'bg-indigo-100')}>
-                    🌐
-                  </div>
+                  <img
+                    src="https://i8oxklu4tq3i4awc.public.blob.vercel-storage.com/planet-earth.png"
+                    alt="3D Media"
+                    className="w-16 h-16 object-contain"
+                  />
                   <div className={'font-semibold ' + (isDarkMode ? 'text-white' : 'text-gray-900')}>3D & Immersive Media</div>
                 </div>
                 <div className={'text-xs space-y-2 ' + (isDarkMode ? 'text-[#a1a1a6]' : 'text-gray-600')}>
@@ -1661,9 +1665,11 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
                 }
               >
                 <div className="flex items-center gap-4 mb-4">
-                  <div className={'w-16 h-16 rounded-2xl flex items-center justify-center text-3xl ' + (isDarkMode ? 'bg-amber-500/20' : 'bg-amber-100')}>
-                    🤖
-                  </div>
+                  <img
+                    src="https://i8oxklu4tq3i4awc.public.blob.vercel-storage.com/layout.png"
+                    alt="Browser Automation"
+                    className="w-16 h-16 object-contain"
+                  />
                   <div className={'font-semibold ' + (isDarkMode ? 'text-white' : 'text-gray-900')}>Browser Automation</div>
                 </div>
                 <div className={'text-xs space-y-2 ' + (isDarkMode ? 'text-[#a1a1a6]' : 'text-gray-600')}>
