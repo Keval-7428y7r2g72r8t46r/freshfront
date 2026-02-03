@@ -6,6 +6,7 @@ import { storageService } from '../services/storageService';
 import { contextService, ChatMessage as ContextChatMessage } from '../services/contextService';
 import { createPcmBlob, decode, decodeAudioData } from '../services/audioUtils';
 import { getFileSearchStoreName, uploadFileToGemini, isUserSubscribed, ComputerUseSession, performComputerUseTask, confirmComputerUseAction, cancelComputerUseSession, generateImage, editImageWithReferences, generateVeoVideo, generatePodcastScript, generatePodcastAudio, ImageReference } from '../services/geminiService';
+import { getFallbackChain, isRetryableError, MODEL_FALLBACK_CHAINS } from '../services/modelSelector';
 import { createVideoFromImageUrl, pollVideoUntilComplete, downloadVideoBlob } from '../services/soraService';
 import { authFetch } from '../services/authFetch';
 import ComputerUseViewer from './ComputerUseViewer';
@@ -805,17 +806,41 @@ export const HomeLiveAssistant: React.FC<HomeLiveAssistantProps> = ({
         console.warn('Failed to enable File Search for home assistant:', e);
       }
 
-      const stream = await ai.models.generateContentStream({
-        model: 'gemini-2.5-flash',
-        contents: conversationHistory,
-        config: {
-          systemInstruction,
-          temperature: 0.7,
-          maxOutputTokens: 4096,
-          tools,
-          toolConfig: { functionCallingConfig: { mode: 'AUTO' as any } },
-        },
-      });
+      // Model fallback chain for resilience
+      const fallbackModels = MODEL_FALLBACK_CHAINS.standard;
+      let stream: any = null;
+      let lastError: any = null;
+
+      for (const modelName of fallbackModels) {
+        try {
+          console.log(`[HomeLiveAssistant] Trying model: ${modelName}`);
+          stream = await ai.models.generateContentStream({
+            model: modelName,
+            contents: conversationHistory,
+            config: {
+              systemInstruction,
+              temperature: 0.7,
+              maxOutputTokens: 4096,
+              tools,
+              toolConfig: { functionCallingConfig: { mode: 'AUTO' as any } },
+            },
+          });
+          console.log(`[HomeLiveAssistant] ✅ Success with model: ${modelName}`);
+          break; // Success, exit loop
+        } catch (err: any) {
+          lastError = err;
+          console.warn(`[HomeLiveAssistant] Model ${modelName} failed:`, err.message || err);
+          if (!isRetryableError(err)) {
+            // Non-retryable error (e.g., invalid request), don't try other models
+            throw err;
+          }
+          // Continue to next fallback model
+        }
+      }
+
+      if (!stream) {
+        throw lastError || new Error('All fallback models failed');
+      }
 
       let fullText = '';
       const aggregatedFunctionCalls: any[] = [];
