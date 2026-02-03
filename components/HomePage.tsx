@@ -702,7 +702,7 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
     {
       title: 'Interactive 3D World Generation',
       description:
-        'Create stunning interactive 3D environments from text descriptions or reference images. Explore scenes with virtual camera control, generate multi-angle shots, and export high-resolution renders for marketing, gaming, or immersive storytelling.',
+        'Create stunning interactive 3D environments from text descriptions or reference images. Explore scenes with virtual game controls, annotate specific angles and export high-resolution video recordings for marketing, gaming, or immersive storytelling.',
       imageUrl:
         'https://techcrunch.com/wp-content/uploads/2025/08/Prompt-Event.gif?w=480',
       darkImageUrl:
