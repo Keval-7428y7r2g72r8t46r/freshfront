@@ -29,6 +29,7 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'annual'>('annual');
 
   const demoVideoUrl = 'https://www.youtube.com/embed/d_0_E4pG8fY?autoplay=1';
+  const heroYoutubeUrl = 'https://www.youtube.com/embed/d_0_E4pG8fY';
 
   useEffect(() => {
     if (!isDemoOpen) return;
@@ -736,7 +737,7 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
     {
       title: 'Ready to take action',
       description:
-        'There is a widget for every need, tailored to your session. ',
+        'There is a widget for every need, tailored to your session.',
       imageUrl:
         'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/Discover%20Prospects%20%26%20Access%20Realtime%20Opportunities.PNG',
       subFeatures: [
@@ -977,7 +978,7 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
                   }
                 >
                   <span className="w-2 h-2 rounded-full bg-[#22c55e]"></span>
-                  Max productivity + minimal effort -
+                  Where information lives 🧟
                 </div>
                 <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight leading-[1.05]">
                   A playground for data <br />& business automation
@@ -990,16 +991,15 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
                       (isDarkMode ? 'border-white/[0.06] bg-white/5' : 'border-gray-200 bg-white')
                     }
                   >
-                    <img
-                      src={
-                        isDarkMode
-                          ? 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/Unified%20Dashboard%20for%20Building%20%26%20Managing%20Your%20Projects%202%20dark.PNG'
-                          : 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/Unified%20Dashboard%20for%20Building%20%26%20Managing%20Your%20Projects%202.PNG'
-                      }
-                      alt="Unified dashboard"
-                      className="w-full h-auto object-cover block"
-                      loading="lazy"
-                    />
+                    <div className="aspect-video w-full">
+                      <iframe
+                        src={heroYoutubeUrl + '?autoplay=1&mute=1&loop=1&playlist=e3pvkzMHcvs'}
+                        title="FreshFront Hero Video"
+                        className="w-full h-full border-0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                      ></iframe>
+                    </div>
                   </div>
                 </div>
                 <p className={"mt-5 text-base sm:text-lg leading-relaxed " + (isDarkMode ? 'text-[#a1a1a6]' : 'text-gray-600')}>
@@ -1097,14 +1097,14 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
                     (isDarkMode ? 'border-white/[0.06] bg-white/5' : 'border-gray-200 bg-white')
                   }
                 >
-                  <div className="w-full aspect-[16/10] bg-black">
+                  <div className="aspect-video w-full">
                     <iframe
-                      className="w-full h-full"
-                      src="https://www.youtube.com/embed/e3pvkzMHcvs?autoplay=1&mute=1&loop=1&playlist=e3pvkzMHcvs&controls=0&showinfo=0&rel=0"
-                      title="FreshFront Header Video"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      style={{ border: 'none' }}
-                    />
+                      src={heroYoutubeUrl + '?autoplay=1&mute=1&loop=1&playlist=e3pvkzMHcvs'}
+                      title="FreshFront Hero Video"
+                      className="w-full h-full border-0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                    ></iframe>
                   </div>
                 </div>
               </div>
@@ -2879,4 +2879,3 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
     </div >
   );
 };
-
