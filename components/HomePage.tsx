@@ -587,7 +587,7 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
       {
         id: 'faq-7',
         q: 'How can I use the platform for business?',
-        a: 'You can automate your entire workflow: generate lead capture forms, build email campaigns with custom templates, create websites, and produce video ads. Deep research powers everything—from creating Google Docs guides and digital PDF products (with AI diagrams) to selling them via integrated Stripe payment links and scheduling social media posts to promote them.',
+        a: 'FreshFront is a complete business automation suite. Build lead capture forms, run email campaigns with AI-generated templates, create e-commerce stores with Stripe, schedule social posts to 6+ platforms, generate prospect tables for outreach, and produce marketing videos—all powered by your research data.',
       },
       {
         id: 'faq-8',
@@ -598,6 +598,16 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
         id: 'faq-9',
         q: 'How accurate is the research data?',
         a: 'Our research agents browse the live web in real-time, citing sources for every claim. You can verify every insight by clicking through to the original source.',
+      },
+      {
+        id: 'faq-10',
+        q: 'What is 3D World Generation?',
+        a: 'Create immersive 3D environments from text descriptions or reference images. You can explore scenes with virtual camera controls, generate multi-angle shots, and export high-resolution renders for marketing, gaming, social media, or immersive storytelling.',
+      },
+      {
+        id: 'faq-11',
+        q: 'Can I manage customer relationships in FreshFront?',
+        a: 'Yes. Use AI-powered tables to track leads, create custom forms for data collection, build email templates with our visual builder, and run segmented campaigns. All lead data syncs with your projects for context-aware follow-ups.',
       },
     ],
     []
@@ -686,6 +696,15 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
         'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/browserautolight.png',
       darkImageUrl:
         'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/browserautodark.png',
+    },
+    {
+      title: 'Interactive 3D World Generation',
+      description:
+        'Create stunning interactive 3D environments from text descriptions or reference images. Explore scenes with virtual camera control, generate multi-angle shots, and export high-resolution renders for marketing, gaming, or immersive storytelling.',
+      imageUrl:
+        'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/3dworldlight.png',
+      darkImageUrl:
+        'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/3dworlddark.png',
     },
     {
       title: 'AI Table Generation with Lead Search',
@@ -1229,7 +1248,100 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
           </div>
         </section>
 
+        {/* 3D World Generation Hero Section */}
+        <section className="py-10 sm:py-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6">
+            <div
+              className={
+                'rounded-3xl border overflow-hidden relative ' +
+                (isDarkMode ? 'border-white/[0.06] bg-gradient-to-br from-indigo-950/40 via-slate-900/60 to-purple-950/40' : 'border-gray-200 bg-gradient-to-br from-indigo-50 via-white to-purple-50')
+              }
+            >
+              {/* Animated background effect */}
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div className={
+                  'absolute top-[-50%] right-[-20%] w-[600px] h-[600px] rounded-full blur-[120px] ' +
+                  (isDarkMode ? 'bg-indigo-500/15' : 'bg-indigo-200/40')
+                } />
+                <div className={
+                  'absolute bottom-[-30%] left-[-10%] w-[400px] h-[400px] rounded-full blur-[100px] ' +
+                  (isDarkMode ? 'bg-purple-500/10' : 'bg-purple-200/30')
+                } />
+              </div>
 
+              <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-8 p-8 sm:p-12 items-center">
+                {/* Content */}
+                <div className="order-2 lg:order-1">
+                  <div
+                    className={
+                      'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs mb-5 ' +
+                      (isDarkMode ? 'border-indigo-500/30 bg-indigo-500/10 text-indigo-300' : 'border-indigo-200 bg-indigo-50 text-indigo-700')
+                    }
+                  >
+                    <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+                    Now Available
+                  </div>
+                  <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight">
+                    Step into{' '}
+                    <span className={isDarkMode ? 'text-indigo-400' : 'text-indigo-600'}>Interactive 3D Worlds</span>
+                  </h2>
+                  <p className={'mt-4 text-base sm:text-lg leading-relaxed ' + (isDarkMode ? 'text-gray-300' : 'text-gray-600')}>
+                    Transform ideas into immersive 3D environments. Generate photorealistic scenes from text or images, explore with virtual camera controls, and capture stunning multi-angle renders.
+                  </p>
+
+                  <div className="mt-6 grid grid-cols-2 gap-4">
+                    {[
+                      { icon: '🎨', title: 'Text to World', desc: 'Describe your scene' },
+                      { icon: '📸', title: 'Image to 3D', desc: 'Upload references' },
+                      { icon: '🎥', title: 'Camera Control', desc: 'Explore freely' },
+                      { icon: '💎', title: 'Hi-Res Export', desc: 'Production ready' },
+                    ].map(item => (
+                      <div
+                        key={item.title}
+                        className={
+                          'p-3 rounded-xl border ' +
+                          (isDarkMode ? 'border-white/[0.06] bg-white/5' : 'border-gray-200 bg-white/80')
+                        }
+                      >
+                        <div className="text-2xl mb-1">{item.icon}</div>
+                        <div className={'text-sm font-semibold ' + (isDarkMode ? 'text-white' : 'text-gray-900')}>{item.title}</div>
+                        <div className={'text-xs ' + (isDarkMode ? 'text-gray-400' : 'text-gray-500')}>{item.desc}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-6">
+                    <button
+                      type="button"
+                      onClick={onAuth}
+                      className="px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition-colors"
+                    >
+                      Try 3D Generation
+                    </button>
+                  </div>
+                </div>
+
+                {/* Visual */}
+                <div className="order-1 lg:order-2">
+                  <div
+                    className={
+                      'rounded-2xl border overflow-hidden shadow-2xl ' +
+                      (isDarkMode ? 'border-white/[0.08] shadow-indigo-500/10' : 'border-gray-200 shadow-indigo-200/50')
+                    }
+                  >
+                    <div className={'aspect-[4/3] flex items-center justify-center ' + (isDarkMode ? 'bg-gradient-to-br from-indigo-900/50 to-purple-900/50' : 'bg-gradient-to-br from-indigo-100 to-purple-100')}>
+                      <div className="text-center p-8">
+                        <div className="text-6xl mb-4">🌌</div>
+                        <div className={'text-lg font-semibold ' + (isDarkMode ? 'text-white' : 'text-gray-900')}>3D World Generator</div>
+                        <div className={'text-sm mt-2 ' + (isDarkMode ? 'text-gray-400' : 'text-gray-600')}>Powered by WorldLabs AI</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
         {/* AI Cofounder Section */}
         <section id="ai-cofounder" className="py-10 sm:py-16">
@@ -1491,6 +1603,48 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
                   <div className="flex items-center gap-2"><span className="text-cyan-500">📝</span> Manage project notes</div>
                   <div className="flex items-center gap-2"><span className="text-cyan-500">🗓️</span> Schedule & cancel posts</div>
                   <div className="flex items-center gap-2"><span className="text-cyan-500">📁</span> Browse & retrieve project files</div>
+                </div>
+              </div>
+
+              {/* CRM & Lead Management */}
+              <div
+                className={
+                  'rounded-2xl border p-5 ' +
+                  (isDarkMode ? 'border-white/[0.06] bg-white/5' : 'border-gray-200 bg-white')
+                }
+              >
+                <div className="flex items-center gap-4 mb-4">
+                  <div className={'w-16 h-16 rounded-2xl flex items-center justify-center text-3xl ' + (isDarkMode ? 'bg-rose-500/20' : 'bg-rose-100')}>
+                    🎯
+                  </div>
+                  <div className={'font-semibold ' + (isDarkMode ? 'text-white' : 'text-gray-900')}>CRM & Lead Management</div>
+                </div>
+                <div className={'text-xs space-y-2 ' + (isDarkMode ? 'text-[#a1a1a6]' : 'text-gray-600')}>
+                  <div className="flex items-center gap-2"><span className="text-rose-500">🔍</span> Prospect search with enrichment data</div>
+                  <div className="flex items-center gap-2"><span className="text-rose-500">📧</span> AI email builder with templates</div>
+                  <div className="flex items-center gap-2"><span className="text-rose-500">📊</span> Track leads & customer interactions</div>
+                  <div className="flex items-center gap-2"><span className="text-rose-500">📝</span> Smart form builder for lead capture</div>
+                </div>
+              </div>
+
+              {/* 3D & Immersive Media */}
+              <div
+                className={
+                  'rounded-2xl border p-5 ' +
+                  (isDarkMode ? 'border-white/[0.06] bg-white/5' : 'border-gray-200 bg-white')
+                }
+              >
+                <div className="flex items-center gap-4 mb-4">
+                  <div className={'w-16 h-16 rounded-2xl flex items-center justify-center text-3xl ' + (isDarkMode ? 'bg-indigo-500/20' : 'bg-indigo-100')}>
+                    🌐
+                  </div>
+                  <div className={'font-semibold ' + (isDarkMode ? 'text-white' : 'text-gray-900')}>3D & Immersive Media</div>
+                </div>
+                <div className={'text-xs space-y-2 ' + (isDarkMode ? 'text-[#a1a1a6]' : 'text-gray-600')}>
+                  <div className="flex items-center gap-2"><span className="text-indigo-500">🏔️</span> Generate 3D worlds from prompts</div>
+                  <div className="flex items-center gap-2"><span className="text-indigo-500">📸</span> Virtual camera & multi-angle renders</div>
+                  <div className="flex items-center gap-2"><span className="text-indigo-500">🎨</span> Reference image to 3D scene</div>
+                  <div className="flex items-center gap-2"><span className="text-indigo-500">🎬</span> Export for marketing & storytelling</div>
                 </div>
               </div>
             </div>
