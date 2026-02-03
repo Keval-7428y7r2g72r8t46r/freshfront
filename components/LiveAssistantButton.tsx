@@ -6,9 +6,16 @@ interface LiveAssistantButtonProps {
     className?: string;
     isDarkMode?: boolean;
     children?: React.ReactNode;
+    visible?: boolean; // Controls if button should be shown
 }
 
-export const LiveAssistantButton: React.FC<LiveAssistantButtonProps> = ({ onClick, className = '', isDarkMode = false, children }) => {
+export const LiveAssistantButton: React.FC<LiveAssistantButtonProps> = ({
+    onClick,
+    className = '',
+    isDarkMode = false,
+    children,
+    visible = true
+}) => {
     const buttonRef = useRef<HTMLButtonElement>(null);
     const [eyeOffset, setEyeOffset] = useState({ x: 0, y: 0 });
     const [mounted, setMounted] = useState(false);
@@ -43,6 +50,9 @@ export const LiveAssistantButton: React.FC<LiveAssistantButtonProps> = ({ onClic
         return () => window.removeEventListener('mousemove', handleMouseMove);
     }, []);
 
+    // Don't render if not visible or not mounted
+    if (!mounted || !visible) return null;
+
     const buttonElement = (
         <button
             ref={buttonRef}
@@ -63,7 +73,5 @@ export const LiveAssistantButton: React.FC<LiveAssistantButtonProps> = ({ onClic
 
     // Use portal to render to document.body, ensuring fixed positioning works correctly
     // regardless of parent transforms or filters
-    if (!mounted) return null;
     return createPortal(buttonElement, document.body);
 };
-
