@@ -20,9 +20,10 @@ interface ProjectsPageProps {
   isDarkMode: boolean;
   toggleTheme: () => void;
   projectsVersion?: number;
+  isActive?: boolean; // Controls if this page is the active view (for portal-based buttons)
 }
 
-export const ProjectsPage: React.FC<ProjectsPageProps> = ({ onSelectProject, isDarkMode, toggleTheme, projectsVersion }) => {
+export const ProjectsPage: React.FC<ProjectsPageProps> = ({ onSelectProject, isDarkMode, toggleTheme, projectsVersion, isActive = true }) => {
   const [projects, setProjects] = useState<ResearchProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -1253,7 +1254,7 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ onSelectProject, isD
 
       <LiveAssistantButton
         onClick={() => setShowHomeAssistant(true)}
-        visible={!showHomeAssistant}
+        visible={!showHomeAssistant && isActive}
         className={`bg-[#0071e3] hover:bg-[#0077ed] shadow-lg shadow-[#0071e3]/40 hover:shadow-[#0071e3]/60 text-white`}
       >
         <span className="absolute right-full mr-3 px-3 py-1.5 bg-[#1d1d1f] text-white text-sm rounded-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap hidden sm:block border border-[#3d3d3f]/50">
