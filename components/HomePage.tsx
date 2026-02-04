@@ -657,7 +657,7 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
       description:
         'Turn your research into quality shareable output. Generate campaign assets directly from your project data and iterate in the same workspace.',
       imageUrl:
-        'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/Create%20Social%20Media%20Content%20and%20Documents%20from%20Your%20Research%20%26%20Project%20Data%202.PNG.png',
+        'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/iconsa.png',
       darkImageUrl:
         'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/Create%20Social%20Media%20Content%20and%20Documents%20from%20Your%20Research%20%26%20Project%20Data%202.PNG.png',
     },
@@ -2907,3 +2907,4 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
     </div >
   );
 };
+
