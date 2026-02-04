@@ -109,12 +109,12 @@ interface UnifiedSocialPublisherProps {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const PLATFORMS: PlatformConfig[] = [
-    { id: 'x', name: 'X', icon: '𝕏', logoUrl: 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/X-Logo-Round-Color.png', color: '#000000', supportsText: true, supportsImage: true, supportsVideo: true },
-    { id: 'linkedin', name: 'LinkedIn', icon: '💼', logoUrl: 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/LinkedIn_logo_initials.png', color: '#0A66C2', supportsText: true, supportsImage: true, supportsVideo: true },
-    { id: 'facebook', name: 'Facebook', icon: '📘', logoUrl: 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/2021_Facebook_icon.svg.webp', color: '#1877F2', supportsText: true, supportsImage: true, supportsVideo: true },
-    { id: 'instagram', name: 'Instagram', icon: '📷', logoUrl: 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/Instagram_logo_2016.svg.webp', color: '#E4405F', supportsText: false, supportsImage: true, supportsVideo: true },
-    { id: 'tiktok', name: 'TikTok', icon: '🎵', logoUrl: 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/tiktok-6338432_1280.webp', color: '#000000', supportsText: false, supportsImage: true, supportsVideo: true },
-    { id: 'youtube', name: 'YouTube', icon: '▶️', logoUrl: 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/YouTube_full-color_icon_%282017%29.svg.png', color: '#FF0000', supportsText: false, supportsImage: false, supportsVideo: true },
+    { id: 'x', name: 'X', icon: '𝕏', logoUrl: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/X-Logo-Round-Color.png', color: '#000000', supportsText: true, supportsImage: true, supportsVideo: true },
+    { id: 'linkedin', name: 'LinkedIn', icon: '💼', logoUrl: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/LinkedIn_logo_initials.png', color: '#0A66C2', supportsText: true, supportsImage: true, supportsVideo: true },
+    { id: 'facebook', name: 'Facebook', icon: '📘', logoUrl: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/2021_Facebook_icon.svg.webp', color: '#1877F2', supportsText: true, supportsImage: true, supportsVideo: true },
+    { id: 'instagram', name: 'Instagram', icon: '📷', logoUrl: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/Instagram_logo_2016.svg.webp', color: '#E4405F', supportsText: false, supportsImage: true, supportsVideo: true },
+    { id: 'tiktok', name: 'TikTok', icon: '🎵', logoUrl: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/tiktok-6338432_1280.webp', color: '#000000', supportsText: false, supportsImage: true, supportsVideo: true },
+    { id: 'youtube', name: 'YouTube', icon: '▶️', logoUrl: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/YouTube_full-color_icon_%282017%29.svg.png', color: '#FF0000', supportsText: false, supportsImage: false, supportsVideo: true },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
