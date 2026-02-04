@@ -4386,7 +4386,13 @@ DO NOT use schedule_post for email - use THIS tool instead.`,
           },
           thinkingConfig: {
             includeThoughts: true,
-            thinkingBudget: -1, // Dynamic thinking
+            thinkingBudget: 4096, // Capped budget to prevent token overflow
+          },
+          // Enable session resumption for longer sessions
+          sessionResumption: {},
+          // Enable context window compression to prevent early disconnection
+          contextWindowCompression: {
+            slidingWindow: {},
           },
           tools: [
             { googleSearch: {} },
