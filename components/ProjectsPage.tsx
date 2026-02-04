@@ -103,7 +103,9 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ onSelectProject, isD
 
   // Show tutorial after initial load if user is new
   useEffect(() => {
-    if (shouldShowTutorial && !loading && projects.length === 0) {
+    // Double-check localStorage to prevent reappearing after navigation
+    const isCompleted = localStorage.getItem('freshfront-projects-onboarding') === 'true';
+    if (shouldShowTutorial && !isCompleted && !loading && projects.length === 0) {
       // Small delay to ensure DOM is ready
       const timer = setTimeout(() => setShowTutorial(true), 500);
       return () => clearTimeout(timer);
