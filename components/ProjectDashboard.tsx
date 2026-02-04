@@ -61,15 +61,15 @@ const SEO_COUNTRIES: { code: string; label: string }[] = [
 ];
 
 const PLATFORM_LOGOS: Record<string, string> = {
-    facebook: 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/2021_Facebook_icon.svg.webp',
-    instagram: 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/Instagram_logo_2016.svg.webp',
-    tiktok: 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/tiktok-6338432_1280.webp',
-    youtube: 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/YouTube_full-color_icon_%282017%29.svg.png',
-    linkedin: 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/LinkedIn_logo_initials.png',
-    x: 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/X-Logo-Round-Color.png',
-    googledrive: 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/Google_Drive_icon_%282020%29.svg.png',
-    googledocs: 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/Docs_2020.webp',
-    googlesheets: 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/Google_Sheets_logo_%282014-2020%29.svg.png',
+    facebook: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/2021_Facebook_icon.svg.webp',
+    instagram: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/Instagram_logo_2016.svg.webp',
+    tiktok: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/tiktok-6338432_1280.webp',
+    youtube: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/YouTube_full-color_icon_%282017%29.svg.png',
+    linkedin: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/LinkedIn_logo_initials.png',
+    x: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/X-Logo-Round-Color.png',
+    googledrive: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/Google_Drive_icon_%282020%29.svg.png',
+    googledocs: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/Docs_2020.webp',
+    googlesheets: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/Google_Sheets_logo_%282014-2020%29.svg.png',
     google: 'https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png',
 };
 
@@ -5053,7 +5053,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 label: 'Overview',
                 icon: (
                     <img
-                        src="https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/books%20%281%29.png"
+                        src="https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/books%20%281%29.png"
                         alt=""
                         className="w-6 h-6 sm:w-5 sm:h-5 object-contain"
                         aria-hidden="true"
@@ -5066,7 +5066,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 label: 'Data',
                 icon: (
                     <img
-                        src="https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/3d-folder.png"
+                        src="https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/3d-folder.png"
                         alt=""
                         className="w-6 h-6 sm:w-5 sm:h-5 object-contain"
                         aria-hidden="true"
@@ -5079,7 +5079,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 label: 'Notes',
                 icon: (
                     <img
-                        src="https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/notes.png"
+                        src="https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/notes.png"
                         alt=""
                         className="w-6 h-6 sm:w-5 sm:h-5 object-contain"
                         aria-hidden="true"
@@ -5092,7 +5092,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 label: 'Tasks',
                 icon: (
                     <img
-                        src="https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/check.png"
+                        src="https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/check.png"
                         alt=""
                         className="w-6 h-6 sm:w-5 sm:h-5 object-contain"
                         aria-hidden="true"
@@ -5105,7 +5105,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 label: 'Assets',
                 icon: (
                     <img
-                        src="https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/content%20%281%29.png"
+                        src="https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/content%20%281%29.png"
                         alt=""
                         className="w-6 h-6 sm:w-5 sm:h-5 object-contain"
                         aria-hidden="true"
@@ -5118,7 +5118,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 label: 'SEO',
                 icon: (
                     <img
-                        src="https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/medal.png"
+                        src="https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/medal.png"
                         alt=""
                         className="w-6 h-6 sm:w-5 sm:h-5 object-contain"
                         aria-hidden="true"
@@ -5131,7 +5131,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 label: 'Post',
                 icon: (
                     <img
-                        src="https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/share.png"
+                        src="https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/share.png"
                         alt=""
                         className="w-6 h-6 sm:w-5 sm:h-5 object-contain"
                         aria-hidden="true"
@@ -5144,7 +5144,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 label: 'Email',
                 icon: (
                     <img
-                        src="https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/mail.png"
+                        src="https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/mail.png"
                         alt=""
                         className="w-6 h-6 sm:w-5 sm:h-5 object-contain"
                         aria-hidden="true"
@@ -5157,7 +5157,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 label: 'Inspo',
                 icon: (
                     <img
-                        src="https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/bulb.png"
+                        src="https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/bulb.png"
                         alt="Inspo"
                         className="w-6 h-6 sm:w-5 sm:h-5 object-contain"
                     />
@@ -14008,12 +14008,12 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                                                     {post.platforms.map((p: string) => {
                                                         if (!p) return null;
                                                         const logoUrl =
-                                                            (p === 'twitter' || p === 'x') ? 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/X-Logo-Round-Color.png' :
-                                                                (p === 'instagram') ? 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/Instagram_logo_2016.svg.webp' :
-                                                                    (p === 'linkedin') ? 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/LinkedIn_logo_initials.png' :
-                                                                        (p === 'tiktok') ? 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/tiktok-6338432_1280.webp' :
-                                                                            (p === 'youtube') ? 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/YouTube_full-color_icon_%282017%29.svg.png' :
-                                                                                (p === 'facebook') ? 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/2021_Facebook_icon.svg.webp' : null;
+                                                            (p === 'twitter' || p === 'x') ? 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/X-Logo-Round-Color.png' :
+                                                                (p === 'instagram') ? 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/Instagram_logo_2016.svg.webp' :
+                                                                    (p === 'linkedin') ? 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/LinkedIn_logo_initials.png' :
+                                                                        (p === 'tiktok') ? 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/tiktok-6338432_1280.webp' :
+                                                                            (p === 'youtube') ? 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/YouTube_full-color_icon_%282017%29.svg.png' :
+                                                                                (p === 'facebook') ? 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/2021_Facebook_icon.svg.webp' : null;
 
                                                         if (logoUrl) {
                                                             return <img key={p} src={logoUrl} alt={p} className="w-5 h-5 rounded-full border border-white/20 object-cover bg-white" />;
