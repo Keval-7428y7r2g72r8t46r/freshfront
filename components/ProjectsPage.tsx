@@ -14,6 +14,7 @@ import { useCredits } from '../hooks/useCredits';
 import { LiveAssistantButton } from './LiveAssistantButton';
 import { CreditInfoModal } from './CreditInfoModal';
 import { CreditBalanceDisplay } from './InsufficientCreditsModal';
+import { OnboardingTutorial, useShouldShowTutorial, TutorialStep } from './OnboardingTutorial';
 
 interface ProjectsPageProps {
   onSelectProject: (project: ResearchProject, options?: { initialTab?: any; initialAssetType?: string; view?: 'dashboard' | 'research' }) => void;
@@ -55,6 +56,59 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ onSelectProject, isD
 
   const [showCreditInfo, setShowCreditInfo] = useState(false);
   const { credits } = useCredits();
+
+  // Onboarding tutorial state
+  const shouldShowTutorial = useShouldShowTutorial('freshfront-projects-onboarding');
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  // Tutorial steps configuration
+  const tutorialSteps: TutorialStep[] = [
+    {
+      id: 'profile',
+      targetSelector: '#onboarding-profile-btn',
+      title: 'Set up your profile',
+      description: 'Add your brand logo and description to give the AI better context about you and your business.',
+      position: 'bottom',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.118a7.5 7.5 0 0115 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.5-1.632z" />
+        </svg>
+      ),
+    },
+    {
+      id: 'magic-research',
+      targetSelector: '#onboarding-magic-research',
+      title: 'Start with AI research',
+      description: 'Describe what you want to research and we\'ll create a complete project with notes, tasks, and draft research topics.',
+      position: 'top',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      ),
+    },
+    {
+      id: 'create-project',
+      targetSelector: '#onboarding-create-project',
+      title: 'Or start from scratch',
+      description: 'Create a blank project and build it yourself. Add files, notes, tasks, and run research as you go.',
+      position: 'bottom',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 4v16m8-8H4" />
+        </svg>
+      ),
+    },
+  ];
+
+  // Show tutorial after initial load if user is new
+  useEffect(() => {
+    if (shouldShowTutorial && !loading && projects.length === 0) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => setShowTutorial(true), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [shouldShowTutorial, loading, projects.length]);
 
   // Global search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -882,6 +936,7 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ onSelectProject, isD
               )}
             </button>
             <button
+              id="onboarding-profile-btn"
               onClick={goToProfile}
               className={
                 "w-10 h-10 flex items-center justify-center rounded-full border transition-all duration-200 " +
@@ -976,6 +1031,7 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ onSelectProject, isD
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
             {/* Create new project - macOS Folder style */}
             <button
+              id="onboarding-create-project"
               onClick={() => setShowCreateModal(true)}
               className="group relative cursor-pointer transition-all duration-300 text-[14px]"
             >
@@ -1182,6 +1238,7 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ onSelectProject, isD
       {/* Magic Research Project Creator */}
       <div className="pointer-events-none fixed bottom-4 left-0 right-0 z-30 flex justify-center px-4 sm:px-0">
         <div
+          id="onboarding-magic-research"
           className={
             'pointer-events-auto w-full max-w-xl rounded-2xl border backdrop-blur-md shadow-lg magic-research-glow ' +
             (isDarkMode
@@ -1438,6 +1495,16 @@ export const ProjectsPage: React.FC<ProjectsPageProps> = ({ onSelectProject, isD
         isDarkMode={isDarkMode}
         currentCredits={credits}
       />
+
+      {/* Onboarding Tutorial */}
+      {showTutorial && (
+        <OnboardingTutorial
+          steps={tutorialSteps}
+          isDarkMode={isDarkMode}
+          onComplete={() => setShowTutorial(false)}
+          storageKey="freshfront-projects-onboarding"
+        />
+      )}
     </div>
   );
 };
