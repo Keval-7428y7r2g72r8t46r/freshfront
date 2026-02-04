@@ -129,16 +129,16 @@ const SESSION_COLORS = [
 ];
 
 const PLATFORM_LOGOS: Record<string, string> = {
-  facebook: 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/2021_Facebook_icon.svg.webp',
-  instagram: 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/Instagram_logo_2016.svg.webp',
-  tiktok: 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/tiktok-6338432_1280.webp',
-  youtube: 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/YouTube_full-color_icon_%282017%29.svg.png',
-  linkedin: 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/LinkedIn_logo_initials.png',
-  x: 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/X-Logo-Round-Color.png',
-  googledocs: 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/Docs_2020.webp',
-  googlesheets: 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/Google_Sheets_logo_%282014-2020%29.svg.png',
-  googledrive: 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/Google_Drive_icon_%282020%29.svg.png',
-  blog: 'https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/blog-8419.svg.png',
+  facebook: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/2021_Facebook_icon.svg.webp',
+  instagram: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/Instagram_logo_2016.svg.webp',
+  tiktok: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/tiktok-6338432_1280.webp',
+  youtube: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/YouTube_full-color_icon_%282017%29.svg.png',
+  linkedin: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/LinkedIn_logo_initials.png',
+  x: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/X-Logo-Round-Color.png',
+  googledocs: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/Docs_2020.webp',
+  googlesheets: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/Google_Sheets_logo_%282014-2020%29.svg.png',
+  googledrive: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/Google_Drive_icon_%282020%29.svg.png',
+  blog: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/blog-8419.svg.png',
 };
 
 const STRIPE_COUNTRIES = [
@@ -12746,7 +12746,7 @@ Requirements:
                             </svg>
                           ) : (
                             <img
-                              src="https://I8OXklu4Tq3i4aWc.public.blob.vercel-storage.com/Docs_2020.webp"
+                              src="https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/Docs_2020.webp"
                               alt="Docs"
                               className="w-5 h-5 object-contain"
                             />
