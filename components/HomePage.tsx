@@ -979,10 +979,10 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
                   }
                 >
                   <span className="w-2 h-2 rounded-full bg-[#22c55e]"></span>
-                  Where information lives <img src="https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/zombie.png" alt="zombie" className="w-10 h-10 object-contain inline-block relative -top-3 -mr-2" />
+                  Where information lives <span className="relative inline-block w-4 h-4 ml-1.5"><img src="https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/zombie.png" alt="zombie" className="absolute -top-4 -left-2 w-8 h-8 max-w-none object-contain" /></span>
                 </div>
                 <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight leading-[1.05]">
-                  A playground for data <br />& business automation
+                  A playground for productivity <br />& data automation
                 </h1>
 
                 <div className="mt-6 lg:hidden">
