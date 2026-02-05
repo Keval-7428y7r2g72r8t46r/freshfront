@@ -657,9 +657,9 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
       description:
         'Turn your research into quality shareable output. Generate campaign assets directly from your project data and iterate in the same workspace.',
       imageUrl:
-        'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/iconsa.png',
+        'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/Create%20Social%20Media%20Content%20and%20Documents%20from%20Your%20Research%20%26%20Project%20Data%202.PNG.png',
       darkImageUrl:
-        'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/iconsa.png',
+        'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/Create%20Social%20Media%20Content%20and%20Documents%20from%20Your%20Research%20%26%20Project%20Data%202.PNG.png',
     },
     {
       title: 'Unified Social Media Publishing & Scheduling',
@@ -979,7 +979,7 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
                   }
                 >
                   <span className="w-2 h-2 rounded-full bg-[#22c55e]"></span>
-                  Where information lives 🧟
+                  Where information lives <img src="https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/zombie.png" alt="zombie" className="w-4 h-4 object-contain inline-block translate-y-[-1px]" />
                 </div>
                 <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight leading-[1.05]">
                   A playground for data <br />& business automation
@@ -1291,19 +1291,21 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
 
                   <div className="mt-6 grid grid-cols-2 gap-4">
                     {[
-                      { icon: '🎨', title: 'Text to World', desc: 'Describe your scene' },
-                      { icon: '📸', title: 'Image to 3D', desc: 'Upload references' },
-                      { icon: '🕹️', title: 'Interactive Controls', desc: 'Explore freely' },
-                      { icon: '💎', title: 'Hi-Res Export', desc: 'Production ready' },
+                      { icon: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/copy.png', title: 'Text to World', desc: 'Describe your scene' },
+                      { icon: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/camera.png', title: 'Image to 3D', desc: 'Upload references' },
+                      { icon: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/joystick.png', title: 'Interactive Controls', desc: 'Explore freely' },
+                      { icon: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/share.png', title: 'Hi-Res Export', desc: 'Production ready' },
                     ].map(item => (
                       <div
                         key={item.title}
                         className={
-                          'p-3 rounded-xl border ' +
+                          'p-3 rounded-xl border flex flex-col items-center text-center ' +
                           (isDarkMode ? 'border-white/[0.06] bg-white/5' : 'border-gray-200 bg-white/80')
                         }
                       >
-                        <div className="text-2xl mb-1">{item.icon}</div>
+                        <div className="w-9 h-9 mb-1.5 flex items-center justify-center">
+                          <img src={item.icon} alt={item.title} className="w-full h-full object-contain" />
+                        </div>
                         <div className={'text-sm font-semibold ' + (isDarkMode ? 'text-white' : 'text-gray-900')}>{item.title}</div>
                         <div className={'text-xs ' + (isDarkMode ? 'text-gray-400' : 'text-gray-500')}>{item.desc}</div>
                       </div>
@@ -2907,5 +2909,3 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
     </div >
   );
 };
-
-
