@@ -982,7 +982,7 @@ export const HomePage: React.FC<HomePageProps> = ({ isDarkMode, toggleTheme, onA
                   Where information lives <span className="relative inline-block w-4 h-4 ml-1.5"><img src="https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/zombie.png" alt="zombie" className="absolute -top-4 -left-2 w-8 h-8 max-w-none object-contain" /></span>
                 </div>
                 <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight leading-[1.05]">
-                  A playground for productivity <br />& data automation
+                  A playground for data automation <br />& productivity
                 </h1>
 
                 <div className="mt-6 lg:hidden">
