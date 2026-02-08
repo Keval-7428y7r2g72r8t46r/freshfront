@@ -860,17 +860,31 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
     const start = new Date(Math.min(dStart.getTime(), dEnd.getTime()));
     const end = new Date(Math.max(dStart.getTime(), dEnd.getTime()));
 
+    console.log('[KanbanBoard] Drag End:', {
+      start: start.toLocaleString(),
+      end: end.toLocaleString(),
+      isScheduling: !!schedulingTaskId
+    });
+
     setSelectedDate(start);
 
     // Create Event Logic - ALWAYS update these defaults when a range is selected
     // Default: Start 9:00 AM on first day, End 10:00 AM on last day
     const s = new Date(start);
     s.setHours(9, 0, 0, 0);
-    setNewEventStartLocal(localInputFromMs(s.getTime()));
+    const sStr = localInputFromMs(s.getTime());
 
     const e = new Date(end);
     e.setHours(10, 0, 0, 0);
-    setNewEventEndLocal(localInputFromMs(e.getTime()));
+    const eStr = localInputFromMs(e.getTime());
+
+    console.log('[KanbanBoard] Setting Create Event Times:', { sStr, eStr });
+
+    // HARDCODED TEST VALUES
+    setNewEventStartLocal("2025-01-01T10:00");
+    setNewEventEndLocal("2025-01-01T12:00");
+    // setNewEventStartLocal(sStr);
+    // setNewEventEndLocal(eStr);
 
     if (schedulingTaskId) {
       const updateDatePreservingTime = (isoString: string, newDateTarget: Date) => {
