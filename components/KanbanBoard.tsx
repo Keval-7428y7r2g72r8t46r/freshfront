@@ -139,12 +139,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
     return { startLocal: localInputFromMs(start.getTime()), endLocal: localInputFromMs(end.getTime()) };
   };
 
-  // DEBUG: Monitor state changes
-  useEffect(() => {
-    console.log('[KanbanBoard] State Effect: newEventStartLocal changed to:', newEventStartLocal);
-  }, [newEventStartLocal]);
 
-  console.log('[KanbanBoard] Render:', { newEventStartLocal, newEventEndLocal });
 
   const normalizeDay = (d: Date) => {
     const next = new Date(d);
@@ -159,12 +154,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
     return next;
   };
 
-  useEffect(() => {
-    if (!calendarOpen) return;
-    const defaults = getDefaultScheduleInputs(selectedDate);
-    setNewEventStartLocal(defaults.startLocal);
-    setNewEventEndLocal(defaults.endLocal);
-  }, [calendarOpen, selectedDate]);
+  // Effect removed to prevent overwriting drag selection
+  // useEffect(() => {
+  //   if (!calendarOpen) return;
+  //   const defaults = getDefaultScheduleInputs(selectedDate);
+  //   setNewEventStartLocal(defaults.startLocal);
+  //   setNewEventEndLocal(defaults.endLocal);
+  // }, [calendarOpen, selectedDate]);
 
   const refreshCalendarStatus = async () => {
     try {
@@ -867,12 +863,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
     const start = new Date(Math.min(dStart.getTime(), dEnd.getTime()));
     const end = new Date(Math.max(dStart.getTime(), dEnd.getTime()));
 
-    console.log('[KanbanBoard] Drag End:', {
-      start: start.toLocaleString(),
-      end: end.toLocaleString(),
-      isScheduling: !!schedulingTaskId
-    });
-
     setSelectedDate(start);
 
     // Create Event Logic - ALWAYS update these defaults when a range is selected
@@ -884,8 +874,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
     const e = new Date(end);
     e.setHours(10, 0, 0, 0);
     const eStr = localInputFromMs(e.getTime());
-
-    console.log('[KanbanBoard] Setting Create Event Times:', { sStr, eStr });
 
     // Hardcoded values removed
     setNewEventStartLocal(sStr);
