@@ -1252,7 +1252,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      <div>
+                      <div className="order-2 lg:order-1">
                         <div className="flex items-center justify-between mb-2">
                           <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                             {calendarMonth.toLocaleString(undefined, { month: 'long', year: 'numeric' })}
@@ -1356,7 +1356,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
                         })()}
                       </div>
 
-                      <div>
+                      <div className="order-1 lg:order-2">
                         <div className="flex items-center justify-between mb-2">
                           <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                             {selectedDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
