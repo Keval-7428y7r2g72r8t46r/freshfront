@@ -846,12 +846,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
           <div className="flex items-center gap-2">
             <button
               onClick={openCalendar}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${isDarkMode
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isDarkMode
                 ? 'bg-white/5 hover:bg-white/10 text-slate-200'
                 : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
                 }`}
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               <span>Calendar</span>
@@ -860,14 +860,14 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
               <button
                 onClick={handleGenerateFromResearch}
                 disabled={isGeneratingTasks}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50 ${isDarkMode
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${isDarkMode
                   ? 'bg-violet-600/20 hover:bg-violet-600/30 text-violet-300'
                   : 'bg-violet-100 hover:bg-violet-200 text-violet-700'
                   }`}
               >
                 {isGeneratingTasks ? (
                   <>
-                    <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
@@ -875,7 +875,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
                   </>
                 ) : (
                   <>
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                     <span className="sm:hidden">AI Generate</span>
@@ -991,10 +991,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
                 {!isReadOnly && (
                   <button
                     onClick={() => setIsAddingTask(column.id)}
-                    className={`p-1 hover:bg-white/10 rounded transition-colors ${isDarkMode ? 'text-slate-500 hover:text-white' : 'text-gray-500 hover:text-gray-900'
+                    className={`p-2 hover:bg-white/10 rounded transition-colors ${isDarkMode ? 'text-slate-500 hover:text-white' : 'text-gray-500 hover:text-gray-900'
                       }`}
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
                   </button>
@@ -1009,19 +1009,21 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
                     className={`p-2 rounded-lg border ${isDarkMode ? 'bg-slate-800 border-white/10' : 'bg-white border-gray-200'
                       }`}
                   >
-                    <input
-                      type="text"
-                      value={newTaskTitle}
-                      onChange={(e) => setNewTaskTitle(e.target.value)}
-                      placeholder="Task title..."
-                      className={`w-full bg-transparent text-sm outline-none mb-2 ${isDarkMode ? 'text-white placeholder-slate-500' : 'text-gray-900 placeholder-gray-400'
-                        }`}
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleAddTask(column.id);
-                        if (e.key === 'Escape') setIsAddingTask(null);
-                      }}
-                    />
+                    <div className="mb-3">
+                      <input
+                        type="text"
+                        value={newTaskTitle}
+                        onChange={(e) => setNewTaskTitle(e.target.value)}
+                        placeholder="Task title..."
+                        className={`w-full bg-transparent text-base sm:text-sm outline-none ${isDarkMode ? 'text-white placeholder-slate-500' : 'text-gray-900 placeholder-gray-400'
+                          }`}
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleAddTask(column.id);
+                          if (e.key === 'Escape') setIsAddingTask(null);
+                        }}
+                      />
+                    </div>
                     <div className="flex items-center justify-between">
                       <div className="flex gap-1">
                         {(['low', 'medium', 'high'] as TaskPriority[]).map(p => (
@@ -1039,28 +1041,36 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
                           </button>
                         ))}
                       </div>
-                      <div className="flex gap-1">
+                      <div className="flex items-center justify-between gap-1 mt-3">
                         <button
                           onClick={() => setIsAddingTask(null)}
-                          className={`px-2 py-0.5 text-xs ${isDarkMode ? 'text-slate-500 hover:text-white' : 'text-gray-500 hover:text-gray-900'
+                          className={`flex-1 px-3 py-2 text-sm font-medium rounded transition-colors ${isDarkMode
+                            ? 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                             }`}
                         >
                           Cancel
                         </button>
                         <button
+                          onClick={() => handleAddTask(column.id)}
+                          className="flex-1 px-3 py-2 text-sm font-medium bg-blue-600 text-white rounded hover:bg-blue-500"
+                        >
+                          Add Task
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-3 mt-2 border-t border-dashed border-gray-600/30">
+                        <button
                           onClick={() => handleAddTask(column.id, { schedule: true })}
-                          className={`px-2 py-0.5 text-xs rounded border transition-colors ${isDarkMode
+                          className={`w-full px-3 py-2 text-xs font-medium rounded border transition-colors flex items-center justify-center gap-2 ${isDarkMode
                             ? 'bg-white/5 hover:bg-white/10 text-slate-200 border-white/10'
-                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200'
+                            : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200'
                             }`}
                         >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
                           Add & Schedule
-                        </button>
-                        <button
-                          onClick={() => handleAddTask(column.id)}
-                          className="px-2 py-0.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-500"
-                        >
-                          Add
                         </button>
                       </div>
                     </div>
@@ -1141,17 +1151,17 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
                         )}
                       </div>
                       {!isReadOnly && (
-                        <div className="flex items-center gap-1 flex-shrink-0">
+                        <div className="flex items-center gap-1 flex-shrink-0 ml-2">
                           {!task.dueDate && !task.googleCalendarEventId && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 openCalendarForTask(task).catch(() => undefined);
                               }}
-                              className="p-1 opacity-0 group-hover:opacity-100 hover:bg-blue-500/20 text-slate-500 hover:text-blue-300 rounded transition-all"
+                              className="p-2 text-slate-400 hover:bg-blue-500/10 hover:text-blue-500 rounded-lg transition-colors"
                               title="Schedule"
                             >
-                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                               </svg>
                             </button>
@@ -1161,9 +1171,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
                               e.stopPropagation();
                               handleDeleteTask(task.id);
                             }}
-                            className="p-1 opacity-0 group-hover:opacity-100 hover:bg-red-500/20 text-slate-500 hover:text-red-400 rounded transition-all"
+                            className="p-2 text-slate-400 hover:bg-red-500/10 hover:text-red-500 rounded-lg transition-colors"
                           >
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                             </svg>
                           </button>
@@ -1213,10 +1223,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
                   setCalendarOpen(false);
                   setSchedulingTaskId(null);
                 }}
-                className={`p-2 rounded-full transition-colors ${isDarkMode ? 'hover:bg-white/10 text-slate-300' : 'hover:bg-gray-100 text-gray-600'
+                className={`p-3 rounded-full transition-colors ${isDarkMode ? 'hover:bg-white/10 text-slate-300' : 'hover:bg-gray-100 text-gray-600'
                   }`}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -1246,7 +1256,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
                       <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                         {calendarMonth.toLocaleString(undefined, { month: 'long', year: 'numeric' })}
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={async () => {
                             if (calendarLoading) return;
@@ -1263,9 +1273,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
                               setCalendarLoading(false);
                             }
                           }}
-                          className={`p-1.5 rounded ${isDarkMode ? 'hover:bg-white/10 text-slate-300' : 'hover:bg-gray-100 text-gray-600'}`}
+                          className={`p-2 rounded ${isDarkMode ? 'hover:bg-white/10 text-slate-300' : 'hover:bg-gray-100 text-gray-600'}`}
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                           </svg>
                         </button>
@@ -1285,9 +1295,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
                               setCalendarLoading(false);
                             }
                           }}
-                          className={`p-1.5 rounded ${isDarkMode ? 'hover:bg-white/10 text-slate-300' : 'hover:bg-gray-100 text-gray-600'}`}
+                          className={`p-2 rounded ${isDarkMode ? 'hover:bg-white/10 text-slate-300' : 'hover:bg-gray-100 text-gray-600'}`}
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                           </svg>
                         </button>
@@ -1324,7 +1334,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
                               setSelectedDate(d);
                               setSchedulingTaskId(null);
                             }}
-                            className={`h-12 rounded-lg border flex flex-col items-center justify-center transition-colors ${isSelected
+                            className={`h-14 rounded-lg border flex flex-col items-center justify-center transition-colors ${isSelected
                               ? isDarkMode
                                 ? 'bg-blue-500/20 border-blue-500/40'
                                 : 'bg-blue-50 border-blue-200'
@@ -1471,7 +1481,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
                           value={newEventTitle}
                           onChange={(e) => setNewEventTitle(e.target.value)}
                           placeholder="Event title"
-                          className={`w-full text-xs rounded-lg px-2 py-1 border outline-none ${isDarkMode ? 'bg-black/30 border-white/10 text-white placeholder-slate-500' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
+                          className={`w-full text-sm rounded-lg px-3 py-2 border outline-none ${isDarkMode ? 'bg-black/30 border-white/10 text-white placeholder-slate-500' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
                             }`}
                         />
                         <textarea
@@ -1479,44 +1489,44 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
                           onChange={(e) => setNewEventDescription(e.target.value)}
                           placeholder="Description (optional)"
                           rows={2}
-                          className={`w-full text-xs rounded-lg px-2 py-1 border outline-none resize-none ${isDarkMode ? 'bg-black/30 border-white/10 text-white placeholder-slate-500' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
+                          className={`w-full text-sm rounded-lg px-3 py-2 border outline-none resize-none ${isDarkMode ? 'bg-black/30 border-white/10 text-white placeholder-slate-500' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
                             }`}
                         />
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           <div>
-                            <div className={`text-[10px] mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>Start</div>
+                            <div className={`text-xs mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>Start</div>
                             <input
                               type="datetime-local"
                               value={newEventStartLocal}
                               onChange={(e) => setNewEventStartLocal(e.target.value)}
-                              className={`w-full text-xs rounded-lg px-2 py-1 border outline-none ${isDarkMode ? 'bg-black/30 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
+                              className={`w-full text-sm rounded-lg px-2 py-2 border outline-none ${isDarkMode ? 'bg-black/30 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
                                 }`}
                             />
                           </div>
                           <div>
-                            <div className={`text-[10px] mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>End</div>
+                            <div className={`text-xs mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>End</div>
                             <input
                               type="datetime-local"
                               value={newEventEndLocal}
                               onChange={(e) => setNewEventEndLocal(e.target.value)}
-                              className={`w-full text-xs rounded-lg px-2 py-1 border outline-none ${isDarkMode ? 'bg-black/30 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
+                              className={`w-full text-sm rounded-lg px-2 py-2 border outline-none ${isDarkMode ? 'bg-black/30 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
                                 }`}
                             />
                           </div>
                         </div>
-                        <label className={`flex items-center gap-2 text-[10px] ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
+                        <label className={`flex items-center gap-2 text-xs ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
                           <input
                             type="checkbox"
                             checked={newEventAddMeet}
                             onChange={(e) => setNewEventAddMeet(e.target.checked)}
-                            className="accent-blue-600"
+                            className="accent-blue-600 w-4 h-4"
                           />
                           Add Google Meet
                         </label>
                         <button
                           onClick={handleCreateCalendarEvent}
                           disabled={calendarLoading}
-                          className="w-full text-xs px-2 py-1 rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50"
+                          className="w-full text-sm font-medium px-4 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 mt-2"
                         >
                           Add event to this date
                         </button>
