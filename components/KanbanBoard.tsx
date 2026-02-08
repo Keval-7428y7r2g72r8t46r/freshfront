@@ -17,10 +17,10 @@ const COLUMNS: { id: TaskStatus; title: string; color: string; bgColor: string }
   { id: 'done', title: 'Done', color: 'text-emerald-400', bgColor: 'bg-emerald-500/10' }
 ];
 
-const PRIORITY_COLORS: Record<TaskPriority, { dot: string; bg: string; text: string }> = {
-  low: { dot: 'bg-slate-400', bg: 'bg-slate-500/20', text: 'text-slate-400' },
-  medium: { dot: 'bg-amber-400', bg: 'bg-amber-500/20', text: 'text-amber-400' },
-  high: { dot: 'bg-red-400', bg: 'bg-red-500/20', text: 'text-red-400' }
+const PRIORITY_COLORS: Record<TaskPriority, { dot: string; light: string; dark: string }> = {
+  low: { dot: 'bg-slate-400', light: 'bg-slate-100 text-slate-600', dark: 'bg-slate-500/20 text-slate-400' },
+  medium: { dot: 'bg-amber-400', light: 'bg-amber-100 text-amber-700', dark: 'bg-amber-500/20 text-amber-400' },
+  high: { dot: 'bg-red-400', light: 'bg-red-100 text-red-700', dark: 'bg-red-500/20 text-red-400' }
 };
 
 const PLATFORM_LOGOS: Record<string, string> = {
@@ -943,7 +943,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
                     )}
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${PRIORITY_COLORS[suggestion.priority].bg} ${PRIORITY_COLORS[suggestion.priority].text}`}>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${isDarkMode ? PRIORITY_COLORS[suggestion.priority].dark : PRIORITY_COLORS[suggestion.priority].light}`}>
                       {suggestion.priority}
                     </span>
                     <button
@@ -1041,7 +1041,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
                               key={p}
                               onClick={() => setNewTaskPriority(p)}
                               className={`px-2 py-1.5 rounded-md text-[10px] uppercase font-bold tracking-wider transition-all ${newTaskPriority === p
-                                ? `${PRIORITY_COLORS[p].bg} ${PRIORITY_COLORS[p].text} shadow-sm`
+                                ? `${isDarkMode ? PRIORITY_COLORS[p].dark : PRIORITY_COLORS[p].light} shadow-sm`
                                 : isDarkMode
                                   ? 'text-slate-500 hover:text-slate-300'
                                   : 'text-gray-500 hover:text-gray-700'
@@ -1192,501 +1192,507 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
       </div>
 
       {calendarOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="relative z-50">
           <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+          />
+
+          <div
+            className="fixed inset-0 z-10 w-screen overflow-y-auto"
             onClick={() => {
               if (calendarLoading) return;
               setCalendarOpen(false);
               setSchedulingTaskId(null);
             }}
-          />
-
-          <div
-            className={`relative w-full max-w-5xl rounded-2xl border shadow-2xl overflow-hidden ${isDarkMode ? 'bg-[#1d1d1f] border-[#3d3d3f]' : 'bg-white border-gray-200'
-              }`}
-            onClick={(e) => e.stopPropagation()}
           >
-            <div className={`flex items-center justify-between px-4 py-3 border-b ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}>
-              <div className="flex items-center gap-2">
-                <span className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Calendar</span>
-                {!calendarConnected && (
-                  <span className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>Not connected</span>
-                )}
-              </div>
-              <button
-                onClick={() => {
-                  if (calendarLoading) return;
-                  setCalendarOpen(false);
-                  setSchedulingTaskId(null);
-                }}
-                className={`p-3 rounded-full transition-colors ${isDarkMode ? 'hover:bg-white/10 text-slate-300' : 'hover:bg-gray-100 text-gray-600'
+            <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+              <div
+                className={`relative transform text-left w-full max-w-5xl rounded-2xl border shadow-2xl overflow-hidden ${isDarkMode ? 'bg-[#1d1d1f] border-[#3d3d3f]' : 'bg-white border-gray-200'
                   }`}
+                onClick={(e) => e.stopPropagation()}
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="p-4">
-              {calendarError && (
-                <div className={`mb-3 text-xs ${isDarkMode ? 'text-red-300' : 'text-red-700'}`}>{calendarError}</div>
-              )}
-
-              {!calendarConnected ? (
-                <div className="flex items-center justify-between gap-3">
-                  <div className={`text-sm ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
-                    Connect Google to view events and sync tasks.
+                <div className={`flex items-center justify-between px-4 py-3 border-b ${isDarkMode ? 'border-white/10' : 'border-gray-200'}`}>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Calendar</span>
+                    {!calendarConnected && (
+                      <span className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>Not connected</span>
+                    )}
                   </div>
                   <button
-                    onClick={handleConnectGoogleCalendar}
-                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-500"
+                    onClick={() => {
+                      if (calendarLoading) return;
+                      setCalendarOpen(false);
+                      setSchedulingTaskId(null);
+                    }}
+                    className={`p-3 rounded-full transition-colors ${isDarkMode ? 'hover:bg-white/10 text-slate-300' : 'hover:bg-gray-100 text-gray-600'
+                      }`}
                   >
-                    Connect Google
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                   </button>
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {calendarMonth.toLocaleString(undefined, { month: 'long', year: 'numeric' })}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={async () => {
-                            if (calendarLoading) return;
-                            const next = new Date(calendarMonth);
-                            next.setMonth(next.getMonth() - 1);
-                            next.setDate(1);
-                            setCalendarMonth(next);
-                            setCalendarLoading(true);
-                            try {
-                              await loadCalendarEvents(next);
-                            } catch (e: any) {
-                              setCalendarError(e?.message || 'Failed to load calendar events');
-                            } finally {
-                              setCalendarLoading(false);
-                            }
-                          }}
-                          className={`p-2 rounded ${isDarkMode ? 'hover:bg-white/10 text-slate-300' : 'hover:bg-gray-100 text-gray-600'}`}
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={async () => {
-                            if (calendarLoading) return;
-                            const next = new Date(calendarMonth);
-                            next.setMonth(next.getMonth() + 1);
-                            next.setDate(1);
-                            setCalendarMonth(next);
-                            setCalendarLoading(true);
-                            try {
-                              await loadCalendarEvents(next);
-                            } catch (e: any) {
-                              setCalendarError(e?.message || 'Failed to load calendar events');
-                            } finally {
-                              setCalendarLoading(false);
-                            }
-                          }}
-                          className={`p-2 rounded ${isDarkMode ? 'hover:bg-white/10 text-slate-300' : 'hover:bg-gray-100 text-gray-600'}`}
-                        >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </button>
-                      </div>
-                    </div>
 
-                    <div className={`grid grid-cols-7 gap-1 text-[10px] mb-1 ${isDarkMode ? 'text-slate-500' : 'text-gray-500'}`}>
-                      {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
-                        <div key={d} className="text-center">{d}</div>
-                      ))}
-                    </div>
+                <div className="p-4">
+                  {calendarError && (
+                    <div className={`mb-3 text-xs ${isDarkMode ? 'text-red-300' : 'text-red-700'}`}>{calendarError}</div>
+                  )}
 
-                    {(() => {
-                      const monthStart = new Date(calendarMonth);
-                      monthStart.setDate(1);
-                      monthStart.setHours(0, 0, 0, 0);
-                      const firstDow = monthStart.getDay();
-                      const gridStart = new Date(monthStart);
-                      gridStart.setDate(monthStart.getDate() - firstDow);
-                      const byDay = eventsByDayKey();
-
-                      const cells = new Array(42).fill(null).map((_, idx) => {
-                        const d = new Date(gridStart);
-                        d.setDate(gridStart.getDate() + idx);
-                        d.setHours(0, 0, 0, 0);
-                        const key = dateKeyLocal(d);
-                        const isCurrentMonth = d.getMonth() === monthStart.getMonth();
-                        const isSelected = key === selectedDayKey;
-                        const count = (byDay.get(key) || []).length;
-                        return (
-                          <button
-                            key={key}
-                            onClick={() => {
-                              setSelectedDate(d);
-                              setSchedulingTaskId(null);
-                            }}
-                            className={`h-14 rounded-lg border flex flex-col items-center justify-center transition-colors ${isSelected
-                              ? isDarkMode
-                                ? 'bg-blue-500/20 border-blue-500/40'
-                                : 'bg-blue-50 border-blue-200'
-                              : isDarkMode
-                                ? 'bg-white/0 hover:bg-white/5 border-white/10'
-                                : 'bg-white hover:bg-gray-50 border-gray-200'
-                              } ${!isCurrentMonth ? (isDarkMode ? 'opacity-40' : 'opacity-50') : ''}`}
-                          >
-                            <div className={`text-xs ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{d.getDate()}</div>
-                            {count > 0 && (
-                              <div className={`text-[10px] ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>{count} evt</div>
-                            )}
-                          </button>
-                        );
-                      });
-
-                      return <div className="grid grid-cols-7 gap-1">{cells}</div>;
-                    })()}
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {selectedDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                  {!calendarConnected ? (
+                    <div className="flex items-center justify-between gap-3">
+                      <div className={`text-sm ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
+                        Connect Google to view events and sync tasks.
                       </div>
                       <button
-                        onClick={async () => {
-                          if (calendarLoading) return;
-                          setCalendarLoading(true);
-                          setCalendarError(null);
-                          try {
-                            await loadCalendarEvents(calendarMonth);
-                          } catch (e: any) {
-                            setCalendarError(e?.message || 'Failed to refresh calendar');
-                          } finally {
-                            setCalendarLoading(false);
-                          }
-                        }}
-                        className={`text-xs px-2 py-1 rounded-lg ${isDarkMode ? 'bg-white/5 hover:bg-white/10 text-slate-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+                        onClick={handleConnectGoogleCalendar}
+                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-500"
                       >
-                        Refresh
+                        Connect Google
                       </button>
                     </div>
+                  ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                            {calendarMonth.toLocaleString(undefined, { month: 'long', year: 'numeric' })}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={async () => {
+                                if (calendarLoading) return;
+                                const next = new Date(calendarMonth);
+                                next.setMonth(next.getMonth() - 1);
+                                next.setDate(1);
+                                setCalendarMonth(next);
+                                setCalendarLoading(true);
+                                try {
+                                  await loadCalendarEvents(next);
+                                } catch (e: any) {
+                                  setCalendarError(e?.message || 'Failed to load calendar events');
+                                } finally {
+                                  setCalendarLoading(false);
+                                }
+                              }}
+                              className={`p-2 rounded ${isDarkMode ? 'hover:bg-white/10 text-slate-300' : 'hover:bg-gray-100 text-gray-600'}`}
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={async () => {
+                                if (calendarLoading) return;
+                                const next = new Date(calendarMonth);
+                                next.setMonth(next.getMonth() + 1);
+                                next.setDate(1);
+                                setCalendarMonth(next);
+                                setCalendarLoading(true);
+                                try {
+                                  await loadCalendarEvents(next);
+                                } catch (e: any) {
+                                  setCalendarError(e?.message || 'Failed to load calendar events');
+                                } finally {
+                                  setCalendarLoading(false);
+                                }
+                              }}
+                              className={`p-2 rounded ${isDarkMode ? 'hover:bg-white/10 text-slate-300' : 'hover:bg-gray-100 text-gray-600'}`}
+                            >
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
 
-                    <div className={`rounded-xl border p-3 mb-3 ${isDarkMode ? 'border-white/10 bg-black/20' : 'border-gray-200 bg-gray-50'}`}>
-                      <div className={`text-xs font-medium mb-2 ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>Calendar & Scheduled</div>
-                      {selectedDayEvents.length === 0 ? (
-                        <div className={`text-xs ${isDarkMode ? 'text-slate-500' : 'text-gray-500'}`}>No events</div>
-                      ) : (
-                        <div className="space-y-2 max-h-40 overflow-y-auto">
-                          {selectedDayEvents.map((ev) => {
-                            const isScheduledPost = ev?.isScheduledPost === true;
-                            const title = String(ev?.summary || 'Untitled');
-                            const htmlLink = typeof ev?.htmlLink === 'string' ? ev.htmlLink : '';
-                            const hangoutLink = typeof ev?.hangoutLink === 'string' ? ev.hangoutLink : '';
+                        <div className={`grid grid-cols-7 gap-1 text-[10px] mb-1 ${isDarkMode ? 'text-slate-500' : 'text-gray-500'}`}>
+                          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+                            <div key={d} className="text-center">{d}</div>
+                          ))}
+                        </div>
 
-                            if (isScheduledPost) {
-                              // Render scheduled post differently
-                              return (
-                                <div key={String(ev?.id || title)} className="flex items-start justify-between gap-2">
-                                  <div className="flex items-center gap-1.5 min-w-0">
-                                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${ev?.status === 'scheduled' ? 'bg-blue-500/20 text-blue-400' :
-                                      ev?.status === 'publishing' ? 'bg-yellow-500/20 text-yellow-400' :
-                                        ev?.status === 'published' ? 'bg-green-500/20 text-green-400' :
-                                          'bg-gray-500/20 text-gray-400'
-                                      }`}>{ev?.status}</span>
-                                    <div className="flex items-center gap-1 mx-1">
-                                      {ev?.platforms?.map((p: string) => (
-                                        <img
-                                          key={p}
-                                          src={PLATFORM_LOGOS[p] || ''}
-                                          alt={p}
-                                          className="w-3.5 h-3.5 object-contain"
-                                          title={p}
-                                        />
-                                      ))}
-                                    </div>
-                                    <span className={`text-xs font-medium truncate ${isDarkMode ? 'text-purple-300' : 'text-purple-700'}`}>
-                                      {ev?.textContent ? (ev.textContent.length > 30 ? ev.textContent.substring(0, 30) + '...' : ev.textContent) : 'Social Post'}
-                                    </span>
-                                  </div>
-                                </div>
-                              );
-                            }
+                        {(() => {
+                          const monthStart = new Date(calendarMonth);
+                          monthStart.setDate(1);
+                          monthStart.setHours(0, 0, 0, 0);
+                          const firstDow = monthStart.getDay();
+                          const gridStart = new Date(monthStart);
+                          gridStart.setDate(monthStart.getDate() - firstDow);
+                          const byDay = eventsByDayKey();
 
-                            // Render scheduled email differently
-                            const isScheduledEmail = ev?.isScheduledEmail === true;
-                            if (isScheduledEmail) {
-                              return (
-                                <div key={String(ev?.id || title)} className="flex items-start justify-between gap-2">
-                                  <div className="flex items-center gap-1.5 min-w-0">
-                                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${ev?.status === 'scheduled' ? 'bg-purple-500/20 text-purple-400' :
-                                      ev?.status === 'sending' ? 'bg-yellow-500/20 text-yellow-400' :
-                                        ev?.status === 'sent' ? 'bg-green-500/20 text-green-400' :
-                                          'bg-gray-500/20 text-gray-400'
-                                      }`}>{ev?.status}</span>
-                                    <span className="text-[10px]">{ev?.provider === 'gmail' ? '\ud83d\udce7' : '\ud83d\udce8'}</span>
-                                    <span className={`text-xs font-medium truncate ${isDarkMode ? 'text-pink-300' : 'text-pink-700'}`}>
-                                      {ev?.subject ? (ev.subject.length > 25 ? ev.subject.substring(0, 25) + '...' : ev.subject) : 'Email'}
-                                      {ev?.recipientCount > 1 && ` (${ev.recipientCount})`}
-                                    </span>
-                                  </div>
-                                </div>
-                              );
-                            }
-
+                          const cells = new Array(42).fill(null).map((_, idx) => {
+                            const d = new Date(gridStart);
+                            d.setDate(gridStart.getDate() + idx);
+                            d.setHours(0, 0, 0, 0);
+                            const key = dateKeyLocal(d);
+                            const isCurrentMonth = d.getMonth() === monthStart.getMonth();
+                            const isSelected = key === selectedDayKey;
+                            const count = (byDay.get(key) || []).length;
                             return (
-                              <div key={String(ev?.id || title)} className="flex items-start justify-between gap-2">
-                                <div className="min-w-0">
-                                  <div className={`text-xs font-medium truncate ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{title}</div>
-                                  {hangoutLink && (
-                                    <a
-                                      href={hangoutLink}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      className={`text-[10px] ${isDarkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-700 hover:text-blue-600'}`}
-                                    >
-                                      Meet link
-                                    </a>
-                                  )}
-                                </div>
-                                {htmlLink && (
-                                  <a
-                                    href={htmlLink}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className={`text-[10px] ${isDarkMode ? 'text-slate-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
-                                  >
-                                    Open
-                                  </a>
+                              <button
+                                key={key}
+                                onClick={() => {
+                                  setSelectedDate(d);
+                                  setSchedulingTaskId(null);
+                                }}
+                                className={`h-14 rounded-lg border flex flex-col items-center justify-center transition-colors ${isSelected
+                                  ? isDarkMode
+                                    ? 'bg-blue-500/20 border-blue-500/40'
+                                    : 'bg-blue-50 border-blue-200'
+                                  : isDarkMode
+                                    ? 'bg-white/0 hover:bg-white/5 border-white/10'
+                                    : 'bg-white hover:bg-gray-50 border-gray-200'
+                                  } ${!isCurrentMonth ? (isDarkMode ? 'opacity-40' : 'opacity-50') : ''}`}
+                              >
+                                <div className={`text-xs ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{d.getDate()}</div>
+                                {count > 0 && (
+                                  <div className={`text-[10px] ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>{count} evt</div>
                                 )}
-                              </div>
+                              </button>
                             );
-                          })}
-                        </div>
-                      )}
-                    </div>
+                          });
 
-                    <div className={`rounded-xl border p-3 mb-3 ${isDarkMode ? 'border-white/10 bg-black/20' : 'border-gray-200 bg-gray-50'}`}>
-                      <div className={`text-xs font-medium mb-2 ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>Create event</div>
-                      <div className="space-y-2">
-                        <input
-                          type="text"
-                          value={newEventTitle}
-                          onChange={(e) => setNewEventTitle(e.target.value)}
-                          placeholder="Event title"
-                          className={`w-full text-sm rounded-lg px-3 py-2 border outline-none ${isDarkMode ? 'bg-black/30 border-white/10 text-white placeholder-slate-500' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
-                            }`}
-                        />
-                        <textarea
-                          value={newEventDescription}
-                          onChange={(e) => setNewEventDescription(e.target.value)}
-                          placeholder="Description (optional)"
-                          rows={2}
-                          className={`w-full text-sm rounded-lg px-3 py-2 border outline-none resize-none ${isDarkMode ? 'bg-black/30 border-white/10 text-white placeholder-slate-500' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
-                            }`}
-                        />
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          <div>
-                            <div className={`text-xs mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>Start</div>
-                            <input
-                              type="datetime-local"
-                              value={newEventStartLocal}
-                              onChange={(e) => setNewEventStartLocal(e.target.value)}
-                              className={`w-full text-sm rounded-lg px-2 py-2 border outline-none ${isDarkMode ? 'bg-black/30 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
-                                }`}
-                            />
-                          </div>
-                          <div>
-                            <div className={`text-xs mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>End</div>
-                            <input
-                              type="datetime-local"
-                              value={newEventEndLocal}
-                              onChange={(e) => setNewEventEndLocal(e.target.value)}
-                              className={`w-full text-sm rounded-lg px-2 py-2 border outline-none ${isDarkMode ? 'bg-black/30 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
-                                }`}
-                            />
-                          </div>
-                        </div>
-                        <label className={`flex items-center gap-2 text-xs ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
-                          <input
-                            type="checkbox"
-                            checked={newEventAddMeet}
-                            onChange={(e) => setNewEventAddMeet(e.target.checked)}
-                            className="accent-blue-600 w-4 h-4"
-                          />
-                          Add Google Meet
-                        </label>
-                        <button
-                          onClick={handleCreateCalendarEvent}
-                          disabled={calendarLoading}
-                          className="w-full text-sm font-medium px-4 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 mt-2"
-                        >
-                          Add event to this date
-                        </button>
+                          return <div className="grid grid-cols-7 gap-1">{cells}</div>;
+                        })()}
                       </div>
-                    </div>
 
-                    <div className={`rounded-xl border p-3 ${isDarkMode ? 'border-white/10 bg-black/20' : 'border-gray-200 bg-gray-50'}`}>
-                      <div className={`text-xs font-medium mb-2 ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>Tasks</div>
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                            {selectedDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                          </div>
+                          <button
+                            onClick={async () => {
+                              if (calendarLoading) return;
+                              setCalendarLoading(true);
+                              setCalendarError(null);
+                              try {
+                                await loadCalendarEvents(calendarMonth);
+                              } catch (e: any) {
+                                setCalendarError(e?.message || 'Failed to refresh calendar');
+                              } finally {
+                                setCalendarLoading(false);
+                              }
+                            }}
+                            className={`text-xs px-2 py-1 rounded-lg ${isDarkMode ? 'bg-white/5 hover:bg-white/10 text-slate-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+                          >
+                            Refresh
+                          </button>
+                        </div>
 
-                      {(() => {
-                        const dayStart = new Date(selectedDate);
-                        dayStart.setHours(0, 0, 0, 0);
-                        const dayEnd = new Date(selectedDate);
-                        dayEnd.setHours(23, 59, 59, 999);
+                        <div className={`rounded-xl border p-3 mb-3 ${isDarkMode ? 'border-white/10 bg-black/20' : 'border-gray-200 bg-gray-50'}`}>
+                          <div className={`text-xs font-medium mb-2 ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>Calendar & Scheduled</div>
+                          {selectedDayEvents.length === 0 ? (
+                            <div className={`text-xs ${isDarkMode ? 'text-slate-500' : 'text-gray-500'}`}>No events</div>
+                          ) : (
+                            <div className="space-y-2 max-h-40 overflow-y-auto">
+                              {selectedDayEvents.map((ev) => {
+                                const isScheduledPost = ev?.isScheduledPost === true;
+                                const title = String(ev?.summary || 'Untitled');
+                                const htmlLink = typeof ev?.htmlLink === 'string' ? ev.htmlLink : '';
+                                const hangoutLink = typeof ev?.hangoutLink === 'string' ? ev.hangoutLink : '';
 
-                        const scheduledToday = tasks
-                          .filter(t => typeof t.dueDate === 'number' && t.dueDate >= dayStart.getTime() && t.dueDate <= dayEnd.getTime())
-                          .sort((a, b) => (a.dueDate || 0) - (b.dueDate || 0));
-
-                        const unscheduled = tasks.filter(t => !t.dueDate && !t.googleCalendarEventId);
-                        const list = [...scheduledToday, ...unscheduled].slice(0, 20);
-
-                        if (!list.length) {
-                          return <div className={`text-xs ${isDarkMode ? 'text-slate-500' : 'text-gray-500'}`}>No tasks</div>;
-                        }
-
-                        return (
-                          <div className="space-y-2 max-h-56 overflow-y-auto">
-                            {list.map((task) => {
-                              const isScheduling = schedulingTaskId === task.id;
-                              const hasEvent = Boolean(task.googleCalendarEventId);
-                              const hasTime = Boolean(task.dueDate && task.dueDateEnd);
-                              return (
-                                <div key={task.id} className={`p-2 rounded-lg border ${isDarkMode ? 'border-white/10 bg-white/5' : 'border-gray-200 bg-white'}`}>
-                                  <div className="flex items-start justify-between gap-2">
-                                    <div className="min-w-0">
-                                      <div className={`text-xs font-medium truncate ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{task.title}</div>
-                                      {(hasEvent || hasTime) && (
-                                        <div className={`text-[10px] mt-0.5 ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>
-                                          {task.dueDate ? new Date(task.dueDate).toLocaleString() : 'Scheduled'}
+                                if (isScheduledPost) {
+                                  // Render scheduled post differently
+                                  return (
+                                    <div key={String(ev?.id || title)} className="flex items-start justify-between gap-2">
+                                      <div className="flex items-center gap-1.5 min-w-0">
+                                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${ev?.status === 'scheduled' ? 'bg-blue-500/20 text-blue-400' :
+                                          ev?.status === 'publishing' ? 'bg-yellow-500/20 text-yellow-400' :
+                                            ev?.status === 'published' ? 'bg-green-500/20 text-green-400' :
+                                              'bg-gray-500/20 text-gray-400'
+                                          }`}>{ev?.status}</span>
+                                        <div className="flex items-center gap-1 mx-1">
+                                          {ev?.platforms?.map((p: string) => (
+                                            <img
+                                              key={p}
+                                              src={PLATFORM_LOGOS[p] || ''}
+                                              alt={p}
+                                              className="w-3.5 h-3.5 object-contain"
+                                              title={p}
+                                            />
+                                          ))}
                                         </div>
-                                      )}
-                                      {task.googleMeetLink && (
+                                        <span className={`text-xs font-medium truncate ${isDarkMode ? 'text-purple-300' : 'text-purple-700'}`}>
+                                          {ev?.textContent ? (ev.textContent.length > 30 ? ev.textContent.substring(0, 30) + '...' : ev.textContent) : 'Social Post'}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  );
+                                }
+
+                                // Render scheduled email differently
+                                const isScheduledEmail = ev?.isScheduledEmail === true;
+                                if (isScheduledEmail) {
+                                  return (
+                                    <div key={String(ev?.id || title)} className="flex items-start justify-between gap-2">
+                                      <div className="flex items-center gap-1.5 min-w-0">
+                                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${ev?.status === 'scheduled' ? 'bg-purple-500/20 text-purple-400' :
+                                          ev?.status === 'sending' ? 'bg-yellow-500/20 text-yellow-400' :
+                                            ev?.status === 'sent' ? 'bg-green-500/20 text-green-400' :
+                                              'bg-gray-500/20 text-gray-400'
+                                          }`}>{ev?.status}</span>
+                                        <span className="text-[10px]">{ev?.provider === 'gmail' ? '\ud83d\udce7' : '\ud83d\udce8'}</span>
+                                        <span className={`text-xs font-medium truncate ${isDarkMode ? 'text-pink-300' : 'text-pink-700'}`}>
+                                          {ev?.subject ? (ev.subject.length > 25 ? ev.subject.substring(0, 25) + '...' : ev.subject) : 'Email'}
+                                          {ev?.recipientCount > 1 && ` (${ev.recipientCount})`}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  );
+                                }
+
+                                return (
+                                  <div key={String(ev?.id || title)} className="flex items-start justify-between gap-2">
+                                    <div className="min-w-0">
+                                      <div className={`text-xs font-medium truncate ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{title}</div>
+                                      {hangoutLink && (
                                         <a
-                                          href={task.googleMeetLink}
+                                          href={hangoutLink}
                                           target="_blank"
                                           rel="noreferrer"
                                           className={`text-[10px] ${isDarkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-700 hover:text-blue-600'}`}
                                         >
-                                          Join Meet
+                                          Meet link
                                         </a>
                                       )}
                                     </div>
-
-                                    <div className="flex items-center gap-1">
-                                      {task.googleCalendarHtmlLink && (
-                                        <a
-                                          href={task.googleCalendarHtmlLink}
-                                          target="_blank"
-                                          rel="noreferrer"
-                                          className={`text-[10px] px-2 py-1 rounded ${isDarkMode ? 'bg-white/10 hover:bg-white/15 text-slate-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
-                                        >
-                                          Event
-                                        </a>
-                                      )}
-                                      {hasEvent ? (
-                                        <button
-                                          onClick={() => handleUnschedule(task)}
-                                          disabled={calendarLoading}
-                                          className={`text-[10px] px-2 py-1 rounded ${isDarkMode
-                                            ? 'bg-red-500/20 hover:bg-red-500/30 text-red-300'
-                                            : 'bg-red-50 hover:bg-red-100 text-red-700'
-                                            } disabled:opacity-50`}
-                                        >
-                                          Unschedule
-                                        </button>
-                                      ) : (
-                                        <button
-                                          onClick={() => handleStartScheduling(task)}
-                                          disabled={calendarLoading}
-                                          className={`text-[10px] px-2 py-1 rounded ${isDarkMode
-                                            ? 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-300'
-                                            : 'bg-blue-50 hover:bg-blue-100 text-blue-700'
-                                            } disabled:opacity-50`}
-                                        >
-                                          Schedule
-                                        </button>
-                                      )}
-                                    </div>
+                                    {htmlLink && (
+                                      <a
+                                        href={htmlLink}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className={`text-[10px] ${isDarkMode ? 'text-slate-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
+                                      >
+                                        Open
+                                      </a>
+                                    )}
                                   </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
 
-                                  {isScheduling && (
-                                    <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
-                                      <div>
-                                        <div className={`text-[10px] mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>Start</div>
-                                        <input
-                                          type="datetime-local"
-                                          value={scheduleStartLocal}
-                                          onChange={(e) => setScheduleStartLocal(e.target.value)}
-                                          className={`w-full text-xs rounded-lg px-2 py-1 border outline-none ${isDarkMode
-                                            ? 'bg-black/30 border-white/10 text-white'
-                                            : 'bg-white border-gray-200 text-gray-900'
-                                            }`}
-                                        />
-                                      </div>
-                                      <div>
-                                        <div className={`text-[10px] mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>End</div>
-                                        <input
-                                          type="datetime-local"
-                                          value={scheduleEndLocal}
-                                          onChange={(e) => setScheduleEndLocal(e.target.value)}
-                                          className={`w-full text-xs rounded-lg px-2 py-1 border outline-none ${isDarkMode
-                                            ? 'bg-black/30 border-white/10 text-white'
-                                            : 'bg-white border-gray-200 text-gray-900'
-                                            }`}
-                                        />
-
-                                        <label className={`mt-2 flex items-center gap-2 text-[10px] ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
-                                          <input
-                                            type="checkbox"
-                                            checked={scheduleAddMeet}
-                                            onChange={(e) => setScheduleAddMeet(e.target.checked)}
-                                            className="accent-blue-600"
-                                          />
-                                          Add Google Meet
-                                        </label>
-                                      </div>
-                                      <div className="flex gap-2">
-                                        <button
-                                          onClick={() => {
-                                            setSchedulingTaskId(null);
-                                          }}
-                                          className={`flex-1 text-xs px-2 py-1 rounded-lg ${isDarkMode
-                                            ? 'bg-white/10 hover:bg-white/15 text-slate-200'
-                                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                                            }`}
-                                        >
-                                          Cancel
-                                        </button>
-                                        <button
-                                          onClick={() => handleConfirmSchedule(task)}
-                                          disabled={calendarLoading}
-                                          className="flex-1 text-xs px-2 py-1 rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50"
-                                        >
-                                          Save
-                                        </button>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
+                        <div className={`rounded-xl border p-3 mb-3 ${isDarkMode ? 'border-white/10 bg-black/20' : 'border-gray-200 bg-gray-50'}`}>
+                          <div className={`text-xs font-medium mb-2 ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>Create event</div>
+                          <div className="space-y-2">
+                            <input
+                              type="text"
+                              value={newEventTitle}
+                              onChange={(e) => setNewEventTitle(e.target.value)}
+                              placeholder="Event title"
+                              className={`w-full text-sm rounded-lg px-3 py-2 border outline-none ${isDarkMode ? 'bg-black/30 border-white/10 text-white placeholder-slate-500' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
+                                }`}
+                            />
+                            <textarea
+                              value={newEventDescription}
+                              onChange={(e) => setNewEventDescription(e.target.value)}
+                              placeholder="Description (optional)"
+                              rows={2}
+                              className={`w-full text-sm rounded-lg px-3 py-2 border outline-none resize-none ${isDarkMode ? 'bg-black/30 border-white/10 text-white placeholder-slate-500' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'
+                                }`}
+                            />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <div>
+                                <div className={`text-xs mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>Start</div>
+                                <input
+                                  type="datetime-local"
+                                  value={newEventStartLocal}
+                                  onChange={(e) => setNewEventStartLocal(e.target.value)}
+                                  className={`w-full text-sm rounded-lg px-2 py-2 border outline-none ${isDarkMode ? 'bg-black/30 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
+                                    }`}
+                                />
+                              </div>
+                              <div>
+                                <div className={`text-xs mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>End</div>
+                                <input
+                                  type="datetime-local"
+                                  value={newEventEndLocal}
+                                  onChange={(e) => setNewEventEndLocal(e.target.value)}
+                                  className={`w-full text-sm rounded-lg px-2 py-2 border outline-none ${isDarkMode ? 'bg-black/30 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
+                                    }`}
+                                />
+                              </div>
+                            </div>
+                            <label className={`flex items-center gap-2 text-xs ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
+                              <input
+                                type="checkbox"
+                                checked={newEventAddMeet}
+                                onChange={(e) => setNewEventAddMeet(e.target.checked)}
+                                className="accent-blue-600 w-4 h-4"
+                              />
+                              Add Google Meet
+                            </label>
+                            <button
+                              onClick={handleCreateCalendarEvent}
+                              disabled={calendarLoading}
+                              className="w-full text-sm font-medium px-4 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 mt-2"
+                            >
+                              Add event to this date
+                            </button>
                           </div>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                </div>
-              )}
+                        </div>
 
-              {calendarLoading && (
-                <div className={`mt-3 text-xs ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>Loading…</div>
-              )}
+                        <div className={`rounded-xl border p-3 ${isDarkMode ? 'border-white/10 bg-black/20' : 'border-gray-200 bg-gray-50'}`}>
+                          <div className={`text-xs font-medium mb-2 ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>Tasks</div>
+
+                          {(() => {
+                            const dayStart = new Date(selectedDate);
+                            dayStart.setHours(0, 0, 0, 0);
+                            const dayEnd = new Date(selectedDate);
+                            dayEnd.setHours(23, 59, 59, 999);
+
+                            const scheduledToday = tasks
+                              .filter(t => typeof t.dueDate === 'number' && t.dueDate >= dayStart.getTime() && t.dueDate <= dayEnd.getTime())
+                              .sort((a, b) => (a.dueDate || 0) - (b.dueDate || 0));
+
+                            const unscheduled = tasks.filter(t => !t.dueDate && !t.googleCalendarEventId);
+                            const list = [...scheduledToday, ...unscheduled].slice(0, 20);
+
+                            if (!list.length) {
+                              return <div className={`text-xs ${isDarkMode ? 'text-slate-500' : 'text-gray-500'}`}>No tasks</div>;
+                            }
+
+                            return (
+                              <div className="space-y-2 max-h-56 overflow-y-auto">
+                                {list.map((task) => {
+                                  const isScheduling = schedulingTaskId === task.id;
+                                  const hasEvent = Boolean(task.googleCalendarEventId);
+                                  const hasTime = Boolean(task.dueDate && task.dueDateEnd);
+                                  return (
+                                    <div key={task.id} className={`p-2 rounded-lg border ${isDarkMode ? 'border-white/10 bg-white/5' : 'border-gray-200 bg-white'}`}>
+                                      <div className="flex items-start justify-between gap-2">
+                                        <div className="min-w-0">
+                                          <div className={`text-xs font-medium truncate ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{task.title}</div>
+                                          {(hasEvent || hasTime) && (
+                                            <div className={`text-[10px] mt-0.5 ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>
+                                              {task.dueDate ? new Date(task.dueDate).toLocaleString() : 'Scheduled'}
+                                            </div>
+                                          )}
+                                          {task.googleMeetLink && (
+                                            <a
+                                              href={task.googleMeetLink}
+                                              target="_blank"
+                                              rel="noreferrer"
+                                              className={`text-[10px] ${isDarkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-700 hover:text-blue-600'}`}
+                                            >
+                                              Join Meet
+                                            </a>
+                                          )}
+                                        </div>
+
+                                        <div className="flex items-center gap-1">
+                                          {task.googleCalendarHtmlLink && (
+                                            <a
+                                              href={task.googleCalendarHtmlLink}
+                                              target="_blank"
+                                              rel="noreferrer"
+                                              className={`text-[10px] px-2 py-1 rounded ${isDarkMode ? 'bg-white/10 hover:bg-white/15 text-slate-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+                                            >
+                                              Event
+                                            </a>
+                                          )}
+                                          {hasEvent ? (
+                                            <button
+                                              onClick={() => handleUnschedule(task)}
+                                              disabled={calendarLoading}
+                                              className={`text-[10px] px-2 py-1 rounded ${isDarkMode
+                                                ? 'bg-red-500/20 hover:bg-red-500/30 text-red-300'
+                                                : 'bg-red-50 hover:bg-red-100 text-red-700'
+                                                } disabled:opacity-50`}
+                                            >
+                                              Unschedule
+                                            </button>
+                                          ) : (
+                                            <button
+                                              onClick={() => handleStartScheduling(task)}
+                                              disabled={calendarLoading}
+                                              className={`text-[10px] px-2 py-1 rounded ${isDarkMode
+                                                ? 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-300'
+                                                : 'bg-blue-50 hover:bg-blue-100 text-blue-700'
+                                                } disabled:opacity-50`}
+                                            >
+                                              Schedule
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {isScheduling && (
+                                        <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
+                                          <div>
+                                            <div className={`text-[10px] mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>Start</div>
+                                            <input
+                                              type="datetime-local"
+                                              value={scheduleStartLocal}
+                                              onChange={(e) => setScheduleStartLocal(e.target.value)}
+                                              className={`w-full text-xs rounded-lg px-2 py-1 border outline-none ${isDarkMode
+                                                ? 'bg-black/30 border-white/10 text-white'
+                                                : 'bg-white border-gray-200 text-gray-900'
+                                                }`}
+                                            />
+                                          </div>
+                                          <div>
+                                            <div className={`text-[10px] mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>End</div>
+                                            <input
+                                              type="datetime-local"
+                                              value={scheduleEndLocal}
+                                              onChange={(e) => setScheduleEndLocal(e.target.value)}
+                                              className={`w-full text-xs rounded-lg px-2 py-1 border outline-none ${isDarkMode
+                                                ? 'bg-black/30 border-white/10 text-white'
+                                                : 'bg-white border-gray-200 text-gray-900'
+                                                }`}
+                                            />
+
+                                            <label className={`mt-2 flex items-center gap-2 text-[10px] ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
+                                              <input
+                                                type="checkbox"
+                                                checked={scheduleAddMeet}
+                                                onChange={(e) => setScheduleAddMeet(e.target.checked)}
+                                                className="accent-blue-600"
+                                              />
+                                              Add Google Meet
+                                            </label>
+                                          </div>
+                                          <div className="flex gap-2">
+                                            <button
+                                              onClick={() => {
+                                                setSchedulingTaskId(null);
+                                              }}
+                                              className={`flex-1 text-xs px-2 py-1 rounded-lg ${isDarkMode
+                                                ? 'bg-white/10 hover:bg-white/15 text-slate-200'
+                                                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                                                }`}
+                                            >
+                                              Cancel
+                                            </button>
+                                            <button
+                                              onClick={() => handleConfirmSchedule(task)}
+                                              disabled={calendarLoading}
+                                              className="flex-1 text-xs px-2 py-1 rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50"
+                                            >
+                                              Save
+                                            </button>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {calendarLoading && (
+                    <div className={`mt-3 text-xs ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>Loading…</div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
