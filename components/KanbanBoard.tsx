@@ -1252,7 +1252,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      <div className="order-2 lg:order-1">
+                      <div className="order-2 lg:order-1 lg:row-span-2">
                         <div className="flex items-center justify-between mb-2">
                           <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                             {calendarMonth.toLocaleString(undefined, { month: 'long', year: 'numeric' })}
@@ -1356,7 +1356,160 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
                         })()}
                       </div>
 
-                      <div className="order-1 lg:order-2">
+                      <div className="order-1 lg:order-3 lg:col-start-2">
+                        <div className={`rounded-xl border p-3 ${isDarkMode ? 'border-white/10 bg-black/20' : 'border-gray-200 bg-gray-50'}`}>
+                          <div className={`text-xs font-medium mb-2 ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>Tasks</div>
+
+                          {(() => {
+                            const dayStart = new Date(selectedDate);
+                            dayStart.setHours(0, 0, 0, 0);
+                            const dayEnd = new Date(selectedDate);
+                            dayEnd.setHours(23, 59, 59, 999);
+
+                            const scheduledToday = tasks
+                              .filter(t => typeof t.dueDate === 'number' && t.dueDate >= dayStart.getTime() && t.dueDate <= dayEnd.getTime())
+                              .sort((a, b) => (a.dueDate || 0) - (b.dueDate || 0));
+
+                            const unscheduled = tasks.filter(t => !t.dueDate && !t.googleCalendarEventId);
+                            const list = [...scheduledToday, ...unscheduled].slice(0, 20);
+
+                            if (!list.length) {
+                              return <div className={`text-xs ${isDarkMode ? 'text-slate-500' : 'text-gray-500'}`}>No tasks</div>;
+                            }
+
+                            return (
+                              <div className="space-y-2 max-h-56 overflow-y-auto">
+                                {list.map((task) => {
+                                  const isScheduling = schedulingTaskId === task.id;
+                                  const hasEvent = Boolean(task.googleCalendarEventId);
+                                  const hasTime = Boolean(task.dueDate && task.dueDateEnd);
+                                  return (
+                                    <div key={task.id} className={`p-2 rounded-lg border ${isDarkMode ? 'border-white/10 bg-white/5' : 'border-gray-200 bg-white'}`}>
+                                      <div className="flex items-start justify-between gap-2">
+                                        <div className="min-w-0">
+                                          <div className={`text-xs font-medium truncate ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{task.title}</div>
+                                          {(hasEvent || hasTime) && (
+                                            <div className={`text-[10px] mt-0.5 ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>
+                                              {task.dueDate ? new Date(task.dueDate).toLocaleString() : 'Scheduled'}
+                                            </div>
+                                          )}
+                                          {task.googleMeetLink && (
+                                            <a
+                                              href={task.googleMeetLink}
+                                              target="_blank"
+                                              rel="noreferrer"
+                                              className={`text-[10px] ${isDarkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-700 hover:text-blue-600'}`}
+                                            >
+                                              Join Meet
+                                            </a>
+                                          )}
+                                        </div>
+
+                                        <div className="flex items-center gap-1">
+                                          {task.googleCalendarHtmlLink && (
+                                            <a
+                                              href={task.googleCalendarHtmlLink}
+                                              target="_blank"
+                                              rel="noreferrer"
+                                              className={`text-[10px] px-2 py-1 rounded ${isDarkMode ? 'bg-white/10 hover:bg-white/15 text-slate-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+                                            >
+                                              Event
+                                            </a>
+                                          )}
+                                          {hasEvent ? (
+                                            <button
+                                              onClick={() => handleUnschedule(task)}
+                                              disabled={calendarLoading}
+                                              className={`text-[10px] px-2 py-1 rounded ${isDarkMode
+                                                ? 'bg-red-500/20 hover:bg-red-500/30 text-red-300'
+                                                : 'bg-red-50 hover:bg-red-100 text-red-700'
+                                                } disabled:opacity-50`}
+                                            >
+                                              Unschedule
+                                            </button>
+                                          ) : (
+                                            <button
+                                              onClick={() => handleStartScheduling(task)}
+                                              disabled={calendarLoading}
+                                              className={`text-[10px] px-2 py-1 rounded ${isDarkMode
+                                                ? 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-300'
+                                                : 'bg-blue-50 hover:bg-blue-100 text-blue-700'
+                                                } disabled:opacity-50`}
+                                            >
+                                              Schedule
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      {isScheduling && (
+                                        <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
+                                          <div>
+                                            <div className={`text-[10px] mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>Start</div>
+                                            <input
+                                              type="datetime-local"
+                                              value={scheduleStartLocal}
+                                              onChange={(e) => setScheduleStartLocal(e.target.value)}
+                                              className={`w-full text-xs rounded-lg px-2 py-1 border outline-none ${isDarkMode
+                                                ? 'bg-black/30 border-white/10 text-white'
+                                                : 'bg-white border-gray-200 text-gray-900'
+                                                }`}
+                                            />
+                                          </div>
+                                          <div>
+                                            <div className={`text-[10px] mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>End</div>
+                                            <input
+                                              type="datetime-local"
+                                              value={scheduleEndLocal}
+                                              onChange={(e) => setScheduleEndLocal(e.target.value)}
+                                              className={`w-full text-xs rounded-lg px-2 py-1 border outline-none ${isDarkMode
+                                                ? 'bg-black/30 border-white/10 text-white'
+                                                : 'bg-white border-gray-200 text-gray-900'
+                                                }`}
+                                            />
+
+                                            <label className={`mt-2 flex items-center gap-2 text-[10px] ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
+                                              <input
+                                                type="checkbox"
+                                                checked={scheduleAddMeet}
+                                                onChange={(e) => setScheduleAddMeet(e.target.checked)}
+                                                className="accent-blue-600"
+                                              />
+                                              Add Google Meet
+                                            </label>
+                                          </div>
+                                          <div className="flex gap-2">
+                                            <button
+                                              onClick={() => {
+                                                setSchedulingTaskId(null);
+                                              }}
+                                              className={`flex-1 text-xs px-2 py-1 rounded-lg ${isDarkMode
+                                                ? 'bg-white/10 hover:bg-white/15 text-slate-200'
+                                                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                                                }`}
+                                            >
+                                              Cancel
+                                            </button>
+                                            <button
+                                              onClick={() => handleConfirmSchedule(task)}
+                                              disabled={calendarLoading}
+                                              className="flex-1 text-xs px-2 py-1 rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50"
+                                            >
+                                              Save
+                                            </button>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </div>
+
+                      <div className="order-3 lg:order-2 lg:col-start-2">
                         <div className="flex items-center justify-between mb-2">
                           <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                             {selectedDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
@@ -1532,157 +1685,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
                               Add event to this date
                             </button>
                           </div>
-                        </div>
-
-                        <div className={`rounded-xl border p-3 ${isDarkMode ? 'border-white/10 bg-black/20' : 'border-gray-200 bg-gray-50'}`}>
-                          <div className={`text-xs font-medium mb-2 ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>Tasks</div>
-
-                          {(() => {
-                            const dayStart = new Date(selectedDate);
-                            dayStart.setHours(0, 0, 0, 0);
-                            const dayEnd = new Date(selectedDate);
-                            dayEnd.setHours(23, 59, 59, 999);
-
-                            const scheduledToday = tasks
-                              .filter(t => typeof t.dueDate === 'number' && t.dueDate >= dayStart.getTime() && t.dueDate <= dayEnd.getTime())
-                              .sort((a, b) => (a.dueDate || 0) - (b.dueDate || 0));
-
-                            const unscheduled = tasks.filter(t => !t.dueDate && !t.googleCalendarEventId);
-                            const list = [...scheduledToday, ...unscheduled].slice(0, 20);
-
-                            if (!list.length) {
-                              return <div className={`text-xs ${isDarkMode ? 'text-slate-500' : 'text-gray-500'}`}>No tasks</div>;
-                            }
-
-                            return (
-                              <div className="space-y-2 max-h-56 overflow-y-auto">
-                                {list.map((task) => {
-                                  const isScheduling = schedulingTaskId === task.id;
-                                  const hasEvent = Boolean(task.googleCalendarEventId);
-                                  const hasTime = Boolean(task.dueDate && task.dueDateEnd);
-                                  return (
-                                    <div key={task.id} className={`p-2 rounded-lg border ${isDarkMode ? 'border-white/10 bg-white/5' : 'border-gray-200 bg-white'}`}>
-                                      <div className="flex items-start justify-between gap-2">
-                                        <div className="min-w-0">
-                                          <div className={`text-xs font-medium truncate ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{task.title}</div>
-                                          {(hasEvent || hasTime) && (
-                                            <div className={`text-[10px] mt-0.5 ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`}>
-                                              {task.dueDate ? new Date(task.dueDate).toLocaleString() : 'Scheduled'}
-                                            </div>
-                                          )}
-                                          {task.googleMeetLink && (
-                                            <a
-                                              href={task.googleMeetLink}
-                                              target="_blank"
-                                              rel="noreferrer"
-                                              className={`text-[10px] ${isDarkMode ? 'text-blue-300 hover:text-blue-200' : 'text-blue-700 hover:text-blue-600'}`}
-                                            >
-                                              Join Meet
-                                            </a>
-                                          )}
-                                        </div>
-
-                                        <div className="flex items-center gap-1">
-                                          {task.googleCalendarHtmlLink && (
-                                            <a
-                                              href={task.googleCalendarHtmlLink}
-                                              target="_blank"
-                                              rel="noreferrer"
-                                              className={`text-[10px] px-2 py-1 rounded ${isDarkMode ? 'bg-white/10 hover:bg-white/15 text-slate-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
-                                            >
-                                              Event
-                                            </a>
-                                          )}
-                                          {hasEvent ? (
-                                            <button
-                                              onClick={() => handleUnschedule(task)}
-                                              disabled={calendarLoading}
-                                              className={`text-[10px] px-2 py-1 rounded ${isDarkMode
-                                                ? 'bg-red-500/20 hover:bg-red-500/30 text-red-300'
-                                                : 'bg-red-50 hover:bg-red-100 text-red-700'
-                                                } disabled:opacity-50`}
-                                            >
-                                              Unschedule
-                                            </button>
-                                          ) : (
-                                            <button
-                                              onClick={() => handleStartScheduling(task)}
-                                              disabled={calendarLoading}
-                                              className={`text-[10px] px-2 py-1 rounded ${isDarkMode
-                                                ? 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-300'
-                                                : 'bg-blue-50 hover:bg-blue-100 text-blue-700'
-                                                } disabled:opacity-50`}
-                                            >
-                                              Schedule
-                                            </button>
-                                          )}
-                                        </div>
-                                      </div>
-
-                                      {isScheduling && (
-                                        <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
-                                          <div>
-                                            <div className={`text-[10px] mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>Start</div>
-                                            <input
-                                              type="datetime-local"
-                                              value={scheduleStartLocal}
-                                              onChange={(e) => setScheduleStartLocal(e.target.value)}
-                                              className={`w-full text-xs rounded-lg px-2 py-1 border outline-none ${isDarkMode
-                                                ? 'bg-black/30 border-white/10 text-white'
-                                                : 'bg-white border-gray-200 text-gray-900'
-                                                }`}
-                                            />
-                                          </div>
-                                          <div>
-                                            <div className={`text-[10px] mb-1 ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>End</div>
-                                            <input
-                                              type="datetime-local"
-                                              value={scheduleEndLocal}
-                                              onChange={(e) => setScheduleEndLocal(e.target.value)}
-                                              className={`w-full text-xs rounded-lg px-2 py-1 border outline-none ${isDarkMode
-                                                ? 'bg-black/30 border-white/10 text-white'
-                                                : 'bg-white border-gray-200 text-gray-900'
-                                                }`}
-                                            />
-
-                                            <label className={`mt-2 flex items-center gap-2 text-[10px] ${isDarkMode ? 'text-slate-300' : 'text-gray-700'}`}>
-                                              <input
-                                                type="checkbox"
-                                                checked={scheduleAddMeet}
-                                                onChange={(e) => setScheduleAddMeet(e.target.checked)}
-                                                className="accent-blue-600"
-                                              />
-                                              Add Google Meet
-                                            </label>
-                                          </div>
-                                          <div className="flex gap-2">
-                                            <button
-                                              onClick={() => {
-                                                setSchedulingTaskId(null);
-                                              }}
-                                              className={`flex-1 text-xs px-2 py-1 rounded-lg ${isDarkMode
-                                                ? 'bg-white/10 hover:bg-white/15 text-slate-200'
-                                                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                                                }`}
-                                            >
-                                              Cancel
-                                            </button>
-                                            <button
-                                              onClick={() => handleConfirmSchedule(task)}
-                                              disabled={calendarLoading}
-                                              className="flex-1 text-xs px-2 py-1 rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50"
-                                            >
-                                              Save
-                                            </button>
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            );
-                          })()}
                         </div>
                       </div>
                     </div>
