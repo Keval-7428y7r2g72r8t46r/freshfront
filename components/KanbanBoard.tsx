@@ -88,6 +88,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
 
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const isTouchDraggingRef = useRef(false);
+  const [dragStartDate, setDragStartDate] = useState<Date | null>(null);
+  const [dragEndDate, setDragEndDate] = useState<Date | null>(null);
+  const isDraggingDateRef = useRef(false);
 
   const tasks = project.tasks || [];
   const isReadOnly = !!readOnly;
@@ -828,6 +831,68 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
     setAiSuggestions(prev => prev.filter(s => s.title !== suggestion.title));
   };
 
+  const handleDateDragStart = (d: Date) => {
+    if (!calendarOpen) return;
+    setDragStartDate(d);
+    setDragEndDate(d);
+    isDraggingDateRef.current = true;
+  };
+
+  const handleDateDragEnter = (d: Date) => {
+    if (isDraggingDateRef.current) {
+      setDragEndDate(d);
+    }
+  };
+
+  const handleDateDragEnd = () => {
+    if (!isDraggingDateRef.current || !dragStartDate || !dragEndDate) return;
+    isDraggingDateRef.current = false;
+
+    const start = new Date(Math.min(dragStartDate.getTime(), dragEndDate.getTime()));
+    const end = new Date(Math.max(dragStartDate.getTime(), dragEndDate.getTime()));
+
+    setSelectedDate(start);
+
+    if (schedulingTaskId) {
+      const updateDatePreservingTime = (isoString: string, newDateTarget: Date) => {
+        if (!isoString) return '';
+        const date = new Date(isoString);
+        const newDate = new Date(newDateTarget);
+        newDate.setHours(date.getHours(), date.getMinutes());
+        const pad = (n: number) => n < 10 ? '0' + n : n;
+        return `${newDate.getFullYear()}-${pad(newDate.getMonth() + 1)}-${pad(newDate.getDate())}T${pad(newDate.getHours())}:${pad(newDate.getMinutes())}`;
+      };
+
+      if (scheduleStartLocal) setScheduleStartLocal(updateDatePreservingTime(scheduleStartLocal, start));
+      if (scheduleEndLocal) setScheduleEndLocal(updateDatePreservingTime(scheduleEndLocal, end));
+    } else {
+      setSchedulingTaskId(null);
+    }
+
+    setDragStartDate(null);
+    setDragEndDate(null);
+  };
+
+  const handleDateTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    const dateStr = el?.closest('[data-date]')?.getAttribute('data-date');
+    if (dateStr) {
+      handleDateDragStart(new Date(dateStr));
+    }
+  };
+
+  const handleDateTouchMove = (e: React.TouchEvent) => {
+    if (!isDraggingDateRef.current) return;
+    const touch = e.touches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    const dateStr = el?.closest('[data-date]')?.getAttribute('data-date');
+    if (dateStr) {
+      handleDateDragEnter(new Date(dateStr));
+    }
+  };
+
+
   return (
     <>
       <div className="flex flex-col h-auto md:h-full">
@@ -1327,35 +1392,34 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
                             const key = dateKeyLocal(d);
                             const isCurrentMonth = d.getMonth() === monthStart.getMonth();
                             const isSelected = key === selectedDayKey;
+
+                            let isInDragRange = false;
+                            if (dragStartDate && dragEndDate) {
+                              const t = d.getTime();
+                              const s = Math.min(dragStartDate.getTime(), dragEndDate.getTime());
+                              const e = Math.max(dragStartDate.getTime(), dragEndDate.getTime());
+                              isInDragRange = t >= s && t <= e;
+                            }
+
                             const count = (byDay.get(key) || []).length;
                             return (
                               <button
                                 key={key}
-                                onClick={() => {
-                                  setSelectedDate(d);
-                                  if (schedulingTaskId) {
-                                    const updateDatePreservingTime = (isoString: string) => {
-                                      if (!isoString) return '';
-                                      const date = new Date(isoString);
-                                      const newDate = new Date(d);
-                                      newDate.setHours(date.getHours(), date.getMinutes());
-                                      const pad = (n: number) => n < 10 ? '0' + n : n;
-                                      return `${newDate.getFullYear()}-${pad(newDate.getMonth() + 1)}-${pad(newDate.getDate())}T${pad(newDate.getHours())}:${pad(newDate.getMinutes())}`;
-                                    };
-
-                                    if (scheduleStartLocal) setScheduleStartLocal(updateDatePreservingTime(scheduleStartLocal));
-                                    if (scheduleEndLocal) setScheduleEndLocal(updateDatePreservingTime(scheduleEndLocal));
-                                  } else {
-                                    setSchedulingTaskId(null);
-                                  }
+                                data-date={d.toISOString()}
+                                onMouseDown={(e) => {
+                                  if (e.button === 0) handleDateDragStart(d);
                                 }}
-                                className={`h-14 rounded-lg border flex flex-col items-center justify-center transition-colors ${isSelected
-                                  ? isDarkMode
-                                    ? 'bg-blue-500/20 border-blue-500/40'
-                                    : 'bg-blue-50 border-blue-200'
-                                  : isDarkMode
-                                    ? 'bg-white/0 hover:bg-white/5 border-white/10'
-                                    : 'bg-white hover:bg-gray-50 border-gray-200'
+                                onMouseEnter={() => handleDateDragEnter(d)}
+                                onMouseUp={handleDateDragEnd}
+                                className={`h-14 rounded-lg border flex flex-col items-center justify-center transition-colors select-none ${isInDragRange
+                                  ? isDarkMode ? 'bg-blue-500/40 border-blue-500/60' : 'bg-blue-100 border-blue-300'
+                                  : isSelected
+                                    ? isDarkMode
+                                      ? 'bg-blue-500/20 border-blue-500/40'
+                                      : 'bg-blue-50 border-blue-200'
+                                    : isDarkMode
+                                      ? 'bg-white/0 hover:bg-white/5 border-white/10'
+                                      : 'bg-white hover:bg-gray-50 border-gray-200'
                                   } ${!isCurrentMonth ? (isDarkMode ? 'opacity-40' : 'opacity-50') : ''}`}
                               >
                                 <div className={`text-xs ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{d.getDate()}</div>
@@ -1366,7 +1430,18 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
                             );
                           });
 
-                          return <div className="grid grid-cols-7 gap-1">{cells}</div>;
+                          return (
+                            <div
+                              className="grid grid-cols-7 gap-1"
+                              onTouchStart={handleDateTouchStart}
+                              onTouchMove={handleDateTouchMove}
+                              onTouchEnd={handleDateDragEnd}
+                              onMouseUp={handleDateDragEnd}
+                              onMouseLeave={handleDateDragEnd}
+                            >
+                              {cells}
+                            </div>
+                          );
                         })()}
                       </div>
 
