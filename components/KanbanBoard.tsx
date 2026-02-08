@@ -1333,7 +1333,21 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
                                 key={key}
                                 onClick={() => {
                                   setSelectedDate(d);
-                                  setSchedulingTaskId(null);
+                                  if (schedulingTaskId) {
+                                    const updateDatePreservingTime = (isoString: string) => {
+                                      if (!isoString) return '';
+                                      const date = new Date(isoString);
+                                      const newDate = new Date(d);
+                                      newDate.setHours(date.getHours(), date.getMinutes());
+                                      const pad = (n: number) => n < 10 ? '0' + n : n;
+                                      return `${newDate.getFullYear()}-${pad(newDate.getMonth() + 1)}-${pad(newDate.getDate())}T${pad(newDate.getHours())}:${pad(newDate.getMinutes())}`;
+                                    };
+
+                                    if (scheduleStartLocal) setScheduleStartLocal(updateDatePreservingTime(scheduleStartLocal));
+                                    if (scheduleEndLocal) setScheduleEndLocal(updateDatePreservingTime(scheduleEndLocal));
+                                  } else {
+                                    setSchedulingTaskId(null);
+                                  }
                                 }}
                                 className={`h-14 rounded-lg border flex flex-col items-center justify-center transition-colors ${isSelected
                                   ? isDarkMode
