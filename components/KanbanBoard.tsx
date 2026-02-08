@@ -861,20 +861,45 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
 
     setSelectedDate(start);
 
-    if (schedulingTaskId) {
-      const updateDatePreservingTime = (isoString: string, newDateTarget: Date) => {
-        if (!isoString) return '';
-        const date = new Date(isoString);
-        const newDate = new Date(newDateTarget);
-        newDate.setHours(date.getHours(), date.getMinutes());
-        const pad = (n: number) => n < 10 ? '0' + n : n;
-        return `${newDate.getFullYear()}-${pad(newDate.getMonth() + 1)}-${pad(newDate.getDate())}T${pad(newDate.getHours())}:${pad(newDate.getMinutes())}`;
-      };
+    const updateDatePreservingTime = (isoString: string, newDateTarget: Date) => {
+      if (!isoString) return '';
+      const date = new Date(isoString); // Parse properly? standard Date ctor parses ISO OK mostly, or use values
+      // actually localInputFromMs produces "YYYY-MM-DDTHH:mm" which Date() parses in local time usually in browsers, 
+      // but let's be careful. The original code used it.
+      // Original: 
+      // const date = new Date(isoString);
+      // const newDate = new Date(newDateTarget);
+      // newDate.setHours(date.getHours(), date.getMinutes());
+      // ... return formatted string
 
+      const dateObj = new Date(isoString);
+      const newDate = new Date(newDateTarget);
+      if (!isNaN(dateObj.getTime())) {
+        newDate.setHours(dateObj.getHours(), dateObj.getMinutes());
+      } else {
+        // If no time set, default to something? Or just keep 00:00
+        // For new events, we might want defaults if string is empty
+        newDate.setHours(9, 0); // Default if empty? 
+      }
+
+      const pad = (n: number) => n < 10 ? '0' + n : n;
+      return `${newDate.getFullYear()}-${pad(newDate.getMonth() + 1)}-${pad(newDate.getDate())}T${pad(newDate.getHours())}:${pad(newDate.getMinutes())}`;
+    };
+
+    if (schedulingTaskId) {
       if (scheduleStartLocal) setScheduleStartLocal(updateDatePreservingTime(scheduleStartLocal, start));
       if (scheduleEndLocal) setScheduleEndLocal(updateDatePreservingTime(scheduleEndLocal, end));
     } else {
       setSchedulingTaskId(null);
+      // For new events, if there's no time set yet, we might want defaults. 
+      // But typically there are defaults set when calendar opens.
+      // Let's use the current values of newEventStartLocal/EndLocal if they exist, or defaults if not.
+
+      const currentStart = newEventStartLocal || `${dateKeyLocal(start)}T09:00`;
+      const currentEnd = newEventEndLocal || `${dateKeyLocal(end)}T10:00`;
+
+      setNewEventStartLocal(updateDatePreservingTime(currentStart, start));
+      setNewEventEndLocal(updateDatePreservingTime(currentEnd, end));
     }
 
     setDragStartDate(null);
