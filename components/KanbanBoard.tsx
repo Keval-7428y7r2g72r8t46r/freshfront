@@ -91,6 +91,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
   const [dragStartDate, setDragStartDate] = useState<Date | null>(null);
   const [dragEndDate, setDragEndDate] = useState<Date | null>(null);
   const isDraggingDateRef = useRef(false);
+  const dragStartDateRef = useRef<Date | null>(null);
+  const dragEndDateRef = useRef<Date | null>(null);
 
   const tasks = project.tasks || [];
   const isReadOnly = !!readOnly;
@@ -835,21 +837,27 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
     if (!calendarOpen) return;
     setDragStartDate(d);
     setDragEndDate(d);
+    dragStartDateRef.current = d;
+    dragEndDateRef.current = d;
     isDraggingDateRef.current = true;
   };
 
   const handleDateDragEnter = (d: Date) => {
     if (isDraggingDateRef.current) {
       setDragEndDate(d);
+      dragEndDateRef.current = d;
     }
   };
 
   const handleDateDragEnd = () => {
-    if (!isDraggingDateRef.current || !dragStartDate || !dragEndDate) return;
+    const dStart = dragStartDateRef.current;
+    const dEnd = dragEndDateRef.current;
+
+    if (!isDraggingDateRef.current || !dStart || !dEnd) return;
     isDraggingDateRef.current = false;
 
-    const start = new Date(Math.min(dragStartDate.getTime(), dragEndDate.getTime()));
-    const end = new Date(Math.max(dragStartDate.getTime(), dragEndDate.getTime()));
+    const start = new Date(Math.min(dStart.getTime(), dEnd.getTime()));
+    const end = new Date(Math.max(dStart.getTime(), dEnd.getTime()));
 
     setSelectedDate(start);
 
@@ -871,6 +879,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
 
     setDragStartDate(null);
     setDragEndDate(null);
+    dragStartDateRef.current = null;
+    dragEndDateRef.current = null;
   };
 
   const handleDateTouchStart = (e: React.TouchEvent) => {
