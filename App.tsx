@@ -1154,6 +1154,7 @@ const App: React.FC = () => {
               activeResearchProjectId={activeResearch?.projectId}
               initialTab={dashboardNavOptions?.initialTab}
               initialAssetType={dashboardNavOptions?.initialAssetType}
+              isActive={showDashboard}
             />
           </div>
 
