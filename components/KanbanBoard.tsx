@@ -139,6 +139,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
     return { startLocal: localInputFromMs(start.getTime()), endLocal: localInputFromMs(end.getTime()) };
   };
 
+  // DEBUG: Monitor state changes
+  useEffect(() => {
+    console.log('[KanbanBoard] State Effect: newEventStartLocal changed to:', newEventStartLocal);
+  }, [newEventStartLocal]);
+
+  console.log('[KanbanBoard] Render:', { newEventStartLocal, newEventEndLocal });
+
   const normalizeDay = (d: Date) => {
     const next = new Date(d);
     next.setHours(0, 0, 0, 0);
@@ -880,11 +887,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
 
     console.log('[KanbanBoard] Setting Create Event Times:', { sStr, eStr });
 
-    // HARDCODED TEST VALUES
-    setNewEventStartLocal("2025-01-01T10:00");
-    setNewEventEndLocal("2025-01-01T12:00");
-    // setNewEventStartLocal(sStr);
-    // setNewEventEndLocal(eStr);
+    // Hardcoded values removed
+    setNewEventStartLocal(sStr);
+    setNewEventEndLocal(eStr);
 
     if (schedulingTaskId) {
       const updateDatePreservingTime = (isoString: string, newDateTarget: Date) => {
