@@ -18,9 +18,9 @@ const COLUMNS: { id: TaskStatus; title: string; color: string; bgColor: string }
 ];
 
 const PRIORITY_COLORS: Record<TaskPriority, { dot: string; light: string; dark: string }> = {
-  low: { dot: 'bg-slate-400', light: 'bg-slate-100 text-slate-600', dark: 'bg-slate-500/20 text-slate-400' },
-  medium: { dot: 'bg-amber-400', light: 'bg-amber-100 text-amber-700', dark: 'bg-amber-500/20 text-amber-400' },
-  high: { dot: 'bg-red-400', light: 'bg-red-100 text-red-700', dark: 'bg-red-500/20 text-red-400' }
+  low: { dot: 'bg-slate-400', light: 'bg-slate-500/10 text-slate-600', dark: 'bg-slate-500/20 text-slate-400' },
+  medium: { dot: 'bg-amber-400', light: 'bg-amber-500/10 text-amber-700', dark: 'bg-amber-500/20 text-amber-400' },
+  high: { dot: 'bg-red-400', light: 'bg-red-500/10 text-red-700', dark: 'bg-red-500/20 text-red-400' }
 };
 
 const PLATFORM_LOGOS: Record<string, string> = {
