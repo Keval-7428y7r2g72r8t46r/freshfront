@@ -1128,7 +1128,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
                       </div>
 
                       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-                        <div className="flex bg-gray-50 dark:bg-slate-800/50 rounded-lg p-0.5 shrink-0">
+                        <div className="flex bg-white border border-gray-200 dark:bg-slate-800/50 rounded-lg p-0.5 shrink-0">
                           {(['low', 'medium', 'high'] as TaskPriority[]).map(p => (
                             <button
                               key={p}
