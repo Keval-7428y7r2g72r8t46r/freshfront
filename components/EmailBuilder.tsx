@@ -20,11 +20,11 @@ import { generateEmailText, generateFullEmail } from '../services/geminiService'
 
 // Social Platform Icons
 const SOCIAL_ICONS: Record<string, string> = {
-    Facebook: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/2021_Facebook_icon.svg.webp',
-    Twitter: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/X-Logo-Round-Color.png',
-    Instagram: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/Instagram_logo_2016.svg.webp',
-    LinkedIn: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/LinkedIn_logo_initials.png',
-    TikTok: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/tiktok-6338432_1280.webp',
+    Facebook: 'https://v5mLtVQUI2sf3sCk.public.blob.vercel-storage.com/2021_Facebook_icon.svg.webp',
+    Twitter: 'https://v5mLtVQUI2sf3sCk.public.blob.vercel-storage.com/X-Logo-Round-Color.png',
+    Instagram: 'https://v5mLtVQUI2sf3sCk.public.blob.vercel-storage.com/Instagram_logo_2016.svg.webp',
+    LinkedIn: 'https://v5mLtVQUI2sf3sCk.public.blob.vercel-storage.com/LinkedIn_logo_initials.png',
+    TikTok: 'https://v5mLtVQUI2sf3sCk.public.blob.vercel-storage.com/tiktok-6338432_1280.webp',
 };
 
 // Social Platform Base URLs
