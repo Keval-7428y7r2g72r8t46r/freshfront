@@ -48,7 +48,7 @@ export default {
 
     oauthUrl.searchParams.set(
       'scope',
-      'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/calendar'
+      'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar'
     );
     oauthUrl.searchParams.set('access_type', 'offline');
     oauthUrl.searchParams.set('prompt', 'consent');
