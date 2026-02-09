@@ -702,11 +702,11 @@ Selected Text:
 
       {/* Note View Modal */}
       {viewingNote && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-0 sm:p-4">
           <div
-            className={`w-full max-w-2xl max-h-[80vh] min-h-[320px] rounded-2xl flex flex-col overflow-hidden ${isDarkMode
-              ? `${getColorClasses(viewingNote.color || 'default').color} border ${getColorClasses(viewingNote.color || 'default').border}`
-              : 'bg-white border border-gray-200'
+            className={`w-full max-w-2xl h-full sm:h-auto sm:max-h-[80vh] sm:min-h-[320px] rounded-none sm:rounded-2xl flex flex-col overflow-hidden ${isDarkMode
+              ? `${getColorClasses(viewingNote.color || 'default').color} border-0 sm:border ${getColorClasses(viewingNote.color || 'default').border}`
+              : 'bg-white border-0 sm:border border-gray-200'
               }`}
           >
             {/* Modal Header */}
