@@ -48,12 +48,12 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
   };
 
   const platformLogos = {
-    facebook: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/2021_Facebook_icon.svg.webp',
-    instagram: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/Instagram_logo_2016.svg.webp',
-    tiktok: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/tiktok-6338432_1280.webp',
-    youtube: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/YouTube_full-color_icon_%282017%29.svg.png',
-    linkedin: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/LinkedIn_logo_initials.png',
-    x: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/X-Logo-Round-Color.png',
+    facebook: 'https://v5mLtVQUI2sf3sCk.public.blob.vercel-storage.com/2021_Facebook_icon.svg.webp',
+    instagram: 'https://v5mLtVQUI2sf3sCk.public.blob.vercel-storage.com/Instagram_logo_2016.svg.webp',
+    tiktok: 'https://v5mLtVQUI2sf3sCk.public.blob.vercel-storage.com/tiktok-6338432_1280.webp',
+    youtube: 'https://v5mLtVQUI2sf3sCk.public.blob.vercel-storage.com/YouTube_full-color_icon_%282017%29.svg.png',
+    linkedin: 'https://v5mLtVQUI2sf3sCk.public.blob.vercel-storage.com/LinkedIn_logo_initials.png',
+    x: 'https://v5mLtVQUI2sf3sCk.public.blob.vercel-storage.com/X-Logo-Round-Color.png',
   };
 
   const proBenefits = [
