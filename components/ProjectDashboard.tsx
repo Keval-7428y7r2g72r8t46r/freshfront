@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { NoteNode, ResearchProject, ResearchReport, SavedResearch, SavedWebsiteVersion, ProjectTask, ProjectNote, KnowledgeBaseFile, UploadedFile, ResearchDraft, ProjectAccessRole, AIInsight, BlogPost, NewsArticle, WizaProspectsResult, YoutubeVideo, UserProfile, EmailTemplate, AssetItem } from '../types';
 import { storageService } from '../services/storageService';
@@ -15,6 +15,7 @@ import { NotesPanel } from './NotesPanel';
 import { NoteMap } from './NoteMap';
 import { KnowledgeBase } from './KnowledgeBase';
 import { ProjectLiveAssistant } from './ProjectLiveAssistant';
+import { LiveAssistantButton } from './LiveAssistantButton';
 import PodcastStudio from './PodcastStudio';
 import { ProjectAssets } from './ProjectAssets';
 import { UnifiedSocialPublisher } from './UnifiedSocialPublisher';
@@ -24,6 +25,7 @@ import { useCredits } from '../hooks/useCredits';
 import { CreditInfoModal } from './CreditInfoModal';
 import { CreditBalanceDisplay } from './InsufficientCreditsModal';
 import { EmailBuilder } from './EmailBuilder';
+import { GameCenter } from './GameCenter';
 
 import { PASTEL_THEMES, ThemeType } from '../constants';
 
@@ -60,15 +62,15 @@ const SEO_COUNTRIES: { code: string; label: string }[] = [
 ];
 
 const PLATFORM_LOGOS: Record<string, string> = {
-    facebook: 'https://c5d6cokf0svjw8ex.public.blob.vercel-storage.com/2021_Facebook_icon.svg.webp',
-    instagram: 'https://c5d6cokf0svjw8ex.public.blob.vercel-storage.com/Instagram_logo_2016.svg.webp',
-    tiktok: 'https://c5d6cokf0svjw8ex.public.blob.vercel-storage.com/tiktok-6338432_1280.webp',
-    youtube: 'https://c5d6cokf0svjw8ex.public.blob.vercel-storage.com/YouTube_full-color_icon_%282017%29.svg.png',
-    linkedin: 'https://c5d6cokf0svjw8ex.public.blob.vercel-storage.com/LinkedIn_logo_initials.png',
-    x: 'https://c5d6cokf0svjw8ex.public.blob.vercel-storage.com/X-Logo-Round-Color.png',
-    googledrive: 'https://c5d6cokf0svjw8ex.public.blob.vercel-storage.com/Google_Drive_icon_%282020%29.svg.png',
-    googledocs: 'https://c5d6cokf0svjw8ex.public.blob.vercel-storage.com/Docs_2020.webp',
-    googlesheets: 'https://c5d6cokf0svjw8ex.public.blob.vercel-storage.com/Google_Sheets_logo_%282014-2020%29.svg.png',
+    facebook: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/2021_Facebook_icon.svg.webp',
+    instagram: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/Instagram_logo_2016.svg.webp',
+    tiktok: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/tiktok-6338432_1280.webp',
+    youtube: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/YouTube_full-color_icon_%282017%29.svg.png',
+    linkedin: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/LinkedIn_logo_initials.png',
+    x: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/X-Logo-Round-Color.png',
+    googledrive: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/Google_Drive_icon_%282020%29.svg.png',
+    googledocs: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/Docs_2020.webp',
+    googlesheets: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/Google_Sheets_logo_%282014-2020%29.svg.png',
     google: 'https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png',
 };
 
@@ -709,15 +711,30 @@ const DataTab: React.FC<{
                                 const isVideo = file.url && file.mimeType.startsWith('video/');
                                 const isActive = activeFileId === file.name;
 
-                                const canEdit = !isReadOnly && (isImage || (file.url && (file.mimeType === 'text/csv' || file.name.endsWith('.csv') || file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.mimeType?.includes('document') || file.mimeType?.includes('word') || file.name.endsWith('.doc') || file.name.endsWith('.docx') || file.mimeType?.includes('pdf') || file.name.endsWith('.pdf') || file.mimeType?.startsWith('text/') || file.name.endsWith('.txt') || file.name.endsWith('.md'))));
+                                const canEdit = !isReadOnly && (isImage || isVideo || (file.url && (file.mimeType === 'text/csv' || file.name.endsWith('.csv') || file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.mimeType?.includes('document') || file.mimeType?.includes('word') || file.name.endsWith('.doc') || file.name.endsWith('.docx') || file.mimeType?.includes('pdf') || file.name.endsWith('.pdf') || file.mimeType?.startsWith('text/') || file.name.endsWith('.txt') || file.name.endsWith('.md'))));
 
                                 return (
                                     <div
                                         key={file.name}
+                                        draggable={true}
+                                        onDragStart={(e) => {
+                                            e.dataTransfer.setData('application/json', JSON.stringify({
+                                                id: file.name,
+                                                name: file.displayName,
+                                                displayName: file.displayName,
+                                                url: file.url,
+                                                uri: file.uri || file.url,
+                                                type: file.mimeType?.startsWith('image/') ? 'social' :
+                                                    file.mimeType?.startsWith('video/') ? 'video' :
+                                                        file.mimeType?.startsWith('audio/') ? 'podcast' : 'doc',
+                                                mimeType: file.mimeType,
+                                            }));
+                                            e.dataTransfer.effectAllowed = 'copy';
+                                        }}
                                         className={`group relative aspect-[3/4] rounded-2xl border overflow-hidden transition-all duration-300 ${isDarkMode
                                             ? 'bg-[#1c1c1e] border-[#3d3d3f] hover:border-[#5d5d5f]'
                                             : 'bg-white border-gray-200 hover:border-gray-300 shadow-sm hover:shadow-md'
-                                            }`}
+                                            } cursor-grab active:cursor-grabbing`}
                                         onClick={() => {
                                             handleFileClick(file);
                                         }}
@@ -888,29 +905,7 @@ const DataTab: React.FC<{
                 )}
             </div>
 
-            <div className={`p-6 rounded-2xl border ${isDarkMode ? 'bg-[#1d1d1f] border-[#3d3d3f]' : 'bg-white border-gray-200'}`}>
-                <h3 className={`text-lg font-bold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                    How uploaded files work
-                </h3>
-                <ul className={`space-y-2 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                    <li className="flex items-start gap-2">
-                        <span className="text-blue-500 mt-0.5">•</span>
-                        <span>Files are uploaded to Gemini Files API and can be referenced by the project-level AI</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                        <span className="text-blue-500 mt-0.5">•</span>
-                        <span>Supported: images, videos, audio, PDFs, documents (max 2GB per file)</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                        <span className="text-blue-500 mt-0.5">•</span>
-                        <span>Files expire after 48 hours and are automatically deleted from Gemini's servers</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                        <span className="text-blue-500 mt-0.5">•</span>
-                        <span>The AI can analyze images, transcribe audio/video, extract text from documents, and more</span>
-                    </li>
-                </ul>
-            </div>
+
 
             {previewFile && createPortal(
                 <div
@@ -977,6 +972,7 @@ const DataTab: React.FC<{
                 </div>,
                 document.body
             )}
+
         </div>
     );
 };
@@ -1001,6 +997,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
     activeResearchProjectId,
     initialTab,
     initialAssetType,
+    isActive = true,
 }) => {
     /* const { credits: currentCredits } = useCredits(); */
     const { credits: currentCredits } = useCredits();
@@ -1017,7 +1014,10 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
     const canEdit = isOwner || role === 'editor';
     const readOnly = !canEdit;
     const [showCreditInfo, setShowCreditInfo] = useState(false);
+    const [showReverifyConfirm, setShowReverifyConfirm] = useState(false);
+    const [showGameCenter, setShowGameCenter] = useState(false);
     const [activeTab, setActiveTab] = useState<TabId>(initialTab || 'overview');
+    const [activeOverviewTab, setActiveOverviewTab] = useState<'focus' | 'research' | 'news'>('focus');
     const [editRequestAsset, setEditRequestAsset] = useState<AssetItem | null>(null);
 
     const handleRequestEdit = (file: UploadedFile) => {
@@ -1025,8 +1025,9 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
         const asset: AssetItem = {
             id: file.name, // Use name as ID for reference
             type: file.mimeType === 'application/pdf' ? 'book' :
-                (file.mimeType?.startsWith('image/') ? 'header' : // Use 'header' as generic image type that triggers editor
-                    (file.mimeType === 'text/csv' || file.name.endsWith('.csv') || file.name.endsWith('.xlsx') || file.name.endsWith('.xls') ? 'table' : 'doc')),
+                (file.mimeType?.startsWith('video/') ? 'video' :
+                    (file.mimeType?.startsWith('image/') ? 'header' : // Use 'header' as generic image type that triggers editor
+                        (file.mimeType === 'text/csv' || file.name.endsWith('.csv') || file.name.endsWith('.xlsx') || file.name.endsWith('.xls') ? 'table' : 'doc'))),
             url: file.url,
             title: file.displayName,
             description: file.summary || '',
@@ -1038,19 +1039,10 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
         setEditRequestAsset(asset);
 
         // Update filter based on type so ProjectAssets opens correct tab
-        if (asset.type === 'table') {
-            setCurrentAssetsFilter('tables');
-        } else if (asset.type === 'doc' || asset.type === 'blog') {
-            setCurrentAssetsFilter('docs');
-        } else if (asset.type === 'book') {
-            setCurrentAssetsFilter('books');
-        } else {
-            // Default to images for visual types
-            setCurrentAssetsFilter('images');
-        }
-
         setActiveTab('assets');
-    }; const [currentAssetsFilter, setCurrentAssetsFilter] = useState<string>(initialAssetType || 'images');
+    };
+
+    const [currentAssetsFilter, setCurrentAssetsFilter] = useState<string[]>(initialAssetType ? [initialAssetType] : []);
     const [assetCount, setAssetCount] = useState<number>(computeAssetCount(project));
 
     // Organization State
@@ -1083,7 +1075,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
         console.log('[ProjectDashboard] useEffect triggered - initialTab:', initialTab, 'initialAssetType:', initialAssetType, 'project.id:', project.id);
         console.log('[ProjectDashboard] Setting activeTab to:', initialTab || 'overview');
         setActiveTab(initialTab || 'overview');
-        setCurrentAssetsFilter(initialAssetType || 'images');
+        setCurrentAssetsFilter(initialAssetType ? [initialAssetType] : []);
     }, [initialTab, initialAssetType, project.id]);
 
     // Re-compute asset count when project changes
@@ -1095,7 +1087,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
     const [calendarStatusLoading, setCalendarStatusLoading] = useState(false);
     const [calendarLoading, setCalendarLoading] = useState(false);
     const [calendarError, setCalendarError] = useState<string | null>(null);
-    const [calendarMobileExpanded, setCalendarMobileExpanded] = useState(false);
+    const [calendarMobileExpanded, setCalendarMobileExpanded] = useState(true);
     const [calendarMonth, setCalendarMonth] = useState(() => {
         const d = new Date();
         d.setDate(1);
@@ -1136,6 +1128,12 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
     const [newEventStartLocal, setNewEventStartLocal] = useState('');
     const [newEventEndLocal, setNewEventEndLocal] = useState('');
     const [newEventAddMeet, setNewEventAddMeet] = useState(true);
+
+    // Quick Add Task State
+    const [showAddMenu, setShowAddMenu] = useState(false);
+    const [isQuickAddTaskModalOpen, setIsQuickAddTaskModalOpen] = useState(false);
+    const [quickTaskTitle, setQuickTaskTitle] = useState('');
+    const [quickTaskPriority, setQuickTaskPriority] = useState<'low' | 'medium' | 'high'>('high');
 
     const [facebookSdkReady, setFacebookSdkReady] = useState(false);
     const [facebookStatusLoading, setFacebookStatusLoading] = useState(false);
@@ -1295,6 +1293,8 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
     // Email Builder Asset Picker State
     const [isEmailAssetPickerOpen, setIsEmailAssetPickerOpen] = useState(false);
     const [emailAssetSearch, setEmailAssetSearch] = useState('');
+    const [assetsInitialFocus, setAssetsInitialFocus] = useState<string | null>(null);
+    const [emailInitialFocus, setEmailInitialFocus] = useState(false);
     const emailAssetResolver = useRef<((url: string | null) => void) | null>(null);
     const [upPostProfiles, setUpPostProfiles] = useState<any[]>([]);
     const [upPostActiveProfile, setUpPostActiveProfile] = useState<any>(null);
@@ -1405,6 +1405,8 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
         }
     };
 
+
+
     const handleDebugToken = async () => {
         try {
             const fbUserAccessToken = facebookAccessTokenRef.current;
@@ -1423,6 +1425,34 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
         } catch (e: any) {
             console.error('[Social API] Debug Token Failed:', e);
             alert(`Debug failed: ${e.message}`);
+        }
+    };
+
+    const handleQuickAddTask = async () => {
+        if (!quickTaskTitle.trim()) return;
+
+        try {
+            const newTask = await storageService.addTask(project.id, {
+                title: quickTaskTitle,
+                priority: quickTaskPriority,
+                status: 'in_progress',
+                description: ''
+            });
+
+            if (onProjectUpdate) {
+                const updatedProject = {
+                    ...project,
+                    tasks: [...(project.tasks || []), newTask],
+                    lastModified: Date.now()
+                };
+                onProjectUpdate(updatedProject);
+            }
+
+            setQuickTaskTitle('');
+            setQuickTaskPriority('high');
+            setIsQuickAddTaskModalOpen(false);
+        } catch (e) {
+            console.error("Failed to add quick task", e);
         }
     };
 
@@ -3887,11 +3917,11 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
 
     const [showNewMenu, setShowNewMenu] = useState(false);
     const [notesAutoNew, setNotesAutoNew] = useState(false);
-    const [assetsInitialFilter, setAssetsInitialFilter] = useState<'all' | 'images' | 'videos' | 'podcasts' | 'blogs' | 'tables' | 'forms' | 'products' | 'websites' | 'books' | 'docs'>('all');
+    const [assetsInitialFilter, setAssetsInitialFilter] = useState<string[]>([]);
 
-    const handleAssetsFilterChange = useCallback((filter: string) => {
-        setCurrentAssetsFilter(filter);
-        setAssetsInitialFilter(filter as any);
+    const handleAssetsFilterChange = useCallback((filters: string[]) => {
+        setCurrentAssetsFilter(filters);
+        setAssetsInitialFilter(filters);
     }, []);
 
     const [newsMode, setNewsMode] = useState<'news' | 'videos'>('news');
@@ -5064,7 +5094,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 label: 'Overview',
                 icon: (
                     <img
-                        src="https://c5d6cokf0svjw8ex.public.blob.vercel-storage.com/books%20%281%29.png"
+                        src="https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/books%20%281%29.png"
                         alt=""
                         className="w-6 h-6 sm:w-5 sm:h-5 object-contain"
                         aria-hidden="true"
@@ -5077,7 +5107,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 label: 'Data',
                 icon: (
                     <img
-                        src="https://c5d6cokf0svjw8ex.public.blob.vercel-storage.com/3d-folder.png"
+                        src="https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/3d-folder.png"
                         alt=""
                         className="w-6 h-6 sm:w-5 sm:h-5 object-contain"
                         aria-hidden="true"
@@ -5090,7 +5120,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 label: 'Notes',
                 icon: (
                     <img
-                        src="https://c5d6cokf0svjw8ex.public.blob.vercel-storage.com/notes.png"
+                        src="https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/notes.png"
                         alt=""
                         className="w-6 h-6 sm:w-5 sm:h-5 object-contain"
                         aria-hidden="true"
@@ -5103,7 +5133,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 label: 'Tasks',
                 icon: (
                     <img
-                        src="https://c5d6cokf0svjw8ex.public.blob.vercel-storage.com/check.png"
+                        src="https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/check.png"
                         alt=""
                         className="w-6 h-6 sm:w-5 sm:h-5 object-contain"
                         aria-hidden="true"
@@ -5116,7 +5146,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 label: 'Assets',
                 icon: (
                     <img
-                        src="https://c5d6cokf0svjw8ex.public.blob.vercel-storage.com/content%20%281%29.png"
+                        src="https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/content%20%281%29.png"
                         alt=""
                         className="w-6 h-6 sm:w-5 sm:h-5 object-contain"
                         aria-hidden="true"
@@ -5129,7 +5159,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 label: 'SEO',
                 icon: (
                     <img
-                        src="https://c5d6cokf0svjw8ex.public.blob.vercel-storage.com/medal.png"
+                        src="https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/medal.png"
                         alt=""
                         className="w-6 h-6 sm:w-5 sm:h-5 object-contain"
                         aria-hidden="true"
@@ -5142,7 +5172,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 label: 'Post',
                 icon: (
                     <img
-                        src="https://c5d6cokf0svjw8ex.public.blob.vercel-storage.com/share.png"
+                        src="https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/share.png"
                         alt=""
                         className="w-6 h-6 sm:w-5 sm:h-5 object-contain"
                         aria-hidden="true"
@@ -5155,7 +5185,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 label: 'Email',
                 icon: (
                     <img
-                        src="https://c5d6cokf0svjw8ex.public.blob.vercel-storage.com/mail.png"
+                        src="https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/mail.png"
                         alt=""
                         className="w-6 h-6 sm:w-5 sm:h-5 object-contain"
                         aria-hidden="true"
@@ -5168,7 +5198,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 label: 'Inspo',
                 icon: (
                     <img
-                        src="https://c5d6cokf0svjw8ex.public.blob.vercel-storage.com/bulb.png"
+                        src="https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/bulb.png"
                         alt="Inspo"
                         className="w-6 h-6 sm:w-5 sm:h-5 object-contain"
                     />
@@ -6014,7 +6044,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
         }
 
         setSeoTableToCreate(table);
-        setAssetsInitialFilter('tables');
+        setAssetsInitialFilter(['tables']);
         setActiveTab('assets');
     };
 
@@ -6438,6 +6468,26 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
             onDragOver={handleGlobalDragOver}
             onDrop={handleGlobalDrop}
         >
+            {/* Top Hover Game Center Trigger */}
+            <div className="fixed top-0 left-0 right-0 h-4 z-[99] group/trigger flex justify-center pointer-events-none">
+                <div className="pointer-events-auto h-full w-64" /> {/* Hover zone */}
+                <button
+                    onClick={() => setShowGameCenter(true)}
+                    className={`absolute top-0 left-1/2 -translate-x-1/2 pointer-events-auto transform -translate-y-full group-hover/trigger:translate-y-0 transition-transform duration-500 ease-out bg-[#f2f2f7] border border-[#d1d1d6] border-t-0 px-6 py-2.5 rounded-b-3xl shadow-2xl flex items-center gap-3 z-[100] ${activeTheme === 'orange' ? 'shadow-orange-500/40' :
+                        activeTheme === 'green' ? 'shadow-emerald-500/40' :
+                            activeTheme === 'blue' ? 'shadow-sky-500/40' :
+                                activeTheme === 'purple' ? 'shadow-violet-500/40' :
+                                    activeTheme === 'khaki' ? 'shadow-amber-500/40' :
+                                        activeTheme === 'pink' ? 'shadow-pink-500/40' :
+                                            'shadow-[#0071e3]/40'
+                        }`}
+                    title="Open Game Center"
+                >
+                    <span className="text-2xl hover:scale-125 transition-transform duration-300">🎮</span>
+                    <span className="text-[11px] font-black text-[#000000] uppercase tracking-[0.3em] opacity-0 group-hover/trigger:opacity-100 transition-opacity delay-200">Arcade</span>
+                </button>
+            </div>
+
             {/* Global drag overlay */}
             {globalDragging && (
                 <div className="fixed inset-0 z-50 bg-[#0071e3]/20 backdrop-blur-sm flex items-center justify-center pointer-events-none">
@@ -6538,6 +6588,40 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                                     </span>
                                 </div>
                             )}
+                            <div className={"w-px h-6 sm:h-8 flex-shrink-0 " + (
+                                activeTheme === 'dark' ? 'bg-[#3d3d3f]' : activeTheme === 'light' ? 'bg-gray-200' : currentTheme.border
+                            )} />
+                            <button
+                                onClick={() => setShowReverifyConfirm(true)}
+                                disabled={!canEdit || isReverifying || researchSessions.length === 0}
+                                className={
+                                    "flex items-center justify-center sm:justify-start gap-0 sm:gap-2 px-2.5 sm:px-4 py-2.5 rounded-full text-sm font-medium border transition-all " +
+                                    (canEdit
+                                        ? (isDarkMode
+                                            ? 'bg-[#1d1d1f] border-[#3d3d3f]/80 text-[#e5e5ea] hover:bg-[#2d2d2f]'
+                                            : 'bg-white border-gray-200 text-gray-900 hover:bg-gray-50')
+                                        : (isDarkMode
+                                            ? 'bg-[#1d1d1f] border-[#3d3d3f]/40 text-[#636366] cursor-not-allowed opacity-70'
+                                            : 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed opacity-70'))
+                                }
+                                title="Reverify this project's research against the latest web data"
+                                aria-label="Reverify project research"
+                            >
+                                <svg
+                                    className={"w-4 h-4 " + (isReverifying ? 'animate-spin' : '')}
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth="2"
+                                        d="M4 4v5h4M20 20v-5h-4M5 19a7 7 0 0012-5M19 5a7 7 0 00-12 5"
+                                    />
+                                </svg>
+                                <span className="hidden sm:inline">{isReverifying ? 'Reverifying…' : 'Reverify'}</span>
+                            </button>
                             <div className={"w-px h-6 sm:h-8 flex-shrink-0 " + (
                                 activeTheme === 'dark' ? 'bg-[#3d3d3f]' : activeTheme === 'light' ? 'bg-gray-200' : currentTheme.border
                             )} />
@@ -6720,37 +6804,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                                 </svg>
                                 <span>Suggestions</span>
                             </button>
-                            <button
-                                onClick={handleReverifyProject}
-                                disabled={!canEdit || isReverifying || researchSessions.length === 0}
-                                className={
-                                    "flex items-center justify-center sm:justify-start gap-0 sm:gap-2 px-2.5 sm:px-4 py-2.5 rounded-full text-sm font-medium border transition-all " +
-                                    (canEdit
-                                        ? (isDarkMode
-                                            ? 'bg-[#1d1d1f] border-[#3d3d3f]/80 text-[#e5e5ea] hover:bg-[#2d2d2f]'
-                                            : 'bg-white border-gray-200 text-gray-900 hover:bg-gray-50')
-                                        : (isDarkMode
-                                            ? 'bg-[#1d1d1f] border-[#3d3d3f]/40 text-[#636366] cursor-not-allowed opacity-70'
-                                            : 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed opacity-70'))
-                                }
-                                title="Reverify this project's research against the latest web data"
-                                aria-label="Reverify project research"
-                            >
-                                <svg
-                                    className={"w-4 h-4 " + (isReverifying ? 'animate-spin' : '')}
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth="2"
-                                        d="M4 4v5h4M20 20v-5h-4M5 19a7 7 0 0012-5M19 5a7 7 0 00-12 5"
-                                    />
-                                </svg>
-                                <span className="hidden sm:inline">{isReverifying ? 'Reverifying…' : 'Reverify'}</span>
-                            </button>
+
                             <button
                                 onClick={() => {
                                     if (!canEdit) return;
@@ -6767,7 +6821,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                             </button>
 
                             {showNewMenu && canEdit && (
-                                <div className="absolute right-0 top-full mt-2 z-20">
+                                <div className="absolute right-0 top-full mt-2 z-50">
                                     <div
                                         className={
                                             "min-w-[190px] rounded-2xl border shadow-lg backdrop-blur-xl " +
@@ -6847,8 +6901,9 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                                                 type="button"
                                                 onClick={() => {
                                                     setShowNewMenu(false);
-                                                    setAssetsInitialFilter('images');
+                                                    setCurrentAssetsFilter(['images']);
                                                     setActiveTab('assets');
+                                                    setAssetsInitialFocus('image');
                                                 }}
                                                 className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${activeTheme === 'dark'
                                                     ? 'hover:bg-white/10 hover:text-white'
@@ -6869,8 +6924,9 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                                                 type="button"
                                                 onClick={() => {
                                                     setShowNewMenu(false);
-                                                    setAssetsInitialFilter('podcasts');
+                                                    setCurrentAssetsFilter(['podcasts']);
                                                     setActiveTab('assets');
+                                                    setAssetsInitialFocus('podcast');
                                                 }}
                                                 className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${activeTheme === 'dark'
                                                     ? 'hover:bg-white/10 hover:text-white'
@@ -6891,8 +6947,9 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                                                 type="button"
                                                 onClick={() => {
                                                     setShowNewMenu(false);
-                                                    setAssetsInitialFilter('videos');
+                                                    setCurrentAssetsFilter(['videos']);
                                                     setActiveTab('assets');
+                                                    setAssetsInitialFocus('video');
                                                 }}
                                                 className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${activeTheme === 'dark'
                                                     ? 'hover:bg-white/10 hover:text-white'
@@ -6913,8 +6970,9 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                                                 type="button"
                                                 onClick={() => {
                                                     setShowNewMenu(false);
-                                                    setAssetsInitialFilter('blogs');
+                                                    setCurrentAssetsFilter(['blogs']);
                                                     setActiveTab('assets');
+                                                    setAssetsInitialFocus('blog');
                                                 }}
                                                 className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${activeTheme === 'dark'
                                                     ? 'hover:bg-white/10 hover:text-white'
@@ -6936,8 +6994,9 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                                                 type="button"
                                                 onClick={() => {
                                                     setShowNewMenu(false);
-                                                    setAssetsInitialFilter('tables');
+                                                    setCurrentAssetsFilter(['tables']);
                                                     setActiveTab('assets');
+                                                    setAssetsInitialFocus('table');
                                                 }}
                                                 className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${activeTheme === 'dark'
                                                     ? 'hover:bg-white/10 hover:text-white'
@@ -6958,8 +7017,9 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                                                 type="button"
                                                 onClick={() => {
                                                     setShowNewMenu(false);
-                                                    setAssetsInitialFilter('forms');
+                                                    setCurrentAssetsFilter(['forms']);
                                                     setActiveTab('assets');
+                                                    setAssetsInitialFocus('form');
                                                 }}
                                                 className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${activeTheme === 'dark'
                                                     ? 'hover:bg-white/10 hover:text-white'
@@ -6980,8 +7040,9 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                                                 type="button"
                                                 onClick={() => {
                                                     setShowNewMenu(false);
-                                                    setAssetsInitialFilter('products');
+                                                    setCurrentAssetsFilter(['products']);
                                                     setActiveTab('assets');
+                                                    setAssetsInitialFocus('product');
                                                 }}
                                                 className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${activeTheme === 'dark'
                                                     ? 'hover:bg-white/10 hover:text-white'
@@ -6996,6 +7057,74 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                                                     </svg>
                                                 </span>
                                                 <span>Product</span>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setShowNewMenu(false);
+                                                    setCurrentAssetsFilter(['books']);
+                                                    setActiveTab('assets');
+                                                    setAssetsInitialFocus('book');
+                                                }}
+                                                className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${activeTheme === 'dark'
+                                                    ? 'hover:bg-white/10 hover:text-white'
+                                                    : activeTheme === 'light'
+                                                        ? 'hover:bg-gray-100 hover:text-gray-900'
+                                                        : `${currentTheme.hoverBg} hover:${currentTheme.text}`
+                                                    }`}
+                                            >
+                                                <span className="w-5 h-5 rounded-full bg-red-500/10 flex items-center justify-center text-red-500">
+                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                                    </svg>
+                                                </span>
+                                                <span>PDF</span>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setShowNewMenu(false);
+                                                    setActiveTab('email');
+                                                    setEmailInitialFocus(true);
+                                                }}
+                                                className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${activeTheme === 'dark'
+                                                    ? 'hover:bg-white/10 hover:text-white'
+                                                    : activeTheme === 'light'
+                                                        ? 'hover:bg-gray-100 hover:text-gray-900'
+                                                        : `${currentTheme.hoverBg} hover:${currentTheme.text}`
+                                                    }`}
+                                            >
+                                                <span className="w-5 h-5 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
+                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                                    </svg>
+                                                </span>
+                                                <span>Email</span>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setShowNewMenu(false);
+                                                    setCurrentAssetsFilter(['worlds']);
+                                                    setActiveTab('assets');
+                                                    setAssetsInitialFocus('world');
+                                                }}
+                                                className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${activeTheme === 'dark'
+                                                    ? 'hover:bg-white/10 hover:text-white'
+                                                    : activeTheme === 'light'
+                                                        ? 'hover:bg-gray-100 hover:text-gray-900'
+                                                        : `${currentTheme.hoverBg} hover:${currentTheme.text}`
+                                                    }`}
+                                            >
+                                                <span className="w-5 h-5 rounded-full bg-purple-500/10 flex items-center justify-center text-purple-500">
+                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                                                    </svg>
+                                                </span>
+                                                <span>World</span>
                                             </button>
                                         </div>
                                     </div>
@@ -7098,7 +7227,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                             onDrop={handleTabDrop}
                             onClick={() => {
                                 if (tab.id === 'assets') {
-                                    setAssetsInitialFilter('all');
+                                    setAssetsInitialFilter(['all']);
                                 }
                                 setActiveTab(tab.id);
                             }}
@@ -7114,7 +7243,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                         >
                             {tab.icon}
                             <span className="hidden sm:inline">{tab.label}</span>
-                            {tab.count !== undefined && tab.count > 0 && (
+                            {tab.count !== undefined && tab.count > 0 && tab.id !== 'social' && (
                                 <span
                                     className={`hidden sm:inline-flex text-xs px-1.5 py-0.5 rounded-full ${activeTab === tab.id
                                         ? 'bg-white/20 text-white'
@@ -7134,157 +7263,331 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
 
                 {
                     activeTab === 'overview' && (
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-6">
-
-                            {/* Mobile Only: Draft Research Topics (Order 2, below stats) */}
-                            <div className="order-last lg:hidden mb-6">
-                                {draftsSection}
+                        <>
+                            {/* Mobile Sub-tabs Header */}
+                            <div className={`lg:hidden sticky top-0 z-20 -mx-4 px-4 py-2 mb-4 backdrop-blur-xl border-b transition-colors ${activeTheme === 'dark'
+                                ? 'bg-[#000000]/80 border-[#3d3d3f]/60'
+                                : activeTheme === 'light'
+                                    ? 'bg-white/80 border-gray-200'
+                                    : `${currentTheme.bgSecondary}/90 ${currentTheme.border}`
+                                }`}>
+                                <div className="flex items-center justify-between gap-1 p-1 rounded-lg bg-black/5 dark:bg-white/5">
+                                    {(['focus', 'research', 'news'] as const).map((tab) => (
+                                        <button
+                                            key={tab}
+                                            onClick={() => setActiveOverviewTab(tab)}
+                                            className={`flex-1 py-1.5 px-3 rounded-md text-xs font-semibold capitalize transition-all ${activeOverviewTab === tab
+                                                ? (activeTheme === 'dark' || activeTheme === 'light' ? 'bg-[#0071e3] text-white shadow-sm' : `${currentTheme.primary} text-white shadow-sm`)
+                                                : (activeTheme === 'dark' ? 'text-[#86868b] hover:text-white' : activeTheme === 'light' ? 'text-gray-500 hover:text-gray-900' : `${currentTheme.textSecondary} hover:${currentTheme.text}`)
+                                                }`}
+                                        >
+                                            {tab}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
 
-                            {/* Research Library column (span both rows on desktop) */}
-                            <div className="order-3 lg:order-2 lg:col-span-2 lg:row-span-2 space-y-5 lg:space-y-6">
-                                <section>
-                                    <h2 className={`text-base sm:text-lg font-semibold mb-4 flex items-center gap-2 ${activeTheme === 'dark'
-                                        ? 'text-white'
-                                        : activeTheme === 'light'
-                                            ? 'text-gray-900'
-                                            : currentTheme.text
-                                        }`}>
-                                        <svg className={`w-5 h-5 ${activeTheme === 'dark' || activeTheme === 'light' ? 'text-[#0071e3]' : currentTheme.accent}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                                        </svg>
-                                        Research Library
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-6">
+
+                                {/* Mobile Only: Draft Research Topics (Order 2, below stats) - Show in Research Tab */}
+                                <div className={`order-last lg:hidden mb-6 ${activeOverviewTab === 'research' ? 'block' : 'hidden'}`}>
+                                    {draftsSection}
+                                </div>
+
+                                {/* Research Library column - Show in Research Tab on Mobile */}
+                                <div className={`order-3 lg:order-2 lg:col-span-2 lg:row-span-2 space-y-5 lg:space-y-6 ${activeOverviewTab === 'research' ? 'block' : 'hidden lg:block'}`}>
+                                    <section>
+                                        <h2 className={`text-base sm:text-lg font-semibold mb-4 flex items-center gap-2 ${activeTheme === 'dark'
+                                            ? 'text-white'
+                                            : activeTheme === 'light'
+                                                ? 'text-gray-900'
+                                                : currentTheme.text
+                                            }`}>
+                                            <svg className={`w-5 h-5 ${activeTheme === 'dark' || activeTheme === 'light' ? 'text-[#0071e3]' : currentTheme.accent}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                            </svg>
+                                            Research Library
+                                            {researchSessions.length > 0 && (
+                                                <span className={`text-xs px-2 py-0.5 rounded-full ${activeTheme === 'dark' || activeTheme === 'light' ? 'bg-[#0071e3]/20 text-[#0071e3]' : `${currentTheme.primary}/20 ${currentTheme.accent}`}`}>
+                                                    {researchSessions.length}
+                                                </span>
+                                            )}
+                                        </h2>
                                         {researchSessions.length > 0 && (
-                                            <span className={`text-xs px-2 py-0.5 rounded-full ${activeTheme === 'dark' || activeTheme === 'light' ? 'bg-[#0071e3]/20 text-[#0071e3]' : `${currentTheme.primary}/20 ${currentTheme.accent}`}`}>
-                                                {researchSessions.length}
-                                            </span>
-                                        )}
-                                    </h2>
-                                    {researchSessions.length > 0 && (
-                                        <div className="mb-4 space-y-3">
-                                            <div className="w-full">
-                                                <input
-                                                    type="text"
-                                                    value={researchSearch}
-                                                    onChange={e => setResearchSearch(e.target.value)}
-                                                    placeholder="Search by topic, summary, sources, or labels (e.g. competitive, market sizing)"
-                                                    className={`w-full rounded-full px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0071e3] focus:border-transparent ${activeTheme === 'dark'
-                                                        ? 'bg-[#111111] border border-[#3d3d3f]/60 text-white placeholder:text-[#636366]'
-                                                        : activeTheme === 'light'
-                                                            ? 'bg-white border border-gray-300 text-gray-900 placeholder:text-gray-500'
-                                                            : `${currentTheme.cardBg} border ${currentTheme.border} ${currentTheme.text} placeholder:${currentTheme.textSecondary}`
-                                                        }`}
-                                                />
-                                            </div>
-                                            <div className="flex items-stretch gap-3 overflow-x-auto pb-1 -mx-1 px-1 text-xs sm:text-sm">
-                                                <div className="flex items-center gap-2 flex-shrink-0">
-                                                    <select
-                                                        aria-label="Category"
-                                                        value={categoryFilter}
-                                                        onChange={e => setCategoryFilter(e.target.value)}
-                                                        className={`rounded-full px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#0071e3] ${isDarkMode ? 'bg-[#111111] border border-[#3d3d3f]/60 text-white' : 'bg-white border border-gray-300 text-gray-900'}`}
-                                                    >
-                                                        <option value="all">All</option>
-                                                        {categoryOptions.map(cat => (
-                                                            <option key={cat} value={cat}>{cat}</option>
-                                                        ))}
-                                                    </select>
+                                            <div className="mb-4 space-y-3">
+                                                <div className="w-full">
+                                                    <input
+                                                        type="text"
+                                                        value={researchSearch}
+                                                        onChange={e => setResearchSearch(e.target.value)}
+                                                        placeholder="Search by topic, summary, sources, or labels (e.g. competitive, market sizing)"
+                                                        className={`w-full rounded-full px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#0071e3] focus:border-transparent ${activeTheme === 'dark'
+                                                            ? 'bg-[#111111] border border-[#3d3d3f]/60 text-white placeholder:text-[#636366]'
+                                                            : activeTheme === 'light'
+                                                                ? 'bg-white border border-gray-300 text-gray-900 placeholder:text-gray-500'
+                                                                : `${currentTheme.cardBg} border ${currentTheme.border} ${currentTheme.text} placeholder:${currentTheme.textSecondary}`
+                                                            }`}
+                                                    />
                                                 </div>
-                                                <div className="flex items-center gap-2 flex-shrink-0">
-                                                    <div className={`flex items-center gap-1 rounded-full px-2 py-1.5 ${activeTheme === 'dark'
-                                                        ? 'bg-[#111111] border border-[#3d3d3f]/60'
-                                                        : activeTheme === 'light'
-                                                            ? 'bg-white border border-gray-300'
-                                                            : `${currentTheme.cardBg} border ${currentTheme.border}`
-                                                        }`}>
-                                                        {(['all', 'fresh', 'stale'] as const).map(option => (
-                                                            <button
-                                                                key={option}
-                                                                type="button"
-                                                                aria-label={`Show ${option} sessions`}
-                                                                onClick={() => setStaleFilter(option)}
-                                                                className={`px-2 py-0 rounded-full capitalize ${staleFilter === option
-                                                                    ? (activeTheme === 'dark' || activeTheme === 'light' ? 'bg-[#0071e3] text-white' : `${currentTheme.primary} text-white`)
-                                                                    : activeTheme === 'dark'
-                                                                        ? 'text-[#86868b] hover:text-white'
-                                                                        : activeTheme === 'light'
-                                                                            ? 'text-gray-600 hover:text-gray-900'
-                                                                            : `${currentTheme.textSecondary} hover:${currentTheme.text}`
-                                                                    }`}
-                                                            >
-                                                                {option}
-                                                            </button>
-                                                        ))}
+                                                <div className="flex items-stretch gap-3 overflow-x-auto pb-1 -mx-1 px-1 text-xs sm:text-sm">
+                                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                                        <select
+                                                            aria-label="Category"
+                                                            value={categoryFilter}
+                                                            onChange={e => setCategoryFilter(e.target.value)}
+                                                            className={`rounded-full px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#0071e3] ${isDarkMode ? 'bg-[#111111] border border-[#3d3d3f]/60 text-white' : 'bg-white border border-gray-300 text-gray-900'}`}
+                                                        >
+                                                            <option value="all">All</option>
+                                                            {categoryOptions.map(cat => (
+                                                                <option key={cat} value={cat}>{cat}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                                        <div className={`flex items-center gap-1 rounded-full px-2 py-1.5 ${activeTheme === 'dark'
+                                                            ? 'bg-[#111111] border border-[#3d3d3f]/60'
+                                                            : activeTheme === 'light'
+                                                                ? 'bg-white border border-gray-300'
+                                                                : `${currentTheme.cardBg} border ${currentTheme.border}`
+                                                            }`}>
+                                                            {(['all', 'fresh', 'stale'] as const).map(option => (
+                                                                <button
+                                                                    key={option}
+                                                                    type="button"
+                                                                    aria-label={`Show ${option} sessions`}
+                                                                    onClick={() => setStaleFilter(option)}
+                                                                    className={`px-2 py-0 rounded-full capitalize ${staleFilter === option
+                                                                        ? (activeTheme === 'dark' || activeTheme === 'light' ? 'bg-[#0071e3] text-white' : `${currentTheme.primary} text-white`)
+                                                                        : activeTheme === 'dark'
+                                                                            ? 'text-[#86868b] hover:text-white'
+                                                                            : activeTheme === 'light'
+                                                                                ? 'text-gray-600 hover:text-gray-900'
+                                                                                : `${currentTheme.textSecondary} hover:${currentTheme.text}`
+                                                                        }`}
+                                                                >
+                                                                    {option}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                                        <span className="uppercase tracking-wider whitespace-nowrap">Date</span>
+                                                        <input
+                                                            type="date"
+                                                            value={dateFrom}
+                                                            onChange={e => setDateFrom(e.target.value)}
+                                                            className={`rounded-full px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#0071e3] ${activeTheme === 'dark'
+                                                                ? 'bg-[#111111] border border-[#3d3d3f]/60 text-white'
+                                                                : activeTheme === 'light'
+                                                                    ? 'bg-white border border-gray-300 text-gray-900'
+                                                                    : `${currentTheme.cardBg} border ${currentTheme.border} ${currentTheme.text}`
+                                                                }`}
+                                                        />
+                                                        <span className={activeTheme === 'dark' ? 'text-[#3d3d3f]' : activeTheme === 'light' ? 'text-gray-400' : currentTheme.textSecondary}>–</span>
+                                                        <input
+                                                            type="date"
+                                                            value={dateTo}
+                                                            onChange={e => setDateTo(e.target.value)}
+                                                            className={`rounded-full px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#0071e3] ${activeTheme === 'dark'
+                                                                ? 'bg-[#111111] border border-[#3d3d3f]/60 text-white'
+                                                                : activeTheme === 'light'
+                                                                    ? 'bg-white border border-gray-300 text-gray-900'
+                                                                    : `${currentTheme.cardBg} border ${currentTheme.border} ${currentTheme.text}`
+                                                                }`}
+                                                        />
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-2 flex-shrink-0">
-                                                    <span className="uppercase tracking-wider whitespace-nowrap">Date</span>
-                                                    <input
-                                                        type="date"
-                                                        value={dateFrom}
-                                                        onChange={e => setDateFrom(e.target.value)}
-                                                        className={`rounded-full px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#0071e3] ${activeTheme === 'dark'
-                                                            ? 'bg-[#111111] border border-[#3d3d3f]/60 text-white'
-                                                            : activeTheme === 'light'
-                                                                ? 'bg-white border border-gray-300 text-gray-900'
-                                                                : `${currentTheme.cardBg} border ${currentTheme.border} ${currentTheme.text}`
-                                                            }`}
-                                                    />
-                                                    <span className={activeTheme === 'dark' ? 'text-[#3d3d3f]' : activeTheme === 'light' ? 'text-gray-400' : currentTheme.textSecondary}>–</span>
-                                                    <input
-                                                        type="date"
-                                                        value={dateTo}
-                                                        onChange={e => setDateTo(e.target.value)}
-                                                        className={`rounded-full px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#0071e3] ${activeTheme === 'dark'
-                                                            ? 'bg-[#111111] border border-[#3d3d3f]/60 text-white'
-                                                            : activeTheme === 'light'
-                                                                ? 'bg-white border border-gray-300 text-gray-900'
-                                                                : `${currentTheme.cardBg} border ${currentTheme.border} ${currentTheme.text}`
-                                                            }`}
-                                                    />
-                                                </div>
                                             </div>
-                                        </div>
-                                    )}
+                                        )}
 
-                                    {researchSessions.length === 0 ? (
-                                        <div className={`rounded-2xl sm:rounded-3xl p-10 sm:p-12 text-center ${isDarkMode ? 'bg-[#1d1d1f] border border-[#3d3d3f]/50' : 'bg-white border border-gray-200'}`}>
-                                            <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center ${isDarkMode ? 'bg-[#2d2d2f]' : 'bg-gray-100'}`}>
-                                                <svg className={`w-8 h-8 ${isDarkMode ? 'text-[#424245]' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                                                </svg>
-                                            </div>
-                                            <h3 className={`text-lg font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>No research yet</h3>
-                                            <p className={`text-sm mb-4 ${isDarkMode ? 'text-[#86868b]' : 'text-gray-600'}`}>Start by clicking a suggested topic above</p>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-3">
-                                            {filteredResearchSessions.length === 0 && (
-                                                <div className={`rounded-2xl p-6 text-center text-sm ${isDarkMode ? 'bg-[#1d1d1f] border border-[#3d3d3f]/50 text-[#86868b]' : 'bg-white border border-gray-200 text-gray-600'}`}>
-                                                    No research matches your filters.
+                                        {researchSessions.length === 0 ? (
+                                            <div className={`rounded-2xl sm:rounded-3xl p-10 sm:p-12 text-center ${isDarkMode ? 'bg-[#1d1d1f] border border-[#3d3d3f]/50' : 'bg-white border border-gray-200'}`}>
+                                                <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center ${isDarkMode ? 'bg-[#2d2d2f]' : 'bg-gray-100'}`}>
+                                                    <svg className={`w-8 h-8 ${isDarkMode ? 'text-[#424245]' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                                    </svg>
                                                 </div>
-                                            )}
-                                            {filteredResearchSessions.map(session => {
-                                                const report = session.researchReport;
+                                                <h3 className={`text-lg font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>No research yet</h3>
+                                                <p className={`text-sm mb-4 ${isDarkMode ? 'text-[#86868b]' : 'text-gray-600'}`}>Start by clicking a suggested topic above</p>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {filteredResearchSessions.length === 0 && (
+                                                    <div className={`rounded-2xl p-6 text-center text-sm ${isDarkMode ? 'bg-[#1d1d1f] border border-[#3d3d3f]/50 text-[#86868b]' : 'bg-white border border-gray-200 text-gray-600'}`}>
+                                                        No research matches your filters.
+                                                    </div>
+                                                )}
+                                                {filteredResearchSessions.map(session => {
+                                                    const report = session.researchReport;
 
-                                                // Handle sessions without full report data
-                                                if (!report) {
+                                                    // Handle sessions without full report data
+                                                    if (!report) {
+                                                        const sessionIsStale = isSessionStale(session);
+                                                        const hasSummary = (session as any).summary || (session as any).tldr;
+
+                                                        return (
+                                                            <div
+                                                                key={session.id}
+                                                                className={`group rounded-xl sm:rounded-2xl p-4 sm:p-5 transition-all duration-200 ${isDarkMode ? 'bg-[#1d1d1f]' : 'bg-white'
+                                                                    } border ${sessionIsStale ? 'border-[#ff9f0a]/30' : isDarkMode ? 'border-[#3d3d3f]/50' : 'border-gray-200'
+                                                                    }`}
+                                                            >
+                                                                <div className="flex justify-between items-start">
+                                                                    <div className="flex-1 pr-4 min-w-0">
+                                                                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                                                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-[#ff9f0a]/20 text-[#ff9f0a]">
+                                                                                Incomplete Data
+                                                                            </span>
+                                                                            {sessionIsStale && (
+                                                                                <span className="text-[10px] px-2 py-0.5 bg-[#ff9f0a]/20 text-[#ff9f0a] rounded">
+                                                                                    Stale
+                                                                                </span>
+                                                                            )}
+                                                                            <span className={`text-xs ${isDarkMode ? 'text-[#636366]' : 'text-gray-500'}`}>
+                                                                                {new Date(session.timestamp).toLocaleDateString()}
+                                                                            </span>
+                                                                        </div>
+                                                                        <h3 className={`font-semibold text-base sm:text-lg mb-1 truncate ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                                                            {session.topic}
+                                                                        </h3>
+                                                                        <p className={`text-sm line-clamp-2 mb-3 ${isDarkMode ? 'text-[#86868b]' : 'text-gray-600'}`}>
+                                                                            {hasSummary ? ((session as any).summary || (session as any).tldr) : 'This research session is missing full report data. It may not have been saved correctly.'}
+                                                                        </p>
+                                                                        <div className="flex gap-2">
+                                                                            <button
+                                                                                onClick={() => onLoadResearch(session)}
+                                                                                className={`px-3 py-1.5 text-white text-xs rounded-lg transition-colors flex items-center gap-1 ${activeTheme === 'dark' || activeTheme === 'light' ? 'bg-[#0071e3] hover:bg-[#0077ed]' : `${currentTheme.primary} ${currentTheme.primaryHover}`}`}
+                                                                            >
+                                                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                                                </svg>
+                                                                                View Anyway
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    if (confirm('This will delete this incomplete research session. Continue?')) {
+                                                                                        handleDeleteResearch(e, session.id);
+                                                                                    }
+                                                                                }}
+                                                                                className="px-3 py-1.5 bg-[#ff453a]/10 hover:bg-[#ff453a]/20 text-[#ff453a] text-xs rounded-lg transition-colors flex items-center gap-1"
+                                                                            >
+                                                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                                </svg>
+                                                                                Delete
+                                                                            </button>
+                                                                        </div>
+
+                                                                        {/* Post Mode Selector - only show for file uploads */}
+                                                                        {(tiktokVideoSource === 'UPLOAD' || tiktokVideoSource === 'ASSET') && (
+                                                                            <div className="flex items-center gap-2 mb-2">
+                                                                                <span className={`text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Post Mode:</span>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => setTiktokVideoPostMode('direct')}
+                                                                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${tiktokVideoPostMode === 'direct'
+                                                                                        ? (isDarkMode ? 'bg-emerald-600 text-white' : 'bg-emerald-600 text-white')
+                                                                                        : (isDarkMode ? 'bg-white/5 text-gray-400 hover:text-white' : 'bg-white text-gray-600 hover:text-gray-900 border border-gray-200')
+                                                                                        }`}
+                                                                                >
+                                                                                    Direct Post
+                                                                                </button>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => setTiktokVideoPostMode('inbox')}
+                                                                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${tiktokVideoPostMode === 'inbox'
+                                                                                        ? (activeTheme === 'dark' || activeTheme === 'light' ? 'bg-blue-600 text-white' : `${currentTheme.primary} text-white`)
+                                                                                        : (isDarkMode ? 'bg-white/5 text-gray-400 hover:text-white' : 'bg-white text-gray-600 hover:text-gray-900 border border-gray-200')
+                                                                                        }`}
+                                                                                >
+                                                                                    Inbox/Draft
+                                                                                </button>
+                                                                                <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                                                                                    {tiktokVideoPostMode === 'direct' ? '(Posts immediately)' : '(Review in TikTok app)'}
+                                                                                </span>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    }
+
+                                                    const theme = report.theme;
+                                                    const reportActiveTheme = theme ? (isDarkMode ? theme.dark : theme.light) : undefined;
+                                                    const headerImage = report.headerImageUrl;
+                                                    const category = report.category || 'Research';
+                                                    const sourceCount = report.sources?.length || 0;
+                                                    const wizaProfiles = (report as any)?.wizaProspects?.data?.profiles;
+                                                    const leadCount = Array.isArray(wizaProfiles) ? wizaProfiles.length : 0;
                                                     const sessionIsStale = isSessionStale(session);
-                                                    const hasSummary = (session as any).summary || (session as any).tldr;
 
                                                     return (
                                                         <div
                                                             key={session.id}
-                                                            className={`group rounded-xl sm:rounded-2xl p-4 sm:p-5 transition-all duration-200 ${isDarkMode ? 'bg-[#1d1d1f]' : 'bg-white'
-                                                                } border ${sessionIsStale ? 'border-[#ff9f0a]/30' : isDarkMode ? 'border-[#3d3d3f]/50' : 'border-gray-200'
+                                                            onClick={() => onLoadResearch(session)}
+                                                            className={`group border rounded-xl sm:rounded-2xl p-4 sm:p-5 cursor-pointer transition-all duration-200 relative overflow-hidden ${activeTheme === 'dark'
+                                                                ? 'bg-[#1d1d1f] hover:border-[#0071e3]/50'
+                                                                : activeTheme === 'light'
+                                                                    ? 'bg-white hover:border-[#0071e3]/50'
+                                                                    : `${currentTheme.cardBg} hover:${currentTheme.ring.replace('ring-', 'border-')}/50`
+                                                                } ${sessionIsStale ? 'border-[#ff9f0a]/30' : activeTheme === 'dark' ? 'border-[#3d3d3f]/50' : activeTheme === 'light' ? 'border-gray-200' : currentTheme.border
                                                                 }`}
+                                                            style={reportActiveTheme ? {
+                                                                backgroundColor: reportActiveTheme.surface,
+                                                                borderColor: reportActiveTheme.secondary
+                                                            } : {}}
                                                         >
-                                                            <div className="flex justify-between items-start">
+                                                            {headerImage && (
+                                                                <div className="absolute inset-0 z-0 pointer-events-none">
+                                                                    <div
+                                                                        className="absolute inset-0 bg-cover bg-center opacity-15 group-hover:opacity-25 transition-opacity"
+                                                                        style={{
+                                                                            backgroundImage: `url(${headerImage})`,
+                                                                            maskImage: 'linear-gradient(to left, rgba(0,0,0,1) 0%, transparent 70%)',
+                                                                            WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,1) 0%, transparent 70%)'
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                            )}
+
+                                                            <div className="relative z-10 flex justify-between items-start">
                                                                 <div className="flex-1 pr-4 min-w-0">
                                                                     <div className="flex items-center gap-2 mb-2 flex-wrap">
-                                                                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider bg-[#ff9f0a]/20 text-[#ff9f0a]">
-                                                                            Incomplete Data
+                                                                        <span
+                                                                            className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${activeTheme === 'dark' || activeTheme === 'light' ? 'bg-[#0071e3]/20 text-[#0071e3]' : `${currentTheme.bgSecondary} ${currentTheme.accent}`}`}
+                                                                            style={reportActiveTheme ? { backgroundColor: reportActiveTheme.primary + '33', color: reportActiveTheme.primary } : {}}
+                                                                        >
+                                                                            {category}
                                                                         </span>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                if (sourceCount > 0 && report.sources) {
+                                                                                    openSourcesModal(`Sources for "${session.topic}"`, report.sources);
+                                                                                }
+                                                                            }}
+                                                                            className={`text-[10px] px-2 py-0.5 rounded inline-flex items-center gap-1 ${isDarkMode ? 'bg-[#2d2d2f] text-[#86868b]' : 'bg-gray-100 text-gray-600'
+                                                                                } ${sourceCount === 0 ? 'opacity-60 cursor-default' : 'hover:bg-[#0071e3]/10 cursor-pointer'}`}
+                                                                        >
+                                                                            {sourceCount} sources
+                                                                        </button>
+                                                                        {leadCount > 0 && (
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    openLeadsModal(`Leads for "${session.topic}"`, (report as any)?.wizaProspects);
+                                                                                }}
+                                                                                className={`text-[10px] px-2 py-0.5 rounded inline-flex items-center gap-1 ${isDarkMode ? 'bg-[#2d2d2f] text-[#86868b]' : 'bg-gray-100 text-gray-600'
+                                                                                    } hover:bg-[#bf5af2]/10 cursor-pointer`}
+                                                                            >
+                                                                                {leadCount} leads
+                                                                            </button>
+                                                                        )}
                                                                         {sessionIsStale && (
                                                                             <span className="text-[10px] px-2 py-0.5 bg-[#ff9f0a]/20 text-[#ff9f0a] rounded">
                                                                                 Stale
@@ -7294,825 +7597,1040 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                                                                             {new Date(session.timestamp).toLocaleDateString()}
                                                                         </span>
                                                                     </div>
-                                                                    <h3 className={`font-semibold text-base sm:text-lg mb-1 truncate ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                                                    <h3
+                                                                        className={`font-semibold text-base sm:text-lg mb-1 truncate transition-colors ${isDarkMode ? 'text-white' : 'text-gray-900'} ${activeTheme === 'dark' || activeTheme === 'light' ? 'group-hover:text-[#0071e3]' : ''}`}
+                                                                        style={reportActiveTheme ? { color: reportActiveTheme.primary } : {}}
+                                                                    >
                                                                         {session.topic}
                                                                     </h3>
-                                                                    <p className={`text-sm line-clamp-2 mb-3 ${isDarkMode ? 'text-[#86868b]' : 'text-gray-600'}`}>
-                                                                        {hasSummary ? ((session as any).summary || (session as any).tldr) : 'This research session is missing full report data. It may not have been saved correctly.'}
+                                                                    <p className={`text-sm line-clamp-2 ${isDarkMode ? 'text-[#86868b]' : 'text-gray-600'}`}>
+                                                                        {report.tldr}
                                                                     </p>
-                                                                    <div className="flex gap-2">
-                                                                        <button
-                                                                            onClick={() => onLoadResearch(session)}
-                                                                            className={`px-3 py-1.5 text-white text-xs rounded-lg transition-colors flex items-center gap-1 ${activeTheme === 'dark' || activeTheme === 'light' ? 'bg-[#0071e3] hover:bg-[#0077ed]' : `${currentTheme.primary} ${currentTheme.primaryHover}`}`}
-                                                                        >
-                                                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                                            </svg>
-                                                                            View Anyway
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                if (confirm('This will delete this incomplete research session. Continue?')) {
-                                                                                    handleDeleteResearch(e, session.id);
-                                                                                }
-                                                                            }}
-                                                                            className="px-3 py-1.5 bg-[#ff453a]/10 hover:bg-[#ff453a]/20 text-[#ff453a] text-xs rounded-lg transition-colors flex items-center gap-1"
-                                                                        >
-                                                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                                            </svg>
-                                                                            Delete
-                                                                        </button>
+                                                                </div>
+
+                                                                <button
+                                                                    onClick={(e) => handleDeleteResearch(e, session.id)}
+                                                                    className={`opacity-0 group-hover:opacity-100 p-2 hover:text-[#ff453a] hover:bg-[#ff453a]/10 rounded-lg transition-all flex-shrink-0 ${isDarkMode ? 'text-[#86868b]' : 'text-gray-500'}`}
+                                                                >
+                                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                    </svg>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </section>
+                                </div>
+
+                                {/* Right column: top cards (Research in Progress, Focus Mode) */}
+                                <div className="order-1 lg:order-1 lg:col-start-3 lg:row-start-1 space-y-4 lg:space-y-5">
+                                    {/* Research in Progress - Show in Research Tab on Mobile */}
+                                    <div className={activeOverviewTab === 'research' ? 'block' : 'hidden lg:block'}>
+                                        {hasActiveResearchForThisProject && (
+                                            <div
+                                                role="button"
+                                                onClick={() => onStartResearch()}
+                                                className={`cursor-pointer rounded-2xl sm:rounded-3xl p-5 border transition-colors ${activeTheme === 'dark'
+                                                    ? 'bg-gradient-to-br from-[#0b1120] via-[#111827] to-[#020617] border-[#2563eb]/40 hover:border-[#3b82f6]'
+                                                    : activeTheme === 'light'
+                                                        ? 'bg-gradient-to-br from-blue-50 via-sky-50 to-indigo-50 border-blue-100 hover:border-blue-300'
+                                                        : `${currentTheme.cardBg} ${currentTheme.border} hover:shadow-md`
+                                                    }`}
+                                            >
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="relative flex h-3 w-3">
+                                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#22c55e] opacity-75" />
+                                                            <span className="relative inline-flex rounded-full h-3 w-3 bg-[#22c55e]" />
+                                                        </span>
+                                                        <h3
+                                                            className={`text-xs sm:text-sm font-semibold uppercase tracking-wider ${activeTheme === 'dark' ? 'text-[#a5b4fc]' : activeTheme === 'light' ? 'text-blue-700' : currentTheme.text
+                                                                }`}
+                                                        >
+                                                            Research in Progress
+                                                        </h3>
+                                                    </div>
+                                                    {project.activeResearchStartedAt && (
+                                                        <span
+                                                            className={`text-[10px] sm:text-xs ${activeTheme === 'dark' ? 'text-[#9ca3af]' : activeTheme === 'light' ? 'text-gray-500' : currentTheme.textSecondary
+                                                                }`}
+                                                        >
+                                                            Started {new Date(project.activeResearchStartedAt).toLocaleTimeString()}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p
+                                                    className={`text-sm sm:text-base font-medium line-clamp-2 ${activeTheme === 'dark' ? 'text-white' : activeTheme === 'light' ? 'text-gray-900' : currentTheme.text
+                                                        }`}
+                                                >
+                                                    {project.activeResearchTopic}
+                                                </p>
+                                                {visibleActiveLogs.length > 0 ? (
+                                                    <div
+                                                        className={`mt-3 rounded-xl border text-xs sm:text-[13px] overflow-hidden ${activeTheme === 'dark'
+                                                            ? 'border-[#1f2933] bg-black/40 text-[#e5e7eb]'
+                                                            : activeTheme === 'light'
+                                                                ? 'border-blue-100 bg-white/90 text-gray-700'
+                                                                : `${currentTheme.border} bg-white/50 ${currentTheme.textSecondary}`
+                                                            }`}
+                                                    >
+                                                        <div className="px-3 pt-2 pb-1 flex items-center justify-between">
+                                                            <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider">
+                                                                Live research log
+                                                            </span>
+                                                            <span className={`text-[10px] sm:text-[11px] ${activeTheme === 'dark' ? 'text-[#9ca3af]' : activeTheme === 'light' ? 'text-gray-500' : currentTheme.textSecondary
+                                                                }`}>
+                                                                Showing latest {visibleActiveLogs.length} step
+                                                                {visibleActiveLogs.length > 1 ? 's' : ''}
+                                                            </span>
+                                                        </div>
+                                                        <ul className="px-3 pb-2 space-y-1.5 max-h-28 overflow-y-auto">
+                                                            {visibleActiveLogs.map((entry, idx) => (
+                                                                <li key={idx} className="leading-snug line-clamp-2">
+                                                                    {entry}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                ) : (
+                                                    <p
+                                                        className={`mt-2 text-xs ${activeTheme === 'dark' ? 'text-[#9ca3af]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.textSecondary
+                                                            }`}
+                                                    >
+                                                        Gemini is still running this deep research in the background. You can keep working while it
+                                                        finishes.
+                                                    </p>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Focus Mode - Show in Focus Tab on Mobile */}
+                                    <div className={activeOverviewTab === 'focus' ? 'block' : 'hidden lg:block'}>
+                                        <div
+                                            className={`rounded-2xl sm:rounded-3xl p-5 border ${activeTheme === 'dark'
+                                                ? 'bg-gradient-to-br from-[#0071e3]/20 to-[#5ac8fa]/20 border-[#0071e3]/30'
+                                                : activeTheme === 'light'
+                                                    ? 'bg-gradient-to-br from-blue-50 via-sky-50 to-cyan-50 border-blue-100'
+                                                    : `${currentTheme.cardBg} ${currentTheme.border}`
+                                                }`}
+                                        >
+                                            <div className="flex items-center justify-between gap-3 mb-3">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-2 h-2 bg-[#0071e3] rounded-full animate-pulse" />
+                                                    <h3
+                                                        className={`text-sm font-semibold uppercase tracking-wider ${activeTheme === 'dark' ? 'text-[#5ac8fa]' : activeTheme === 'light' ? 'text-blue-600' : currentTheme.text
+                                                            }`}
+                                                    >
+                                                        Focus Mode
+                                                    </h3>
+                                                </div>
+
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (calendarLoading || calendarStatusLoading) return;
+                                                            handleRefreshCalendarWidget().catch(() => undefined);
+                                                        }}
+                                                        className={`p-2 rounded-full transition-colors ${activeTheme === 'dark'
+                                                            ? 'hover:bg-white/10 text-white/70'
+                                                            : activeTheme === 'light'
+                                                                ? 'hover:bg-white/70 text-gray-600'
+                                                                : `${currentTheme.hoverBg} ${currentTheme.textSecondary} hover:${currentTheme.text}`
+                                                            }`}
+                                                        title="Sync calendar"
+                                                        aria-label="Sync calendar"
+                                                        disabled={calendarLoading || calendarStatusLoading}
+                                                    >
+                                                        <svg
+                                                            className={`w-4 h-4 ${calendarLoading || calendarStatusLoading ? 'animate-spin' : ''}`}
+                                                            fill="none"
+                                                            stroke="currentColor"
+                                                            viewBox="0 0 24 24"
+                                                        >
+                                                            <path
+                                                                strokeLinecap="round"
+                                                                strokeLinejoin="round"
+                                                                strokeWidth={2}
+                                                                d="M4 4v6h6M20 20v-6h-6M20 10a8 8 0 00-14.906-3.09M4 14a8 8 0 0014.906 3.09"
+                                                            />
+                                                        </svg>
+                                                    </button>
+
+                                                    <div className="relative">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setShowAddMenu(!showAddMenu)}
+                                                            className={`p-2 rounded-full transition-colors ${activeTheme === 'dark' ? 'hover:bg-white/10 text-white/70' : activeTheme === 'light' ? 'hover:bg-white/70 text-gray-600' : `${currentTheme.hoverBg} ${currentTheme.textSecondary} hover:${currentTheme.text}`
+                                                                }`}
+                                                            title="Add..."
+                                                            aria-label="Add..."
+                                                        >
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                                            </svg>
+                                                        </button>
+
+                                                        {showAddMenu && (
+                                                            <>
+                                                                <div
+                                                                    className="fixed inset-0 z-10"
+                                                                    onClick={() => setShowAddMenu(false)}
+                                                                />
+                                                                <div className={`absolute right-0 mt-2 w-48 rounded-xl shadow-lg border z-20 overflow-hidden ${activeTheme === 'dark'
+                                                                    ? 'bg-[#1c1c1e] border-white/10'
+                                                                    : 'bg-white border-gray-200'
+                                                                    }`}>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setShowAddMenu(false);
+                                                                            const { start, end } = getDefaultScheduleInputs(calendarSelectedDay || new Date());
+                                                                            setNewEventTitle('');
+                                                                            setNewEventDescription('');
+                                                                            setNewEventStartLocal(start);
+                                                                            setNewEventEndLocal(end);
+                                                                            setNewEventAddMeet(true);
+                                                                            setIsCreateEventModalOpen(true);
+                                                                        }}
+                                                                        className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center gap-2 ${activeTheme === 'dark'
+                                                                            ? 'text-white hover:bg-white/5'
+                                                                            : 'text-gray-700 hover:bg-gray-50'
+                                                                            }`}
+                                                                    >
+                                                                        <svg className="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                                        </svg>
+                                                                        Add Event
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setShowAddMenu(false);
+                                                                            setIsQuickAddTaskModalOpen(true);
+                                                                        }}
+                                                                        className={`w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center gap-2 ${activeTheme === 'dark'
+                                                                            ? 'text-white hover:bg-white/5'
+                                                                            : 'text-gray-700 hover:bg-gray-50'
+                                                                            }`}
+                                                                    >
+                                                                        <svg className="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                                                                        </svg>
+                                                                        Add Task
+                                                                    </button>
+                                                                </div>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {inProgressCount > 0 && (
+                                                <div className="space-y-2">
+                                                    {tasks
+                                                        .filter(t => t.status === 'in_progress')
+                                                        .slice(0, 2)
+                                                        .map(task => (
+                                                            <div
+                                                                key={task.id}
+                                                                onClick={() => setActiveTab('tasks')}
+                                                                className={`p-3 rounded-xl border cursor-pointer hover:opacity-80 transition-opacity ${activeTheme === 'dark'
+                                                                    ? 'bg-[#0071e3]/10 border-[#0071e3]/20'
+                                                                    : activeTheme === 'light'
+                                                                        ? 'bg-white/70 border-blue-100'
+                                                                        : `${currentTheme.bgSecondary} ${currentTheme.border}`
+                                                                    }`}
+                                                            >
+                                                                <p className={`text-sm font-medium ${activeTheme === 'dark' ? 'text-white' : activeTheme === 'light' ? 'text-gray-900' : currentTheme.text
+                                                                    }`}>{task.title}</p>
+                                                                {task.description && (
+                                                                    <p
+                                                                        className={`text-xs mt-1 line-clamp-1 ${activeTheme === 'dark' ? 'text-[#5ac8fa]/70' : activeTheme === 'light' ? 'text-blue-600/70' : currentTheme.textSecondary
+                                                                            }`}
+                                                                    >
+                                                                        {task.description}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                </div>
+                                            )}
+
+                                            <div className={`mt-4 pt-4 border-t ${activeTheme === 'dark' ? 'border-white/10' : activeTheme === 'light' ? 'border-blue-100' : currentTheme.border
+                                                }`}>
+                                                <div className="flex items-center justify-between gap-2 mb-2">
+                                                    <div className={`text-xs font-semibold uppercase tracking-wider ${activeTheme === 'dark' ? 'text-white/70' : activeTheme === 'light' ? 'text-gray-700' : currentTheme.textSecondary
+                                                        }`}>
+                                                        Calendar
+                                                    </div>
+
+                                                    <div className="hidden sm:flex items-center gap-1">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const prev = new Date(calendarMonth);
+                                                                prev.setMonth(prev.getMonth() - 1);
+                                                                prev.setDate(1);
+                                                                prev.setHours(0, 0, 0, 0);
+                                                                setCalendarMonth(prev);
+                                                            }}
+                                                            className={`p-1.5 rounded ${activeTheme === 'dark' ? 'hover:bg-white/10 text-white/70' : activeTheme === 'light' ? 'hover:bg-white/70 text-gray-700' : `${currentTheme.hoverBg} ${currentTheme.textSecondary}`
+                                                                }`}
+                                                            aria-label="Previous month"
+                                                        >
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                                            </svg>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const next = new Date(calendarMonth);
+                                                                next.setMonth(next.getMonth() + 1);
+                                                                next.setDate(1);
+                                                                next.setHours(0, 0, 0, 0);
+                                                                setCalendarMonth(next);
+                                                            }}
+                                                            className={`p-1.5 rounded ${activeTheme === 'dark' ? 'hover:bg-white/10 text-white/70' : activeTheme === 'light' ? 'hover:bg-white/70 text-gray-700' : `${currentTheme.hoverBg} ${currentTheme.textSecondary}`
+                                                                }`}
+                                                            aria-label="Next month"
+                                                        >
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setCalendarMobileExpanded(v => !v)}
+                                                        className={`sm:hidden px-2.5 py-1.5 rounded-full text-[11px] font-medium transition-colors ${activeTheme === 'dark' ? 'bg-white/10 text-white/80' : activeTheme === 'light' ? 'bg-white/70 text-gray-800' : `${currentTheme.bgSecondary} ${currentTheme.text}`
+                                                            }`}
+                                                        aria-label={calendarMobileExpanded ? 'Collapse calendar' : 'Expand calendar'}
+                                                    >
+                                                        {calendarMobileExpanded ? 'Collapse' : 'Expand'}
+                                                    </button>
+                                                </div>
+
+                                                <div className={`sm:hidden text-[11px] mb-2 ${activeTheme === 'dark' ? 'text-white/70' : activeTheme === 'light' ? 'text-gray-700' : currentTheme.textSecondary
+                                                    }`}>
+                                                    {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+                                                </div>
+
+                                                <div className={`hidden sm:block text-xs mb-2 ${activeTheme === 'dark' ? 'text-white/80' : activeTheme === 'light' ? 'text-gray-800' : currentTheme.text
+                                                    }`}>
+                                                    {calendarMonth.toLocaleString(undefined, { month: 'long', year: 'numeric' })}
+                                                </div>
+
+                                                {calendarMobileExpanded && (
+                                                    <div className={`sm:hidden text-xs mb-2 ${isDarkMode ? 'text-white/80' : 'text-gray-800'}`}>
+                                                        {calendarMonth.toLocaleString(undefined, { month: 'long', year: 'numeric' })}
+                                                    </div>
+                                                )}
+
+                                                {calendarMobileExpanded && (
+                                                    <div className="sm:hidden flex items-center justify-end gap-1 mb-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const prev = new Date(calendarMonth);
+                                                                prev.setMonth(prev.getMonth() - 1);
+                                                                prev.setDate(1);
+                                                                prev.setHours(0, 0, 0, 0);
+                                                                setCalendarMonth(prev);
+                                                            }}
+                                                            className={`p-1.5 rounded ${activeTheme === 'dark' ? 'hover:bg-white/10 text-white/70' : activeTheme === 'light' ? 'hover:bg-white/70 text-gray-700' : `${currentTheme.hoverBg} ${currentTheme.textSecondary}`
+                                                                }`}
+                                                            aria-label="Previous month"
+                                                        >
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                                            </svg>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const next = new Date(calendarMonth);
+                                                                next.setMonth(next.getMonth() + 1);
+                                                                next.setDate(1);
+                                                                next.setHours(0, 0, 0, 0);
+                                                                setCalendarMonth(next);
+                                                            }}
+                                                            className={`p-1.5 rounded ${activeTheme === 'dark' ? 'hover:bg-white/10 text-white/70' : activeTheme === 'light' ? 'hover:bg-white/70 text-gray-700' : `${currentTheme.hoverBg} ${currentTheme.textSecondary}`
+                                                                }`}
+                                                            aria-label="Next month"
+                                                        >
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                )}
+
+                                                {calendarError && (
+                                                    <div className={`mb-2 text-[11px] ${isDarkMode ? 'text-red-200' : 'text-red-700'}`}>{calendarError}</div>
+                                                )}
+
+                                                {/* Always show calendar (for scheduled posts), show Google connection option if not connected */}
+                                                <div>
+                                                    {(() => {
+                                                        const monthStart = new Date(calendarMonth);
+                                                        monthStart.setDate(1);
+                                                        monthStart.setHours(0, 0, 0, 0);
+
+                                                        const byDay = new Map<string, any[]>();
+                                                        for (const ev of calendarEvents) {
+                                                            const start = ev?.start;
+                                                            const dateStr = typeof start?.date === 'string' ? start.date : '';
+                                                            const dateTimeStr = typeof start?.dateTime === 'string' ? start.dateTime : '';
+                                                            const key = dateStr || (dateTimeStr ? dateKeyLocal(new Date(dateTimeStr)) : '');
+                                                            if (!key) continue;
+                                                            const existing = byDay.get(key) || [];
+                                                            existing.push(ev);
+                                                            byDay.set(key, existing);
+                                                        }
+
+                                                        // Add scheduled posts to byDay
+                                                        for (const post of scheduledPosts) {
+                                                            const postDate = new Date(post.scheduledAt * 1000);
+                                                            const key = dateKeyLocal(postDate);
+                                                            const existing = byDay.get(key) || [];
+                                                            existing.push({
+                                                                id: `scheduled-${post.id}`,
+                                                                summary: `📱 ${post.platforms?.join?.(', ') || 'Social'} post`,
+                                                                start: { dateTime: postDate.toISOString() },
+                                                                isScheduledPost: true,
+                                                                platforms: post.platforms,
+                                                                textContent: post.textContent,
+                                                                status: post.status,
+                                                            });
+                                                            byDay.set(key, existing);
+                                                        }
+
+                                                        // Add scheduled emails to byDay
+                                                        for (const email of scheduledEmails) {
+                                                            const emailDate = new Date(email.scheduledAt * 1000);
+                                                            const key = dateKeyLocal(emailDate);
+                                                            const existing = byDay.get(key) || [];
+                                                            const recipientCount = Array.isArray(email.to) ? email.to.length : 1;
+                                                            existing.push({
+                                                                id: `scheduled-email-${email.id}`,
+                                                                summary: `✉️ ${email.subject}`,
+                                                                start: { dateTime: emailDate.toISOString() },
+                                                                isScheduledEmail: true,
+                                                                to: email.to,
+                                                                subject: email.subject,
+                                                                status: email.status,
+                                                                provider: email.provider,
+                                                                recipientCount,
+                                                            });
+                                                            byDay.set(key, existing);
+                                                        }
+
+
+                                                        const firstDow = monthStart.getDay();
+                                                        const gridStart = new Date(monthStart);
+                                                        gridStart.setDate(monthStart.getDate() - firstDow);
+                                                        gridStart.setHours(0, 0, 0, 0);
+
+                                                        const selectedKey = dateKeyLocal(calendarSelectedDay);
+                                                        const cells = new Array(42).fill(null).map((_, idx) => {
+                                                            const d = new Date(gridStart);
+                                                            d.setDate(gridStart.getDate() + idx);
+                                                            d.setHours(0, 0, 0, 0);
+                                                            const key = dateKeyLocal(d);
+                                                            const isCurrentMonth = d.getMonth() === monthStart.getMonth();
+                                                            const isSelected = key === selectedKey;
+                                                            const count = (byDay.get(key) || []).length;
+                                                            return (
+                                                                <button
+                                                                    key={key}
+                                                                    type="button"
+                                                                    onClick={() => setCalendarSelectedDay(d)}
+                                                                    className={`h-10 rounded-xl border flex flex-col items-center justify-center transition-colors ${isSelected
+                                                                        ? activeTheme === 'dark'
+                                                                            ? 'bg-white/15 border-white/20'
+                                                                            : activeTheme === 'light'
+                                                                                ? 'bg-white border-blue-200'
+                                                                                : `${currentTheme.bgSecondary} border shadow-inner ${currentTheme.border} ring-1 ring-${currentTheme.text}/20`
+                                                                        : activeTheme === 'dark'
+                                                                            ? 'bg-white/5 hover:bg-white/10 border-white/10'
+                                                                            : activeTheme === 'light'
+                                                                                ? 'bg-white/60 hover:bg-white border-blue-100'
+                                                                                : `bg-white/40 hover:${currentTheme.hoverBg} ${currentTheme.border}`
+                                                                        } ${!isCurrentMonth ? (activeTheme === 'dark' ? 'opacity-40' : 'opacity-50') : ''}`}
+                                                                >
+                                                                    <div className={`text-xs ${activeTheme === 'dark' ? 'text-white' : activeTheme === 'light' ? 'text-gray-900' : currentTheme.text
+                                                                        }`}>{d.getDate()}</div>
+                                                                    {count > 0 && <div className={`text-[10px] ${activeTheme === 'dark' ? 'text-white/70' : activeTheme === 'light' ? 'text-blue-700' : currentTheme.textSecondary
+                                                                        }`}>{count}</div>}
+                                                                </button>
+                                                            );
+                                                        });
+
+                                                        const selectedEvents = (byDay.get(selectedKey) || []).slice();
+                                                        selectedEvents.sort((a, b) => {
+                                                            const aStart = a?.start?.dateTime || a?.start?.date;
+                                                            const bStart = b?.start?.dateTime || b?.start?.date;
+                                                            const aDate = typeof aStart === 'string' ? new Date(aStart.includes('T') ? aStart : `${aStart}T00:00:00`) : new Date(0);
+                                                            const bDate = typeof bStart === 'string' ? new Date(bStart.includes('T') ? bStart : `${bStart}T00:00:00`) : new Date(0);
+                                                            return aDate.getTime() - bDate.getTime();
+                                                        });
+
+                                                        const allEvents = calendarEvents.slice();
+                                                        allEvents.sort((a, b) => {
+                                                            const aStart = a?.start?.dateTime || a?.start?.date;
+                                                            const bStart = b?.start?.dateTime || b?.start?.date;
+                                                            const aDate = typeof aStart === 'string' ? new Date(aStart.includes('T') ? aStart : `${aStart}T00:00:00`) : new Date(0);
+                                                            const bDate = typeof bStart === 'string' ? new Date(bStart.includes('T') ? bStart : `${bStart}T00:00:00`) : new Date(0);
+                                                            return aDate.getTime() - bDate.getTime();
+                                                        });
+
+                                                        return (
+                                                            <div>
+                                                                <div className={(calendarMobileExpanded ? 'block' : 'hidden') + ' sm:block'}>
+                                                                    <div className={`grid grid-cols-7 gap-1 text-[10px] mb-1 ${activeTheme === 'dark' ? 'text-white/50' : activeTheme === 'light' ? 'text-gray-500' : currentTheme.textSecondary
+                                                                        }`}>
+                                                                        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d) => (
+                                                                            <div key={d} className="text-center">{d}</div>
+                                                                        ))}
                                                                     </div>
 
-                                                                    {/* Post Mode Selector - only show for file uploads */}
-                                                                    {(tiktokVideoSource === 'UPLOAD' || tiktokVideoSource === 'ASSET') && (
-                                                                        <div className="flex items-center gap-2 mb-2">
-                                                                            <span className={`text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Post Mode:</span>
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={() => setTiktokVideoPostMode('direct')}
-                                                                                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${tiktokVideoPostMode === 'direct'
-                                                                                    ? (isDarkMode ? 'bg-emerald-600 text-white' : 'bg-emerald-600 text-white')
-                                                                                    : (isDarkMode ? 'bg-white/5 text-gray-400 hover:text-white' : 'bg-white text-gray-600 hover:text-gray-900 border border-gray-200')
-                                                                                    }`}
-                                                                            >
-                                                                                Direct Post
-                                                                            </button>
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={() => setTiktokVideoPostMode('inbox')}
-                                                                                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${tiktokVideoPostMode === 'inbox'
-                                                                                    ? (activeTheme === 'dark' || activeTheme === 'light' ? 'bg-blue-600 text-white' : `${currentTheme.primary} text-white`)
-                                                                                    : (isDarkMode ? 'bg-white/5 text-gray-400 hover:text-white' : 'bg-white text-gray-600 hover:text-gray-900 border border-gray-200')
-                                                                                    }`}
-                                                                            >
-                                                                                Inbox/Draft
-                                                                            </button>
-                                                                            <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-                                                                                {tiktokVideoPostMode === 'direct' ? '(Posts immediately)' : '(Review in TikTok app)'}
-                                                                            </span>
+                                                                    <div className="grid grid-cols-7 gap-1">{cells}</div>
+
+                                                                    {selectedEvents.length > 0 && (
+                                                                        <div className={`mt-3 rounded-xl border p-3 ${activeTheme === 'dark' ? 'border-white/10 bg-black/10' : activeTheme === 'light' ? 'border-blue-100 bg-white/60' : `${currentTheme.border} bg-white/50`
+                                                                            }`}>
+                                                                            <div className={`text-[11px] font-medium mb-1 ${activeTheme === 'dark' ? 'text-white/80' : activeTheme === 'light' ? 'text-gray-800' : currentTheme.text
+                                                                                }`}>
+                                                                                {calendarSelectedDay.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                                                                            </div>
+                                                                            <div className="space-y-1.5">
+                                                                                {selectedEvents.map((ev) => {
+                                                                                    const isScheduledPost = ev?.isScheduledPost === true;
+                                                                                    const title = String(ev?.summary || 'Untitled');
+                                                                                    const startRaw = ev?.start?.dateTime || ev?.start?.date;
+                                                                                    const startDate = typeof startRaw === 'string'
+                                                                                        ? new Date(startRaw.includes('T') ? startRaw : `${startRaw}T00:00:00`)
+                                                                                        : null;
+                                                                                    const timeLabel = startDate
+                                                                                        ? (startRaw?.includes?.('T')
+                                                                                            ? startDate.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+                                                                                            : 'All day')
+                                                                                        : '';
+
+                                                                                    if (isScheduledPost) {
+                                                                                        // Render scheduled post differently
+                                                                                        return (
+                                                                                            <div key={String(ev?.id || title)} className="flex items-center justify-between gap-2">
+                                                                                                <div className="flex items-center gap-1.5 min-w-0">
+                                                                                                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${ev?.status === 'scheduled' ? 'bg-blue-500/20 text-blue-400' :
+                                                                                                        ev?.status === 'publishing' ? 'bg-yellow-500/20 text-yellow-400' :
+                                                                                                            ev?.status === 'published' ? 'bg-green-500/20 text-green-400' :
+                                                                                                                'bg-gray-500/20 text-gray-400'
+                                                                                                        }`}>{ev?.status}</span>
+                                                                                                    <div className="flex items-center gap-1 mx-1">
+                                                                                                        {ev?.platforms?.map((p: string) => (
+                                                                                                            <img
+                                                                                                                key={p}
+                                                                                                                src={PLATFORM_LOGOS[p] || ''}
+                                                                                                                alt={p}
+                                                                                                                className="w-3.5 h-3.5 object-contain"
+                                                                                                                title={p}
+                                                                                                            />
+                                                                                                        ))}
+                                                                                                    </div>
+                                                                                                    <span className={`text-[11px] truncate ${isDarkMode ? 'text-purple-300' : 'text-purple-700'}`}>
+                                                                                                        {ev?.textContent ? (ev.textContent.length > 40 ? ev.textContent.substring(0, 40) + '...' : ev.textContent) : 'Social Post'}
+                                                                                                    </span>
+                                                                                                </div>
+                                                                                                <div className={`text-[10px] flex-shrink-0 ${isDarkMode ? 'text-white/60' : 'text-gray-600'}`}>{timeLabel}</div>
+                                                                                            </div>
+                                                                                        );
+                                                                                    }
+
+                                                                                    // Render scheduled email differently
+                                                                                    const isScheduledEmail = ev?.isScheduledEmail === true;
+                                                                                    if (isScheduledEmail) {
+                                                                                        return (
+                                                                                            <div key={String(ev?.id || title)} className="flex items-center justify-between gap-2">
+                                                                                                <div className="flex items-center gap-1.5 min-w-0">
+                                                                                                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${ev?.status === 'scheduled' ? 'bg-purple-500/20 text-purple-400' :
+                                                                                                        ev?.status === 'sending' ? 'bg-yellow-500/20 text-yellow-400' :
+                                                                                                            ev?.status === 'sent' ? 'bg-green-500/20 text-green-400' :
+                                                                                                                'bg-gray-500/20 text-gray-400'
+                                                                                                        }`}>{ev?.status}</span>
+                                                                                                    <span className="text-[10px]">{ev?.provider === 'gmail' ? '\ud83d\udce7' : '\ud83d\udce8'}</span>
+                                                                                                    <span className={`text-[11px] truncate ${isDarkMode ? 'text-pink-300' : 'text-pink-700'}`}>
+                                                                                                        {ev?.subject ? (ev.subject.length > 30 ? ev.subject.substring(0, 30) + '...' : ev.subject) : 'Email'}
+                                                                                                        {ev?.recipientCount > 1 && ` (${ev.recipientCount})`}
+                                                                                                    </span>
+                                                                                                </div>
+                                                                                                <div className={`text-[10px] flex-shrink-0 ${isDarkMode ? 'text-white/60' : 'text-gray-600'}`}>{timeLabel}</div>
+                                                                                            </div>
+                                                                                        );
+                                                                                    }
+
+                                                                                    return (
+                                                                                        <div key={String(ev?.id || title)} className="flex items-center justify-between gap-2">
+                                                                                            <div className={`text-[11px] truncate ${activeTheme === 'dark' ? 'text-white' : activeTheme === 'light' ? 'text-gray-900' : currentTheme.text
+                                                                                                }`}>{title}</div>
+                                                                                            <div className={`text-[10px] flex-shrink-0 ${activeTheme === 'dark' ? 'text-white/60' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.textSecondary
+                                                                                                }`}>{timeLabel}</div>
+                                                                                        </div>
+                                                                                    );
+                                                                                })}
+                                                                            </div>
                                                                         </div>
                                                                     )}
                                                                 </div>
+
+                                                                {allEvents.length > 0 && (
+                                                                    <div className={`mt-3 rounded-xl border p-3 ${activeTheme === 'dark' ? 'border-white/10 bg-black/10' : activeTheme === 'light' ? 'border-blue-100 bg-white/60' : `${currentTheme.border} bg-white/50`
+                                                                        }`}>
+                                                                        <div className={`text-[11px] font-medium mb-2 ${activeTheme === 'dark' ? 'text-white/80' : activeTheme === 'light' ? 'text-gray-800' : currentTheme.text
+                                                                            }`}>
+                                                                            All events ({allEvents.length})
+                                                                        </div>
+                                                                        <div className={`space-y-1.5 overflow-y-auto ${calendarMobileExpanded ? 'max-h-40' : 'max-h-48'} sm:max-h-40`}>
+                                                                            {allEvents.map((ev) => {
+                                                                                const isScheduledPost = ev?.isScheduledPost === true;
+                                                                                const title = String(ev?.summary || 'Untitled');
+                                                                                const startRaw = ev?.start?.dateTime || ev?.start?.date;
+                                                                                const startDate = typeof startRaw === 'string'
+                                                                                    ? new Date(startRaw.includes('T') ? startRaw : `${startRaw}T00:00:00`)
+                                                                                    : null;
+                                                                                const timeLabel = startDate
+                                                                                    ? startDate.toLocaleString(undefined, {
+                                                                                        month: 'short',
+                                                                                        day: 'numeric',
+                                                                                        ...(startRaw?.includes?.('T')
+                                                                                            ? { hour: 'numeric', minute: '2-digit' }
+                                                                                            : {}),
+                                                                                    })
+                                                                                    : '';
+
+                                                                                if (isScheduledPost) {
+                                                                                    return (
+                                                                                        <div key={String(ev?.id || title)} className="flex items-center justify-between gap-2">
+                                                                                            <div className="flex items-center gap-1.5 min-w-0">
+                                                                                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${ev?.status === 'scheduled' ? 'bg-blue-500/20 text-blue-400' :
+                                                                                                    ev?.status === 'publishing' ? 'bg-yellow-500/20 text-yellow-400' :
+                                                                                                        ev?.status === 'published' ? 'bg-green-500/20 text-green-400' :
+                                                                                                            'bg-gray-500/20 text-gray-400'
+                                                                                                    }`}>{ev?.status}</span>
+                                                                                                <div className="flex items-center gap-1 mx-1">
+                                                                                                    {ev?.platforms?.map((p: string) => (
+                                                                                                        <img
+                                                                                                            key={p}
+                                                                                                            src={PLATFORM_LOGOS[p] || ''}
+                                                                                                            alt={p}
+                                                                                                            className="w-3.5 h-3.5 object-contain"
+                                                                                                            title={p}
+                                                                                                        />
+                                                                                                    ))}
+                                                                                                </div>
+                                                                                                <span className={`text-[11px] truncate ${isDarkMode ? 'text-purple-300' : 'text-purple-700'}`}>
+                                                                                                    {ev?.textContent ? (ev.textContent.length > 40 ? ev.textContent.substring(0, 40) + '...' : ev.textContent) : 'Social Post'}
+                                                                                                </span>
+                                                                                            </div>
+                                                                                            <div className={`text-[10px] flex-shrink-0 ${isDarkMode ? 'text-white/60' : 'text-gray-600'}`}>{timeLabel}</div>
+                                                                                        </div>
+                                                                                    );
+                                                                                }
+
+                                                                                // Render scheduled email differently
+                                                                                const isScheduledEmail = ev?.isScheduledEmail === true;
+                                                                                if (isScheduledEmail) {
+                                                                                    return (
+                                                                                        <div key={String(ev?.id || title)} className="flex items-center justify-between gap-2">
+                                                                                            <div className="flex items-center gap-1.5 min-w-0">
+                                                                                                <span className={`text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${ev?.status === 'scheduled' ? 'bg-purple-500/20 text-purple-400' :
+                                                                                                    ev?.status === 'sending' ? 'bg-yellow-500/20 text-yellow-400' :
+                                                                                                        ev?.status === 'sent' ? 'bg-green-500/20 text-green-400' :
+                                                                                                            'bg-gray-500/20 text-gray-400'
+                                                                                                    }`}>{ev?.status}</span>
+                                                                                                <span className="text-[10px]">{ev?.provider === 'gmail' ? '\ud83d\udce7' : '\ud83d\udce8'}</span>
+                                                                                                <span className={`text-[11px] truncate ${isDarkMode ? 'text-pink-300' : 'text-pink-700'}`}>
+                                                                                                    {ev?.subject ? (ev.subject.length > 30 ? ev.subject.substring(0, 30) + '...' : ev.subject) : 'Email'}
+                                                                                                    {ev?.recipientCount > 1 && ` (${ev.recipientCount})`}
+                                                                                                </span>
+                                                                                            </div>
+                                                                                            <div className={`text-[10px] flex-shrink-0 ${isDarkMode ? 'text-white/60' : 'text-gray-600'}`}>{timeLabel}</div>
+                                                                                        </div>
+                                                                                    );
+                                                                                }
+
+                                                                                return (
+                                                                                    <div key={String(ev?.id || title)} className="flex items-center justify-between gap-2">
+                                                                                        <div className={`text-[11px] truncate ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{title}</div>
+                                                                                        <div className={`text-[10px] flex-shrink-0 ${isDarkMode ? 'text-white/60' : 'text-gray-600'}`}>{timeLabel}</div>
+                                                                                    </div>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
                                                             </div>
-                                                        </div>
-                                                    );
-                                                }
-
-                                                const theme = report.theme;
-                                                const reportActiveTheme = theme ? (isDarkMode ? theme.dark : theme.light) : undefined;
-                                                const headerImage = report.headerImageUrl;
-                                                const category = report.category || 'Research';
-                                                const sourceCount = report.sources?.length || 0;
-                                                const wizaProfiles = (report as any)?.wizaProspects?.data?.profiles;
-                                                const leadCount = Array.isArray(wizaProfiles) ? wizaProfiles.length : 0;
-                                                const sessionIsStale = isSessionStale(session);
-
-                                                return (
-                                                    <div
-                                                        key={session.id}
-                                                        onClick={() => onLoadResearch(session)}
-                                                        className={`group border rounded-xl sm:rounded-2xl p-4 sm:p-5 cursor-pointer transition-all duration-200 relative overflow-hidden ${activeTheme === 'dark'
-                                                            ? 'bg-[#1d1d1f] hover:border-[#0071e3]/50'
-                                                            : activeTheme === 'light'
-                                                                ? 'bg-white hover:border-[#0071e3]/50'
-                                                                : `${currentTheme.cardBg} hover:${currentTheme.ring.replace('ring-', 'border-')}/50`
-                                                            } ${sessionIsStale ? 'border-[#ff9f0a]/30' : activeTheme === 'dark' ? 'border-[#3d3d3f]/50' : activeTheme === 'light' ? 'border-gray-200' : currentTheme.border
-                                                            }`}
-                                                        style={reportActiveTheme ? {
-                                                            backgroundColor: reportActiveTheme.surface,
-                                                            borderColor: reportActiveTheme.secondary
-                                                        } : {}}
-                                                    >
-                                                        {headerImage && (
-                                                            <div className="absolute inset-0 z-0 pointer-events-none">
-                                                                <div
-                                                                    className="absolute inset-0 bg-cover bg-center opacity-15 group-hover:opacity-25 transition-opacity"
-                                                                    style={{
-                                                                        backgroundImage: `url(${headerImage})`,
-                                                                        maskImage: 'linear-gradient(to left, rgba(0,0,0,1) 0%, transparent 70%)',
-                                                                        WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,1) 0%, transparent 70%)'
-                                                                    }}
-                                                                />
-                                                            </div>
-                                                        )}
-
-                                                        <div className="relative z-10 flex justify-between items-start">
-                                                            <div className="flex-1 pr-4 min-w-0">
-                                                                <div className="flex items-center gap-2 mb-2 flex-wrap">
-                                                                    <span
-                                                                        className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider ${activeTheme === 'dark' || activeTheme === 'light' ? 'bg-[#0071e3]/20 text-[#0071e3]' : `${currentTheme.bgSecondary} ${currentTheme.accent}`}`}
-                                                                        style={reportActiveTheme ? { backgroundColor: reportActiveTheme.primary + '33', color: reportActiveTheme.primary } : {}}
-                                                                    >
-                                                                        {category}
-                                                                    </span>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            if (sourceCount > 0 && report.sources) {
-                                                                                openSourcesModal(`Sources for "${session.topic}"`, report.sources);
-                                                                            }
-                                                                        }}
-                                                                        className={`text-[10px] px-2 py-0.5 rounded inline-flex items-center gap-1 ${isDarkMode ? 'bg-[#2d2d2f] text-[#86868b]' : 'bg-gray-100 text-gray-600'
-                                                                            } ${sourceCount === 0 ? 'opacity-60 cursor-default' : 'hover:bg-[#0071e3]/10 cursor-pointer'}`}
-                                                                    >
-                                                                        {sourceCount} sources
-                                                                    </button>
-                                                                    {leadCount > 0 && (
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                openLeadsModal(`Leads for "${session.topic}"`, (report as any)?.wizaProspects);
-                                                                            }}
-                                                                            className={`text-[10px] px-2 py-0.5 rounded inline-flex items-center gap-1 ${isDarkMode ? 'bg-[#2d2d2f] text-[#86868b]' : 'bg-gray-100 text-gray-600'
-                                                                                } hover:bg-[#bf5af2]/10 cursor-pointer`}
-                                                                        >
-                                                                            {leadCount} leads
-                                                                        </button>
-                                                                    )}
-                                                                    {sessionIsStale && (
-                                                                        <span className="text-[10px] px-2 py-0.5 bg-[#ff9f0a]/20 text-[#ff9f0a] rounded">
-                                                                            Stale
-                                                                        </span>
-                                                                    )}
-                                                                    <span className={`text-xs ${isDarkMode ? 'text-[#636366]' : 'text-gray-500'}`}>
-                                                                        {new Date(session.timestamp).toLocaleDateString()}
-                                                                    </span>
-                                                                </div>
-                                                                <h3
-                                                                    className={`font-semibold text-base sm:text-lg mb-1 truncate transition-colors ${isDarkMode ? 'text-white' : 'text-gray-900'} ${activeTheme === 'dark' || activeTheme === 'light' ? 'group-hover:text-[#0071e3]' : ''}`}
-                                                                    style={reportActiveTheme ? { color: reportActiveTheme.primary } : {}}
-                                                                >
-                                                                    {session.topic}
-                                                                </h3>
-                                                                <p className={`text-sm line-clamp-2 ${isDarkMode ? 'text-[#86868b]' : 'text-gray-600'}`}>
-                                                                    {report.tldr}
-                                                                </p>
-                                                            </div>
-
-                                                            <button
-                                                                onClick={(e) => handleDeleteResearch(e, session.id)}
-                                                                className={`opacity-0 group-hover:opacity-100 p-2 hover:text-[#ff453a] hover:bg-[#ff453a]/10 rounded-lg transition-all flex-shrink-0 ${isDarkMode ? 'text-[#86868b]' : 'text-gray-500'}`}
-                                                            >
-                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                                </svg>
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-
-                                    <div className="hidden lg:block">
-                                        {draftsSection}
-                                    </div>
-                                </section>
-                            </div>
-
-                            {/* Right column: top cards (Research in Progress, Focus Mode) */}
-                            <div className="order-1 lg:order-1 lg:col-start-3 lg:row-start-1 space-y-4 lg:space-y-5">
-                                {hasActiveResearchForThisProject && (
-                                    <div
-                                        role="button"
-                                        onClick={() => onStartResearch()}
-                                        className={`cursor-pointer rounded-2xl sm:rounded-3xl p-5 border transition-colors ${activeTheme === 'dark'
-                                            ? 'bg-gradient-to-br from-[#0b1120] via-[#111827] to-[#020617] border-[#2563eb]/40 hover:border-[#3b82f6]'
-                                            : activeTheme === 'light'
-                                                ? 'bg-gradient-to-br from-blue-50 via-sky-50 to-indigo-50 border-blue-100 hover:border-blue-300'
-                                                : `${currentTheme.cardBg} ${currentTheme.border} hover:shadow-md`
-                                            }`}
-                                    >
-                                        <div className="flex items-center justify-between mb-3">
-                                            <div className="flex items-center gap-2">
-                                                <span className="relative flex h-3 w-3">
-                                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#22c55e] opacity-75" />
-                                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-[#22c55e]" />
-                                                </span>
-                                                <h3
-                                                    className={`text-xs sm:text-sm font-semibold uppercase tracking-wider ${activeTheme === 'dark' ? 'text-[#a5b4fc]' : activeTheme === 'light' ? 'text-blue-700' : currentTheme.text
-                                                        }`}
-                                                >
-                                                    Research in Progress
-                                                </h3>
-                                            </div>
-                                            {project.activeResearchStartedAt && (
-                                                <span
-                                                    className={`text-[10px] sm:text-xs ${activeTheme === 'dark' ? 'text-[#9ca3af]' : activeTheme === 'light' ? 'text-gray-500' : currentTheme.textSecondary
-                                                        }`}
-                                                >
-                                                    Started {new Date(project.activeResearchStartedAt).toLocaleTimeString()}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <p
-                                            className={`text-sm sm:text-base font-medium line-clamp-2 ${activeTheme === 'dark' ? 'text-white' : activeTheme === 'light' ? 'text-gray-900' : currentTheme.text
-                                                }`}
-                                        >
-                                            {project.activeResearchTopic}
-                                        </p>
-                                        {visibleActiveLogs.length > 0 ? (
-                                            <div
-                                                className={`mt-3 rounded-xl border text-xs sm:text-[13px] overflow-hidden ${activeTheme === 'dark'
-                                                    ? 'border-[#1f2933] bg-black/40 text-[#e5e7eb]'
-                                                    : activeTheme === 'light'
-                                                        ? 'border-blue-100 bg-white/90 text-gray-700'
-                                                        : `${currentTheme.border} bg-white/50 ${currentTheme.textSecondary}`
-                                                    }`}
-                                            >
-                                                <div className="px-3 pt-2 pb-1 flex items-center justify-between">
-                                                    <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider">
-                                                        Live research log
-                                                    </span>
-                                                    <span className={`text-[10px] sm:text-[11px] ${activeTheme === 'dark' ? 'text-[#9ca3af]' : activeTheme === 'light' ? 'text-gray-500' : currentTheme.textSecondary
-                                                        }`}>
-                                                        Showing latest {visibleActiveLogs.length} step
-                                                        {visibleActiveLogs.length > 1 ? 's' : ''}
-                                                    </span>
+                                                        );
+                                                    })()}
                                                 </div>
-                                                <ul className="px-3 pb-2 space-y-1.5 max-h-28 overflow-y-auto">
-                                                    {visibleActiveLogs.map((entry, idx) => (
-                                                        <li key={idx} className="leading-snug line-clamp-2">
-                                                            {entry}
-                                                        </li>
-                                                    ))}
-                                                </ul>
+
+                                                {/* Show Google connection option if not connected */}
+                                                {!calendarConnected && (
+                                                    <div className={`mt-3 flex items-center justify-between gap-3 p-2 rounded-lg ${isDarkMode ? 'bg-white/5' : 'bg-gray-50'}`}>
+                                                        <div className={`text-[11px] ${isDarkMode ? 'text-white/70' : 'text-gray-600'}`}>
+                                                            Connect Google for calendar events
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleConnectGoogleForCalendarWidget}
+                                                            className={`px-2.5 py-1 rounded-full text-[10px] font-medium text-white ${activeTheme === 'dark' || activeTheme === 'light' ? 'bg-[#0071e3] hover:bg-[#0077ed]' : `${currentTheme.primary} ${currentTheme.primaryHover}`}`}
+                                                        >
+                                                            Connect
+                                                        </button>
+                                                    </div>
+                                                )}
+
+                                                {(calendarLoading || calendarStatusLoading) && (
+                                                    <div className={`mt-2 text-[11px] ${isDarkMode ? 'text-white/60' : 'text-gray-600'}`}>Syncing…</div>
+                                                )}
                                             </div>
-                                        ) : (
-                                            <p
-                                                className={`mt-2 text-xs ${activeTheme === 'dark' ? 'text-[#9ca3af]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.textSecondary
-                                                    }`}
-                                            >
-                                                Gemini is still running this deep research in the background. You can keep working while it
-                                                finishes.
-                                            </p>
-                                        )}
-                                    </div>
-                                )}
-
-                                <div
-                                    className={`rounded-2xl sm:rounded-3xl p-5 border ${activeTheme === 'dark'
-                                        ? 'bg-gradient-to-br from-[#0071e3]/20 to-[#5ac8fa]/20 border-[#0071e3]/30'
-                                        : activeTheme === 'light'
-                                            ? 'bg-gradient-to-br from-blue-50 via-sky-50 to-cyan-50 border-blue-100'
-                                            : `${currentTheme.cardBg} ${currentTheme.border}`
-                                        }`}
-                                >
-                                    <div className="flex items-center justify-between gap-3 mb-3">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-2 h-2 bg-[#0071e3] rounded-full animate-pulse" />
-                                            <h3
-                                                className={`text-sm font-semibold uppercase tracking-wider ${activeTheme === 'dark' ? 'text-[#5ac8fa]' : activeTheme === 'light' ? 'text-blue-600' : currentTheme.text
-                                                    }`}
-                                            >
-                                                Focus Mode
-                                            </h3>
-                                        </div>
-
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    if (calendarLoading || calendarStatusLoading) return;
-                                                    handleRefreshCalendarWidget().catch(() => undefined);
-                                                }}
-                                                className={`p-2 rounded-full transition-colors ${activeTheme === 'dark'
-                                                    ? 'hover:bg-white/10 text-white/70'
-                                                    : activeTheme === 'light'
-                                                        ? 'hover:bg-white/70 text-gray-600'
-                                                        : `${currentTheme.hoverBg} ${currentTheme.textSecondary} hover:${currentTheme.text}`
-                                                    }`}
-                                                title="Sync calendar"
-                                                aria-label="Sync calendar"
-                                                disabled={calendarLoading || calendarStatusLoading}
-                                            >
-                                                <svg
-                                                    className={`w-4 h-4 ${calendarLoading || calendarStatusLoading ? 'animate-spin' : ''}`}
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    viewBox="0 0 24 24"
-                                                >
-                                                    <path
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                        strokeWidth={2}
-                                                        d="M4 4v6h6M20 20v-6h-6M20 10a8 8 0 00-14.906-3.09M4 14a8 8 0 0014.906 3.09"
-                                                    />
-                                                </svg>
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    const { start, end } = getDefaultScheduleInputs(calendarSelectedDay || new Date());
-                                                    setNewEventTitle('');
-                                                    setNewEventDescription('');
-                                                    setNewEventStartLocal(start);
-                                                    setNewEventEndLocal(end);
-                                                    setNewEventAddMeet(true);
-                                                    setIsCreateEventModalOpen(true);
-                                                }}
-                                                className={`p-2 rounded-full transition-colors ${activeTheme === 'dark' ? 'hover:bg-white/10 text-white/70' : activeTheme === 'light' ? 'hover:bg-white/70 text-gray-600' : `${currentTheme.hoverBg} ${currentTheme.textSecondary} hover:${currentTheme.text}`
-                                                    }`}
-                                                title="Create calendar event"
-                                                aria-label="Create calendar event"
-                                            >
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                                </svg>
-                                            </button>
                                         </div>
                                     </div>
 
-                                    {inProgressCount > 0 && (
-                                        <div className="space-y-2">
-                                            {tasks
-                                                .filter(t => t.status === 'in_progress')
-                                                .slice(0, 2)
-                                                .map(task => (
-                                                    <div
-                                                        key={task.id}
-                                                        className={`p-3 rounded-xl border ${activeTheme === 'dark'
-                                                            ? 'bg-[#0071e3]/10 border-[#0071e3]/20'
-                                                            : activeTheme === 'light'
-                                                                ? 'bg-white/70 border-blue-100'
-                                                                : `${currentTheme.bgSecondary} ${currentTheme.border}`
+                                    {/* News Section - Show in News Tab on Mobile */}
+                                    <div className="hidden lg:block space-y-4 lg:space-y-5">
+                                        <div className={`rounded-2xl sm:rounded-3xl p-5 ${activeTheme === 'dark'
+                                            ? 'bg-[#1d1d1f] border border-[#3d3d3f]/50'
+                                            : activeTheme === 'light'
+                                                ? 'bg-white border border-gray-200'
+                                                : `${currentTheme.cardBg} border ${currentTheme.border}`
+                                            }`}>
+                                            <div className="flex items-center justify-between gap-3 mb-4">
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className={`text-sm font-semibold uppercase tracking-wider ${activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.text
+                                                        }`}>News</h3>
+                                                    <div className={`flex items-center gap-1 p-0.5 rounded-full ${activeTheme === 'dark'
+                                                        ? 'bg-black/30'
+                                                        : activeTheme === 'light'
+                                                            ? 'bg-gray-100'
+                                                            : `${currentTheme.bgSecondary} border ${currentTheme.border}`
+                                                        }`}>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setNewsMode('news')}
+                                                            className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors ${newsMode === 'news'
+                                                                ? (activeTheme === 'dark' || activeTheme === 'light' ? 'bg-[#0071e3] text-white' : `${currentTheme.primary} text-white`)
+                                                                : activeTheme === 'dark'
+                                                                    ? 'text-[#86868b] hover:text-white'
+                                                                    : activeTheme === 'light'
+                                                                        ? 'text-gray-700 hover:text-gray-900'
+                                                                        : `${currentTheme.textSecondary} hover:${currentTheme.text}`
+                                                                }`}
+                                                        >
+                                                            News
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setNewsMode('videos')}
+                                                            className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors ${newsMode === 'videos'
+                                                                ? (activeTheme === 'dark' || activeTheme === 'light' ? 'bg-[#0071e3] text-white' : `${currentTheme.primary} text-white`)
+                                                                : activeTheme === 'dark'
+                                                                    ? 'text-[#86868b] hover:text-white'
+                                                                    : activeTheme === 'light'
+                                                                        ? 'text-gray-700 hover:text-gray-900'
+                                                                        : `${currentTheme.textSecondary} hover:${currentTheme.text}`
+                                                                }`}
+                                                        >
+                                                            Videos
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                {newsMode === 'news' ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={refreshNews}
+                                                        disabled={refreshingNews}
+                                                        className={`text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${refreshingNews
+                                                            ? activeTheme === 'dark'
+                                                                ? 'bg-white/10 text-[#86868b] cursor-wait'
+                                                                : activeTheme === 'light'
+                                                                    ? 'bg-gray-100 text-gray-500 cursor-wait'
+                                                                    : `${currentTheme.bgSecondary} ${currentTheme.textSecondary} cursor-wait`
+                                                            : activeTheme === 'dark'
+                                                                ? 'bg-[#0071e3]/10 text-[#0071e3] hover:bg-[#0071e3]/20'
+                                                                : activeTheme === 'light'
+                                                                    ? 'bg-[#0071e3]/10 text-[#0071e3] hover:bg-[#0071e3]/20'
+                                                                    : `${currentTheme.bgSecondary} ${currentTheme.accent} hover:brightness-95`
                                                             }`}
                                                     >
-                                                        <p className={`text-sm font-medium ${activeTheme === 'dark' ? 'text-white' : activeTheme === 'light' ? 'text-gray-900' : currentTheme.text
-                                                            }`}>{task.title}</p>
-                                                        {task.description && (
-                                                            <p
-                                                                className={`text-xs mt-1 line-clamp-1 ${activeTheme === 'dark' ? 'text-[#5ac8fa]/70' : activeTheme === 'light' ? 'text-blue-600/70' : currentTheme.textSecondary
+                                                        {refreshingNews ? 'Refreshing…' : 'Refresh'}
+                                                    </button>
+                                                ) : (
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                if (youtubeVideos.length > 0) {
+                                                                    const id = activeYoutubeVideoId || youtubeVideos[0]?.id;
+                                                                    if (id) setActiveYoutubeVideoId(id);
+                                                                }
+                                                                setVideoPlayerMode('modal');
+                                                            }}
+                                                            className={`text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${activeTheme === 'dark'
+                                                                ? 'bg-white/10 text-white/80 hover:bg-white/15'
+                                                                : activeTheme === 'light'
+                                                                    ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                                    : `${currentTheme.bgSecondary} ${currentTheme.text} hover:${currentTheme.hoverBg}`
+                                                                }`}
+                                                        >
+                                                            Open
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={refreshVideos}
+                                                            disabled={refreshingVideos}
+                                                            className={`text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${refreshingVideos
+                                                                ? activeTheme === 'dark'
+                                                                    ? 'bg-white/10 text-[#86868b] cursor-wait'
+                                                                    : activeTheme === 'light'
+                                                                        ? 'bg-gray-100 text-gray-500 cursor-wait'
+                                                                        : `${currentTheme.bgSecondary} ${currentTheme.textSecondary} cursor-wait`
+                                                                : activeTheme === 'dark'
+                                                                    ? 'bg-[#0071e3]/10 text-[#0071e3] hover:bg-[#0071e3]/20'
+                                                                    : activeTheme === 'light'
+                                                                        ? 'bg-[#0071e3]/10 text-[#0071e3] hover:bg-[#0071e3]/20'
+                                                                        : `${currentTheme.bgSecondary} ${currentTheme.accent} hover:brightness-95`
+                                                                }`}
+                                                        >
+                                                            {refreshingVideos ? 'Refreshing…' : 'Refresh'}
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {newsMode === 'news' ? (
+                                                newsArticles.length === 0 ? (
+                                                    <p className={`text-sm ${activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.textSecondary
+                                                        }`}>
+                                                        No news loaded yet. Click Refresh to fetch recent coverage.
+                                                    </p>
+                                                ) : (
+                                                    <div className="space-y-3">
+                                                        {newsArticles.slice(0, 6).map((a, idx) => (
+                                                            <a
+                                                                key={`${a.url}-${idx}`}
+                                                                href={a.url}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className={`block p-3 rounded-xl border transition-colors ${activeTheme === 'dark'
+                                                                    ? 'bg-black/20 border-[#3d3d3f]/60 hover:border-[#0071e3]/50'
+                                                                    : activeTheme === 'light'
+                                                                        ? 'bg-gray-50 border-gray-200 hover:border-blue-200'
+                                                                        : `bg-white/50 ${currentTheme.border} hover:shadow-sm`
                                                                     }`}
                                                             >
-                                                                {task.description}
-                                                            </p>
-                                                        )}
+                                                                <div className="flex items-start justify-between gap-3">
+                                                                    <div className="min-w-0">
+                                                                        <p className={`text-sm font-medium leading-snug line-clamp-2 ${activeTheme === 'dark' ? 'text-white' : activeTheme === 'light' ? 'text-gray-900' : currentTheme.text
+                                                                            }`}>{a.title}</p>
+                                                                        {a.description && (
+                                                                            <p className={`mt-1 text-xs line-clamp-2 ${activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.textSecondary
+                                                                                }`}>{a.description}</p>
+                                                                        )}
+                                                                        <div className={`mt-2 text-[11px] flex items-center gap-2 ${activeTheme === 'dark' ? 'text-[#636366]' : activeTheme === 'light' ? 'text-gray-500' : currentTheme.textSecondary
+                                                                            }`}>
+                                                                            <span className="truncate">{a.source || 'NewsAPI'}</span>
+                                                                            {a.publishedAt && <span className="whitespace-nowrap">• {new Date(a.publishedAt).toLocaleDateString()}</span>}
+                                                                        </div>
+                                                                    </div>
+                                                                    <span className={`text-xs ${activeTheme === 'dark' ? 'text-[#5ac8fa]' : activeTheme === 'light' ? 'text-blue-600' : currentTheme.accent
+                                                                        }`}>↗</span>
+                                                                </div>
+                                                            </a>
+                                                        ))}
                                                     </div>
-                                                ))}
-                                        </div>
-                                    )}
-
-                                    <div className={`mt-4 pt-4 border-t ${activeTheme === 'dark' ? 'border-white/10' : activeTheme === 'light' ? 'border-blue-100' : currentTheme.border
-                                        }`}>
-                                        <div className="flex items-center justify-between gap-2 mb-2">
-                                            <div className={`text-xs font-semibold uppercase tracking-wider ${activeTheme === 'dark' ? 'text-white/70' : activeTheme === 'light' ? 'text-gray-700' : currentTheme.textSecondary
-                                                }`}>
-                                                Calendar
-                                            </div>
-
-                                            <div className="hidden sm:flex items-center gap-1">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        const prev = new Date(calendarMonth);
-                                                        prev.setMonth(prev.getMonth() - 1);
-                                                        prev.setDate(1);
-                                                        prev.setHours(0, 0, 0, 0);
-                                                        setCalendarMonth(prev);
-                                                    }}
-                                                    className={`p-1.5 rounded ${activeTheme === 'dark' ? 'hover:bg-white/10 text-white/70' : activeTheme === 'light' ? 'hover:bg-white/70 text-gray-700' : `${currentTheme.hoverBg} ${currentTheme.textSecondary}`
-                                                        }`}
-                                                    aria-label="Previous month"
-                                                >
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                                    </svg>
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        const next = new Date(calendarMonth);
-                                                        next.setMonth(next.getMonth() + 1);
-                                                        next.setDate(1);
-                                                        next.setHours(0, 0, 0, 0);
-                                                        setCalendarMonth(next);
-                                                    }}
-                                                    className={`p-1.5 rounded ${activeTheme === 'dark' ? 'hover:bg-white/10 text-white/70' : activeTheme === 'light' ? 'hover:bg-white/70 text-gray-700' : `${currentTheme.hoverBg} ${currentTheme.textSecondary}`
-                                                        }`}
-                                                    aria-label="Next month"
-                                                >
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                                    </svg>
-                                                </button>
-                                            </div>
-
-                                            <button
-                                                type="button"
-                                                onClick={() => setCalendarMobileExpanded(v => !v)}
-                                                className={`sm:hidden px-2.5 py-1.5 rounded-full text-[11px] font-medium transition-colors ${activeTheme === 'dark' ? 'bg-white/10 text-white/80' : activeTheme === 'light' ? 'bg-white/70 text-gray-800' : `${currentTheme.bgSecondary} ${currentTheme.text}`
-                                                    }`}
-                                                aria-label={calendarMobileExpanded ? 'Collapse calendar' : 'Expand calendar'}
-                                            >
-                                                {calendarMobileExpanded ? 'Collapse' : 'Expand'}
-                                            </button>
-                                        </div>
-
-                                        <div className={`sm:hidden text-[11px] mb-2 ${activeTheme === 'dark' ? 'text-white/70' : activeTheme === 'light' ? 'text-gray-700' : currentTheme.textSecondary
-                                            }`}>
-                                            {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
-                                        </div>
-
-                                        <div className={`hidden sm:block text-xs mb-2 ${activeTheme === 'dark' ? 'text-white/80' : activeTheme === 'light' ? 'text-gray-800' : currentTheme.text
-                                            }`}>
-                                            {calendarMonth.toLocaleString(undefined, { month: 'long', year: 'numeric' })}
-                                        </div>
-
-                                        {calendarMobileExpanded && (
-                                            <div className={`sm:hidden text-xs mb-2 ${isDarkMode ? 'text-white/80' : 'text-gray-800'}`}>
-                                                {calendarMonth.toLocaleString(undefined, { month: 'long', year: 'numeric' })}
-                                            </div>
-                                        )}
-
-                                        {calendarMobileExpanded && (
-                                            <div className="sm:hidden flex items-center justify-end gap-1 mb-2">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        const prev = new Date(calendarMonth);
-                                                        prev.setMonth(prev.getMonth() - 1);
-                                                        prev.setDate(1);
-                                                        prev.setHours(0, 0, 0, 0);
-                                                        setCalendarMonth(prev);
-                                                    }}
-                                                    className={`p-1.5 rounded ${activeTheme === 'dark' ? 'hover:bg-white/10 text-white/70' : activeTheme === 'light' ? 'hover:bg-white/70 text-gray-700' : `${currentTheme.hoverBg} ${currentTheme.textSecondary}`
-                                                        }`}
-                                                    aria-label="Previous month"
-                                                >
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                                    </svg>
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        const next = new Date(calendarMonth);
-                                                        next.setMonth(next.getMonth() + 1);
-                                                        next.setDate(1);
-                                                        next.setHours(0, 0, 0, 0);
-                                                        setCalendarMonth(next);
-                                                    }}
-                                                    className={`p-1.5 rounded ${activeTheme === 'dark' ? 'hover:bg-white/10 text-white/70' : activeTheme === 'light' ? 'hover:bg-white/70 text-gray-700' : `${currentTheme.hoverBg} ${currentTheme.textSecondary}`
-                                                        }`}
-                                                    aria-label="Next month"
-                                                >
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                                    </svg>
-                                                </button>
-                                            </div>
-                                        )}
-
-                                        {calendarError && (
-                                            <div className={`mb-2 text-[11px] ${isDarkMode ? 'text-red-200' : 'text-red-700'}`}>{calendarError}</div>
-                                        )}
-
-                                        {/* Always show calendar (for scheduled posts), show Google connection option if not connected */}
-                                        <div>
-                                            {(() => {
-                                                const monthStart = new Date(calendarMonth);
-                                                monthStart.setDate(1);
-                                                monthStart.setHours(0, 0, 0, 0);
-
-                                                const byDay = new Map<string, any[]>();
-                                                for (const ev of calendarEvents) {
-                                                    const start = ev?.start;
-                                                    const dateStr = typeof start?.date === 'string' ? start.date : '';
-                                                    const dateTimeStr = typeof start?.dateTime === 'string' ? start.dateTime : '';
-                                                    const key = dateStr || (dateTimeStr ? dateKeyLocal(new Date(dateTimeStr)) : '');
-                                                    if (!key) continue;
-                                                    const existing = byDay.get(key) || [];
-                                                    existing.push(ev);
-                                                    byDay.set(key, existing);
-                                                }
-
-                                                // Add scheduled posts to byDay
-                                                for (const post of scheduledPosts) {
-                                                    const postDate = new Date(post.scheduledAt * 1000);
-                                                    const key = dateKeyLocal(postDate);
-                                                    const existing = byDay.get(key) || [];
-                                                    existing.push({
-                                                        id: `scheduled-${post.id}`,
-                                                        summary: `📱 ${post.platforms?.join?.(', ') || 'Social'} post`,
-                                                        start: { dateTime: postDate.toISOString() },
-                                                        isScheduledPost: true,
-                                                        platforms: post.platforms,
-                                                        textContent: post.textContent,
-                                                        status: post.status,
-                                                    });
-                                                    byDay.set(key, existing);
-                                                }
-
-                                                // Add scheduled emails to byDay
-                                                for (const email of scheduledEmails) {
-                                                    const emailDate = new Date(email.scheduledAt * 1000);
-                                                    const key = dateKeyLocal(emailDate);
-                                                    const existing = byDay.get(key) || [];
-                                                    const recipientCount = Array.isArray(email.to) ? email.to.length : 1;
-                                                    existing.push({
-                                                        id: `scheduled-email-${email.id}`,
-                                                        summary: `✉️ ${email.subject}`,
-                                                        start: { dateTime: emailDate.toISOString() },
-                                                        isScheduledEmail: true,
-                                                        to: email.to,
-                                                        subject: email.subject,
-                                                        status: email.status,
-                                                        provider: email.provider,
-                                                        recipientCount,
-                                                    });
-                                                    byDay.set(key, existing);
-                                                }
-
-
-                                                const firstDow = monthStart.getDay();
-                                                const gridStart = new Date(monthStart);
-                                                gridStart.setDate(monthStart.getDate() - firstDow);
-                                                gridStart.setHours(0, 0, 0, 0);
-
-                                                const selectedKey = dateKeyLocal(calendarSelectedDay);
-                                                const cells = new Array(42).fill(null).map((_, idx) => {
-                                                    const d = new Date(gridStart);
-                                                    d.setDate(gridStart.getDate() + idx);
-                                                    d.setHours(0, 0, 0, 0);
-                                                    const key = dateKeyLocal(d);
-                                                    const isCurrentMonth = d.getMonth() === monthStart.getMonth();
-                                                    const isSelected = key === selectedKey;
-                                                    const count = (byDay.get(key) || []).length;
-                                                    return (
-                                                        <button
-                                                            key={key}
-                                                            type="button"
-                                                            onClick={() => setCalendarSelectedDay(d)}
-                                                            className={`h-10 rounded-xl border flex flex-col items-center justify-center transition-colors ${isSelected
-                                                                ? activeTheme === 'dark'
-                                                                    ? 'bg-white/15 border-white/20'
-                                                                    : activeTheme === 'light'
-                                                                        ? 'bg-white border-blue-200'
-                                                                        : `${currentTheme.bgSecondary} border shadow-inner ${currentTheme.border} ring-1 ring-${currentTheme.text}/20`
-                                                                : activeTheme === 'dark'
-                                                                    ? 'bg-white/5 hover:bg-white/10 border-white/10'
-                                                                    : activeTheme === 'light'
-                                                                        ? 'bg-white/60 hover:bg-white border-blue-100'
-                                                                        : `bg-white/40 hover:${currentTheme.hoverBg} ${currentTheme.border}`
-                                                                } ${!isCurrentMonth ? (activeTheme === 'dark' ? 'opacity-40' : 'opacity-50') : ''}`}
-                                                        >
-                                                            <div className={`text-xs ${activeTheme === 'dark' ? 'text-white' : activeTheme === 'light' ? 'text-gray-900' : currentTheme.text
-                                                                }`}>{d.getDate()}</div>
-                                                            {count > 0 && <div className={`text-[10px] ${activeTheme === 'dark' ? 'text-white/70' : activeTheme === 'light' ? 'text-blue-700' : currentTheme.textSecondary
-                                                                }`}>{count}</div>}
-                                                        </button>
-                                                    );
-                                                });
-
-                                                const selectedEvents = (byDay.get(selectedKey) || []).slice();
-                                                selectedEvents.sort((a, b) => {
-                                                    const aStart = a?.start?.dateTime || a?.start?.date;
-                                                    const bStart = b?.start?.dateTime || b?.start?.date;
-                                                    const aDate = typeof aStart === 'string' ? new Date(aStart.includes('T') ? aStart : `${aStart}T00:00:00`) : new Date(0);
-                                                    const bDate = typeof bStart === 'string' ? new Date(bStart.includes('T') ? bStart : `${bStart}T00:00:00`) : new Date(0);
-                                                    return aDate.getTime() - bDate.getTime();
-                                                });
-
-                                                const allEvents = calendarEvents.slice();
-                                                allEvents.sort((a, b) => {
-                                                    const aStart = a?.start?.dateTime || a?.start?.date;
-                                                    const bStart = b?.start?.dateTime || b?.start?.date;
-                                                    const aDate = typeof aStart === 'string' ? new Date(aStart.includes('T') ? aStart : `${aStart}T00:00:00`) : new Date(0);
-                                                    const bDate = typeof bStart === 'string' ? new Date(bStart.includes('T') ? bStart : `${bStart}T00:00:00`) : new Date(0);
-                                                    return aDate.getTime() - bDate.getTime();
-                                                });
-
-                                                return (
-                                                    <div>
-                                                        <div className={(calendarMobileExpanded ? 'block' : 'hidden') + ' sm:block'}>
-                                                            <div className={`grid grid-cols-7 gap-1 text-[10px] mb-1 ${activeTheme === 'dark' ? 'text-white/50' : activeTheme === 'light' ? 'text-gray-500' : currentTheme.textSecondary
-                                                                }`}>
-                                                                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d) => (
-                                                                    <div key={d} className="text-center">{d}</div>
+                                                )
+                                            ) : (
+                                                <div className="space-y-3">
+                                                    {youtubeVideos.length === 0 ? (
+                                                        <p className={`text-sm ${activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.textSecondary
+                                                            }`}>
+                                                            No videos found yet. Click Refresh.
+                                                        </p>
+                                                    ) : (
+                                                        <div className="max-h-[420px] overflow-auto pr-1">
+                                                            <div className="space-y-3">
+                                                                {youtubeVideos.map((v) => (
+                                                                    <button
+                                                                        key={v.id}
+                                                                        type="button"
+                                                                        onClick={() => openVideoPlayer(v.id)}
+                                                                        className={`block w-full text-left p-3 rounded-xl border transition-colors ${activeTheme === 'dark'
+                                                                            ? 'bg-black/20 border-[#3d3d3f]/60 hover:border-[#0071e3]/50'
+                                                                            : activeTheme === 'light'
+                                                                                ? 'bg-gray-50 border-gray-200 hover:border-blue-200'
+                                                                                : `bg-white/50 ${currentTheme.border} hover:${currentTheme.ring}/50`
+                                                                            }`}
+                                                                    >
+                                                                        <div className="flex items-start gap-3">
+                                                                            <img src={v.thumbnail} alt={v.title} className="w-16 h-10 object-cover rounded-md flex-shrink-0" />
+                                                                            <div className="min-w-0">
+                                                                                <div className={`text-sm font-medium line-clamp-2 ${activeTheme === 'dark' ? 'text-white' : activeTheme === 'light' ? 'text-gray-900' : currentTheme.text
+                                                                                    }`}>{v.title}</div>
+                                                                                <div className={`mt-1 text-[11px] flex items-center gap-2 ${activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.textSecondary
+                                                                                    }`}>
+                                                                                    <span className="truncate">{v.channel}</span>
+                                                                                    <span className="whitespace-nowrap">• {v.duration}</span>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </button>
                                                                 ))}
                                                             </div>
-
-                                                            <div className="grid grid-cols-7 gap-1">{cells}</div>
-
-                                                            {selectedEvents.length > 0 && (
-                                                                <div className={`mt-3 rounded-xl border p-3 ${activeTheme === 'dark' ? 'border-white/10 bg-black/10' : activeTheme === 'light' ? 'border-blue-100 bg-white/60' : `${currentTheme.border} bg-white/50`
-                                                                    }`}>
-                                                                    <div className={`text-[11px] font-medium mb-1 ${activeTheme === 'dark' ? 'text-white/80' : activeTheme === 'light' ? 'text-gray-800' : currentTheme.text
-                                                                        }`}>
-                                                                        {calendarSelectedDay.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-                                                                    </div>
-                                                                    <div className="space-y-1.5">
-                                                                        {selectedEvents.map((ev) => {
-                                                                            const isScheduledPost = ev?.isScheduledPost === true;
-                                                                            const title = String(ev?.summary || 'Untitled');
-                                                                            const startRaw = ev?.start?.dateTime || ev?.start?.date;
-                                                                            const startDate = typeof startRaw === 'string'
-                                                                                ? new Date(startRaw.includes('T') ? startRaw : `${startRaw}T00:00:00`)
-                                                                                : null;
-                                                                            const timeLabel = startDate
-                                                                                ? (startRaw?.includes?.('T')
-                                                                                    ? startDate.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
-                                                                                    : 'All day')
-                                                                                : '';
-
-                                                                            if (isScheduledPost) {
-                                                                                // Render scheduled post differently
-                                                                                return (
-                                                                                    <div key={String(ev?.id || title)} className="flex items-center justify-between gap-2">
-                                                                                        <div className="flex items-center gap-1.5 min-w-0">
-                                                                                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${ev?.status === 'scheduled' ? 'bg-blue-500/20 text-blue-400' :
-                                                                                                ev?.status === 'publishing' ? 'bg-yellow-500/20 text-yellow-400' :
-                                                                                                    ev?.status === 'published' ? 'bg-green-500/20 text-green-400' :
-                                                                                                        'bg-gray-500/20 text-gray-400'
-                                                                                                }`}>{ev?.status}</span>
-                                                                                            <div className="flex items-center gap-1 mx-1">
-                                                                                                {ev?.platforms?.map((p: string) => (
-                                                                                                    <img
-                                                                                                        key={p}
-                                                                                                        src={PLATFORM_LOGOS[p] || ''}
-                                                                                                        alt={p}
-                                                                                                        className="w-3.5 h-3.5 object-contain"
-                                                                                                        title={p}
-                                                                                                    />
-                                                                                                ))}
-                                                                                            </div>
-                                                                                            <span className={`text-[11px] truncate ${isDarkMode ? 'text-purple-300' : 'text-purple-700'}`}>
-                                                                                                {ev?.textContent ? (ev.textContent.length > 40 ? ev.textContent.substring(0, 40) + '...' : ev.textContent) : 'Social Post'}
-                                                                                            </span>
-                                                                                        </div>
-                                                                                        <div className={`text-[10px] flex-shrink-0 ${isDarkMode ? 'text-white/60' : 'text-gray-600'}`}>{timeLabel}</div>
-                                                                                    </div>
-                                                                                );
-                                                                            }
-
-                                                                            // Render scheduled email differently
-                                                                            const isScheduledEmail = ev?.isScheduledEmail === true;
-                                                                            if (isScheduledEmail) {
-                                                                                return (
-                                                                                    <div key={String(ev?.id || title)} className="flex items-center justify-between gap-2">
-                                                                                        <div className="flex items-center gap-1.5 min-w-0">
-                                                                                            <span className={`text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${ev?.status === 'scheduled' ? 'bg-purple-500/20 text-purple-400' :
-                                                                                                ev?.status === 'sending' ? 'bg-yellow-500/20 text-yellow-400' :
-                                                                                                    ev?.status === 'sent' ? 'bg-green-500/20 text-green-400' :
-                                                                                                        'bg-gray-500/20 text-gray-400'
-                                                                                                }`}>{ev?.status}</span>
-                                                                                            <span className="text-[10px]">{ev?.provider === 'gmail' ? '\ud83d\udce7' : '\ud83d\udce8'}</span>
-                                                                                            <span className={`text-[11px] truncate ${isDarkMode ? 'text-pink-300' : 'text-pink-700'}`}>
-                                                                                                {ev?.subject ? (ev.subject.length > 30 ? ev.subject.substring(0, 30) + '...' : ev.subject) : 'Email'}
-                                                                                                {ev?.recipientCount > 1 && ` (${ev.recipientCount})`}
-                                                                                            </span>
-                                                                                        </div>
-                                                                                        <div className={`text-[10px] flex-shrink-0 ${isDarkMode ? 'text-white/60' : 'text-gray-600'}`}>{timeLabel}</div>
-                                                                                    </div>
-                                                                                );
-                                                                            }
-
-                                                                            return (
-                                                                                <div key={String(ev?.id || title)} className="flex items-center justify-between gap-2">
-                                                                                    <div className={`text-[11px] truncate ${activeTheme === 'dark' ? 'text-white' : activeTheme === 'light' ? 'text-gray-900' : currentTheme.text
-                                                                                        }`}>{title}</div>
-                                                                                    <div className={`text-[10px] flex-shrink-0 ${activeTheme === 'dark' ? 'text-white/60' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.textSecondary
-                                                                                        }`}>{timeLabel}</div>
-                                                                                </div>
-                                                                            );
-                                                                        })}
-                                                                    </div>
-                                                                </div>
-                                                            )}
                                                         </div>
-
-                                                        {allEvents.length > 0 && (
-                                                            <div className={`mt-3 rounded-xl border p-3 ${activeTheme === 'dark' ? 'border-white/10 bg-black/10' : activeTheme === 'light' ? 'border-blue-100 bg-white/60' : `${currentTheme.border} bg-white/50`
-                                                                }`}>
-                                                                <div className={`text-[11px] font-medium mb-2 ${activeTheme === 'dark' ? 'text-white/80' : activeTheme === 'light' ? 'text-gray-800' : currentTheme.text
-                                                                    }`}>
-                                                                    All events ({allEvents.length})
-                                                                </div>
-                                                                <div className={`space-y-1.5 overflow-y-auto ${calendarMobileExpanded ? 'max-h-40' : 'max-h-48'} sm:max-h-40`}>
-                                                                    {allEvents.map((ev) => {
-                                                                        const isScheduledPost = ev?.isScheduledPost === true;
-                                                                        const title = String(ev?.summary || 'Untitled');
-                                                                        const startRaw = ev?.start?.dateTime || ev?.start?.date;
-                                                                        const startDate = typeof startRaw === 'string'
-                                                                            ? new Date(startRaw.includes('T') ? startRaw : `${startRaw}T00:00:00`)
-                                                                            : null;
-                                                                        const timeLabel = startDate
-                                                                            ? startDate.toLocaleString(undefined, {
-                                                                                month: 'short',
-                                                                                day: 'numeric',
-                                                                                ...(startRaw?.includes?.('T')
-                                                                                    ? { hour: 'numeric', minute: '2-digit' }
-                                                                                    : {}),
-                                                                            })
-                                                                            : '';
-
-                                                                        if (isScheduledPost) {
-                                                                            return (
-                                                                                <div key={String(ev?.id || title)} className="flex items-center justify-between gap-2">
-                                                                                    <div className="flex items-center gap-1.5 min-w-0">
-                                                                                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${ev?.status === 'scheduled' ? 'bg-blue-500/20 text-blue-400' :
-                                                                                            ev?.status === 'publishing' ? 'bg-yellow-500/20 text-yellow-400' :
-                                                                                                ev?.status === 'published' ? 'bg-green-500/20 text-green-400' :
-                                                                                                    'bg-gray-500/20 text-gray-400'
-                                                                                            }`}>{ev?.status}</span>
-                                                                                        <div className="flex items-center gap-1 mx-1">
-                                                                                            {ev?.platforms?.map((p: string) => (
-                                                                                                <img
-                                                                                                    key={p}
-                                                                                                    src={PLATFORM_LOGOS[p] || ''}
-                                                                                                    alt={p}
-                                                                                                    className="w-3.5 h-3.5 object-contain"
-                                                                                                    title={p}
-                                                                                                />
-                                                                                            ))}
-                                                                                        </div>
-                                                                                        <span className={`text-[11px] truncate ${isDarkMode ? 'text-purple-300' : 'text-purple-700'}`}>
-                                                                                            {ev?.textContent ? (ev.textContent.length > 40 ? ev.textContent.substring(0, 40) + '...' : ev.textContent) : 'Social Post'}
-                                                                                        </span>
-                                                                                    </div>
-                                                                                    <div className={`text-[10px] flex-shrink-0 ${isDarkMode ? 'text-white/60' : 'text-gray-600'}`}>{timeLabel}</div>
-                                                                                </div>
-                                                                            );
-                                                                        }
-
-                                                                        // Render scheduled email differently
-                                                                        const isScheduledEmail = ev?.isScheduledEmail === true;
-                                                                        if (isScheduledEmail) {
-                                                                            return (
-                                                                                <div key={String(ev?.id || title)} className="flex items-center justify-between gap-2">
-                                                                                    <div className="flex items-center gap-1.5 min-w-0">
-                                                                                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${ev?.status === 'scheduled' ? 'bg-purple-500/20 text-purple-400' :
-                                                                                            ev?.status === 'sending' ? 'bg-yellow-500/20 text-yellow-400' :
-                                                                                                ev?.status === 'sent' ? 'bg-green-500/20 text-green-400' :
-                                                                                                    'bg-gray-500/20 text-gray-400'
-                                                                                            }`}>{ev?.status}</span>
-                                                                                        <span className="text-[10px]">{ev?.provider === 'gmail' ? '\ud83d\udce7' : '\ud83d\udce8'}</span>
-                                                                                        <span className={`text-[11px] truncate ${isDarkMode ? 'text-pink-300' : 'text-pink-700'}`}>
-                                                                                            {ev?.subject ? (ev.subject.length > 30 ? ev.subject.substring(0, 30) + '...' : ev.subject) : 'Email'}
-                                                                                            {ev?.recipientCount > 1 && ` (${ev.recipientCount})`}
-                                                                                        </span>
-                                                                                    </div>
-                                                                                    <div className={`text-[10px] flex-shrink-0 ${isDarkMode ? 'text-white/60' : 'text-gray-600'}`}>{timeLabel}</div>
-                                                                                </div>
-                                                                            );
-                                                                        }
-
-                                                                        return (
-                                                                            <div key={String(ev?.id || title)} className="flex items-center justify-between gap-2">
-                                                                                <div className={`text-[11px] truncate ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{title}</div>
-                                                                                <div className={`text-[10px] flex-shrink-0 ${isDarkMode ? 'text-white/60' : 'text-gray-600'}`}>{timeLabel}</div>
-                                                                            </div>
-                                                                        );
-                                                                    })}
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })()}
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
 
-                                        {/* Show Google connection option if not connected */}
-                                        {!calendarConnected && (
-                                            <div className={`mt-3 flex items-center justify-between gap-3 p-2 rounded-lg ${isDarkMode ? 'bg-white/5' : 'bg-gray-50'}`}>
-                                                <div className={`text-[11px] ${isDarkMode ? 'text-white/70' : 'text-gray-600'}`}>
-                                                    Connect Google for calendar events
+                                        {tasks.length > 0 && (
+                                            <div className={`hidden lg:block rounded-2xl sm:rounded-3xl p-5 ${activeTheme === 'dark'
+                                                ? 'bg-[#1d1d1f] border border-[#3d3d3f]/50'
+                                                : activeTheme === 'light'
+                                                    ? 'bg-white border border-gray-200'
+                                                    : `${currentTheme.cardBg} border ${currentTheme.border}`
+                                                }`}>
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <h3 className={`text-sm font-semibold uppercase tracking-wider ${activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.text
+                                                        }`}>Progress</h3>
+                                                    <button
+                                                        onClick={() => setIsQuickAddTaskModalOpen(true)}
+                                                        className={`p-1.5 rounded-lg transition-colors ${activeTheme === 'dark'
+                                                            ? 'hover:bg-white/10 text-[#86868b] hover:text-white'
+                                                            : activeTheme === 'light'
+                                                                ? 'hover:bg-gray-100 text-gray-500 hover:text-gray-900'
+                                                                : `${currentTheme.textSecondary} hover:${currentTheme.text} hover:${currentTheme.bgSecondary}`
+                                                            }`}
+                                                        title="Quick Add Task"
+                                                    >
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                                <div className="space-y-4">
+                                                    <div>
+                                                        <div className="flex justify-between text-xs mb-2">
+                                                            <span className={activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.textSecondary}>Completion</span>
+                                                            <span className={`font-medium ${activeTheme === 'dark' ? 'text-white' : activeTheme === 'light' ? 'text-gray-900' : currentTheme.text}`}>{Math.round((doneCount / tasks.length) * 100)}%</span>
+                                                        </div>
+                                                        <div className={`h-2 rounded-full overflow-hidden ${activeTheme === 'dark' ? 'bg-[#2d2d2f]' : activeTheme === 'light' ? 'bg-gray-200' : 'bg-black/5'
+                                                            }`}>
+                                                            <div
+                                                                className={`h-full rounded-full transition-all ${activeTheme === 'dark' || activeTheme === 'light' ? 'bg-gradient-to-r from-[#0071e3] to-[#30d158]' : `bg-gradient-to-r ${currentTheme.primary} to-[#30d158]`}`}
+                                                                style={{ width: `${(doneCount / tasks.length) * 100}%` }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-3 gap-2 text-center">
+                                                        <div className={`p-3 rounded-xl ${activeTheme === 'dark' ? 'bg-[#2d2d2f]' : activeTheme === 'light' ? 'bg-gray-100' : 'bg-white/50'
+                                                            }`}>
+                                                            <span className={`text-lg font-semibold ${activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.text
+                                                                }`}>{todoCount}</span>
+                                                            <p className={`text-[10px] uppercase mt-0.5 ${activeTheme === 'dark' ? 'text-[#636366]' : activeTheme === 'light' ? 'text-gray-500' : currentTheme.textSecondary
+                                                                }`}>To Do</p>
+                                                        </div>
+                                                        <div className={`p-3 rounded-xl ${activeTheme === 'dark' ? 'bg-[#0071e3]/10' : activeTheme === 'light' ? 'bg-[#0071e3]/10' : `${currentTheme.primary}/10`}`}>
+                                                            <span className={`text-lg font-semibold ${activeTheme === 'dark' ? 'text-[#0071e3]' : activeTheme === 'light' ? 'text-[#0071e3]' : currentTheme.accent}`}>{inProgressCount}</span>
+                                                            <p className={`text-[10px] uppercase mt-0.5 ${activeTheme === 'dark' ? 'text-[#0071e3]' : activeTheme === 'light' ? 'text-[#0071e3]' : currentTheme.accent}`}>Active</p>
+                                                        </div>
+                                                        <div className="p-3 bg-[#30d158]/10 rounded-xl">
+                                                            <span className="text-lg font-semibold text-[#30d158]">{doneCount}</span>
+                                                            <p className="text-[10px] text-[#30d158] uppercase mt-0.5">Done</p>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => setActiveTab('tasks')}
+                                                        className="w-full mt-4 text-sm text-[#0071e3] hover:text-[#0077ed] transition-colors font-medium"
+                                                    >
+                                                        View Task Board
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className={`hidden lg:block rounded-2xl sm:rounded-3xl p-5 ${activeTheme === 'dark'
+                                            ? 'bg-[#1d1d1f] border border-[#3d3d3f]/50'
+                                            : activeTheme === 'light'
+                                                ? 'bg-white border border-gray-200'
+                                                : `${currentTheme.cardBg} border ${currentTheme.border}`
+                                            }`}>
+                                            <h3 className={`text-sm font-semibold uppercase tracking-wider mb-4 ${activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.text
+                                                }`}>Stats</h3>
+                                            <div className="space-y-3">
+                                                <div className="flex justify-between items-center">
+                                                    <span className={`text-sm ${activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.textSecondary
+                                                        }`}>Research Sessions</span>
+                                                    <span className={`text-lg font-semibold ${activeTheme === 'dark' ? 'text-white' : activeTheme === 'light' ? 'text-gray-900' : currentTheme.text
+                                                        }`}>{researchSessions.length}</span>
                                                 </div>
                                                 <button
                                                     type="button"
-                                                    onClick={handleConnectGoogleForCalendarWidget}
-                                                    className={`px-2.5 py-1 rounded-full text-[10px] font-medium text-white ${activeTheme === 'dark' || activeTheme === 'light' ? 'bg-[#0071e3] hover:bg-[#0077ed]' : `${currentTheme.primary} ${currentTheme.primaryHover}`}`}
+                                                    onClick={openAllSourcesModal}
+                                                    disabled={totalSources === 0}
+                                                    className="flex justify-between items-center w-full disabled:opacity-60 text-left"
                                                 >
-                                                    Connect
+                                                    <span className={`text-sm ${activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.textSecondary
+                                                        }`}>Total Sources</span>
+                                                    <span className={`text-lg font-semibold ${activeTheme === 'dark' ? 'text-white' : activeTheme === 'light' ? 'text-gray-900' : currentTheme.text
+                                                        }`}>{totalSources}</span>
                                                 </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setActiveTab('data')}
+                                                    className="flex justify-between items-center w-full text-left"
+                                                >
+                                                    <span className={`text-sm ${activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.textSecondary
+                                                        }`}>Uploaded Files</span>
+                                                    <span className={`text-lg font-semibold ${activeTheme === 'dark' ? 'text-white' : activeTheme === 'light' ? 'text-gray-900' : currentTheme.text
+                                                        }`}>{uploadedFileCount}</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setActiveTab('notes')}
+                                                    className="flex justify-between items-center w-full text-left"
+                                                >
+                                                    <span className={`text-sm ${activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.textSecondary
+                                                        }`}>Notes</span>
+                                                    <span className={`text-lg font-semibold ${activeTheme === 'dark' ? 'text-white' : activeTheme === 'light' ? 'text-gray-900' : currentTheme.text
+                                                        }`}>{notes.length}</span>
+                                                </button>
+                                                <div className="flex justify-between items-center">
+                                                    <span className={`text-sm ${activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.textSecondary
+                                                        }`}>Last Updated</span>
+                                                    <span className={`text-sm ${activeTheme === 'dark' ? 'text-[#e5e5ea]' : activeTheme === 'light' ? 'text-gray-700' : currentTheme.text
+                                                        }`}>{new Date(currentProject.lastModified).toLocaleDateString()}</span>
+                                                </div>
                                             </div>
-                                        )}
-
-                                        {(calendarLoading || calendarStatusLoading) && (
-                                            <div className={`mt-2 text-[11px] ${isDarkMode ? 'text-white/60' : 'text-gray-600'}`}>Syncing…</div>
-                                        )}
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div className="hidden lg:block space-y-4 lg:space-y-5">
+                                <div className="order-3 lg:order-3 lg:col-start-3 lg:row-start-2 space-y-4 lg:space-y-5 lg:hidden">
                                     <div className={`rounded-2xl sm:rounded-3xl p-5 ${activeTheme === 'dark'
                                         ? 'bg-[#1d1d1f] border border-[#3d3d3f]/50'
                                         : activeTheme === 'light'
                                             ? 'bg-white border border-gray-200'
                                             : `${currentTheme.cardBg} border ${currentTheme.border}`
-                                        }`}>
+                                        } ${activeOverviewTab === 'news' ? 'block' : 'hidden'}`}>
                                         <div className="flex items-center justify-between gap-3 mb-4">
                                             <div className="flex items-center gap-2">
-                                                <h3 className={`text-sm font-semibold uppercase tracking-wider ${activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.text
-                                                    }`}>News</h3>
+                                                <h3 className={`text-sm font-semibold uppercase tracking-wider ${isDarkMode ? 'text-[#86868b]' : 'text-gray-600'}`}>News</h3>
                                                 <div className={`flex items-center gap-1 p-0.5 rounded-full ${activeTheme === 'dark'
                                                     ? 'bg-black/30'
                                                     : activeTheme === 'light'
@@ -8123,7 +8641,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                                                         type="button"
                                                         onClick={() => setNewsMode('news')}
                                                         className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors ${newsMode === 'news'
-                                                            ? (activeTheme === 'dark' || activeTheme === 'light' ? 'bg-[#0071e3] text-white' : `${currentTheme.primary} text-white`)
+                                                            ? 'bg-[#0071e3] text-white'
                                                             : activeTheme === 'dark'
                                                                 ? 'text-[#86868b] hover:text-white'
                                                                 : activeTheme === 'light'
@@ -8137,7 +8655,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                                                         type="button"
                                                         onClick={() => setNewsMode('videos')}
                                                         className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors ${newsMode === 'videos'
-                                                            ? (activeTheme === 'dark' || activeTheme === 'light' ? 'bg-[#0071e3] text-white' : `${currentTheme.primary} text-white`)
+                                                            ? 'bg-[#0071e3] text-white'
                                                             : activeTheme === 'dark'
                                                                 ? 'text-[#86868b] hover:text-white'
                                                                 : activeTheme === 'light'
@@ -8216,11 +8734,11 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                                             newsArticles.length === 0 ? (
                                                 <p className={`text-sm ${activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.textSecondary
                                                     }`}>
-                                                    No news loaded yet. Click Refresh to fetch recent coverage.
+                                                    No news loaded yet. Tap Refresh to fetch recent coverage.
                                                 </p>
                                             ) : (
                                                 <div className="space-y-3">
-                                                    {newsArticles.slice(0, 6).map((a, idx) => (
+                                                    {newsArticles.slice(0, 4).map((a, idx) => (
                                                         <a
                                                             key={`${a.url}-${idx}`}
                                                             href={a.url}
@@ -8259,12 +8777,12 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                                                 {youtubeVideos.length === 0 ? (
                                                     <p className={`text-sm ${activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.textSecondary
                                                         }`}>
-                                                        No videos found yet. Click Refresh.
+                                                        No videos found yet. Tap Refresh.
                                                     </p>
                                                 ) : (
-                                                    <div className="max-h-[420px] overflow-auto pr-1">
+                                                    <div className="max-h-[360px] overflow-auto pr-1">
                                                         <div className="space-y-3">
-                                                            {youtubeVideos.map((v) => (
+                                                            {youtubeVideos.map(v => (
                                                                 <button
                                                                     key={v.id}
                                                                     type="button"
@@ -8273,7 +8791,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                                                                         ? 'bg-black/20 border-[#3d3d3f]/60 hover:border-[#0071e3]/50'
                                                                         : activeTheme === 'light'
                                                                             ? 'bg-gray-50 border-gray-200 hover:border-blue-200'
-                                                                            : `bg-white/50 ${currentTheme.border} hover:${currentTheme.ring}/50`
+                                                                            : `bg-white/50 ${currentTheme.border} hover:shadow-sm`
                                                                         }`}
                                                                 >
                                                                     <div className="flex items-start gap-3">
@@ -8303,7 +8821,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                                             : activeTheme === 'light'
                                                 ? 'bg-white border border-gray-200'
                                                 : `${currentTheme.cardBg} border ${currentTheme.border}`
-                                            }`}>
+                                            } ${activeOverviewTab === 'focus' ? 'block' : 'hidden'}`}>
                                             <h3 className={`text-sm font-semibold uppercase tracking-wider mb-4 ${activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.text
                                                 }`}>Progress</h3>
                                             <div className="space-y-4">
@@ -8315,7 +8833,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                                                     <div className={`h-2 rounded-full overflow-hidden ${activeTheme === 'dark' ? 'bg-[#2d2d2f]' : activeTheme === 'light' ? 'bg-gray-200' : 'bg-black/5'
                                                         }`}>
                                                         <div
-                                                            className={`h-full rounded-full transition-all ${activeTheme === 'dark' || activeTheme === 'light' ? 'bg-gradient-to-r from-[#0071e3] to-[#30d158]' : `bg-gradient-to-r ${currentTheme.primary} to-[#30d158]`}`}
+                                                            className="h-full bg-gradient-to-r from-[#0071e3] to-[#30d158] rounded-full transition-all"
                                                             style={{ width: `${(doneCount / tasks.length) * 100}%` }}
                                                         />
                                                     </div>
@@ -8328,13 +8846,19 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                                                         <p className={`text-[10px] uppercase mt-0.5 ${activeTheme === 'dark' ? 'text-[#636366]' : activeTheme === 'light' ? 'text-gray-500' : currentTheme.textSecondary
                                                             }`}>To Do</p>
                                                     </div>
-                                                    <div className={`p-3 rounded-xl ${activeTheme === 'dark' ? 'bg-[#0071e3]/10' : activeTheme === 'light' ? 'bg-[#0071e3]/10' : `${currentTheme.primary}/10`}`}>
-                                                        <span className={`text-lg font-semibold ${activeTheme === 'dark' ? 'text-[#0071e3]' : activeTheme === 'light' ? 'text-[#0071e3]' : currentTheme.accent}`}>{inProgressCount}</span>
-                                                        <p className={`text-[10px] uppercase mt-0.5 ${activeTheme === 'dark' ? 'text-[#0071e3]' : activeTheme === 'light' ? 'text-[#0071e3]' : currentTheme.accent}`}>Active</p>
+                                                    <div className={`p-3 rounded-xl ${activeTheme === 'dark' ? 'bg-[#0071e3]/10' : activeTheme === 'light' ? 'bg-[#0071e3]/10' : currentTheme.bgSecondary
+                                                        }`}>
+                                                        <span className={`text-lg font-semibold ${activeTheme === 'dark' ? 'text-[#0071e3]' : activeTheme === 'light' ? 'text-[#0071e3]' : currentTheme.accent
+                                                            }`}>{inProgressCount}</span>
+                                                        <p className={`text-[10px] uppercase mt-0.5 ${activeTheme === 'dark' ? 'text-[#0071e3]' : activeTheme === 'light' ? 'text-[#0071e3]' : currentTheme.accent
+                                                            }`}>Active</p>
                                                     </div>
-                                                    <div className="p-3 bg-[#30d158]/10 rounded-xl">
-                                                        <span className="text-lg font-semibold text-[#30d158]">{doneCount}</span>
-                                                        <p className="text-[10px] text-[#30d158] uppercase mt-0.5">Done</p>
+                                                    <div className={`p-3 rounded-xl ${activeTheme === 'dark' ? 'bg-[#30d158]/10' : activeTheme === 'light' ? 'bg-[#30d158]/10' : currentTheme.bgSecondary
+                                                        }`}>
+                                                        <span className={`text-lg font-semibold ${activeTheme === 'dark' ? 'text-[#30d158]' : activeTheme === 'light' ? 'text-[#30d158]' : currentTheme.accent
+                                                            }`}>{doneCount}</span>
+                                                        <p className={`text-[10px] uppercase mt-0.5 ${activeTheme === 'dark' ? 'text-[#30d158]' : activeTheme === 'light' ? 'text-[#30d158]' : currentTheme.accent
+                                                            }`}>Done</p>
                                                     </div>
                                                 </div>
                                                 <button
@@ -8352,7 +8876,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                                         : activeTheme === 'light'
                                             ? 'bg-white border border-gray-200'
                                             : `${currentTheme.cardBg} border ${currentTheme.border}`
-                                        }`}>
+                                        } ${activeOverviewTab === 'focus' ? 'block' : 'hidden'}`}>
                                         <h3 className={`text-sm font-semibold uppercase tracking-wider mb-4 ${activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.text
                                             }`}>Stats</h3>
                                         <div className="space-y-3">
@@ -8368,34 +8892,27 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                                                 disabled={totalSources === 0}
                                                 className="flex justify-between items-center w-full disabled:opacity-60 text-left"
                                             >
-                                                <span className={`text-sm ${activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.textSecondary
-                                                    }`}>Total Sources</span>
-                                                <span className={`text-lg font-semibold ${activeTheme === 'dark' ? 'text-white' : activeTheme === 'light' ? 'text-gray-900' : currentTheme.text
-                                                    }`}>{totalSources}</span>
+                                                <span className={`text-sm ${isDarkMode ? 'text-[#86868b]' : 'text-gray-600'}`}>Total Sources</span>
+                                                <span className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{totalSources}</span>
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={() => setActiveTab('data')}
                                                 className="flex justify-between items-center w-full text-left"
                                             >
-                                                <span className={`text-sm ${activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.textSecondary
-                                                    }`}>Uploaded Files</span>
-                                                <span className={`text-lg font-semibold ${activeTheme === 'dark' ? 'text-white' : activeTheme === 'light' ? 'text-gray-900' : currentTheme.text
-                                                    }`}>{uploadedFileCount}</span>
+                                                <span className={`text-sm ${isDarkMode ? 'text-[#86868b]' : 'text-gray-600'}`}>Uploaded Files</span>
+                                                <span className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{uploadedFileCount}</span>
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={() => setActiveTab('notes')}
                                                 className="flex justify-between items-center w-full text-left"
                                             >
-                                                <span className={`text-sm ${activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.textSecondary
-                                                    }`}>Notes</span>
-                                                <span className={`text-lg font-semibold ${activeTheme === 'dark' ? 'text-white' : activeTheme === 'light' ? 'text-gray-900' : currentTheme.text
-                                                    }`}>{notes.length}</span>
+                                                <span className={`text-sm ${isDarkMode ? 'text-[#86868b]' : 'text-gray-600'}`}>Notes</span>
+                                                <span className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{notes.length}</span>
                                             </button>
                                             <div className="flex justify-between items-center">
-                                                <span className={`text-sm ${activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.textSecondary
-                                                    }`}>Last Updated</span>
+                                                <span className={`text-sm ${isDarkMode ? 'text-[#86868b]' : 'text-gray-600'}`}>Last Updated</span>
                                                 <span className={`text-sm ${activeTheme === 'dark' ? 'text-[#e5e5ea]' : activeTheme === 'light' ? 'text-gray-700' : currentTheme.text
                                                     }`}>{new Date(currentProject.lastModified).toLocaleDateString()}</span>
                                             </div>
@@ -8404,305 +8921,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                                 </div>
                             </div>
 
-                            <div className="order-3 lg:order-3 lg:col-start-3 lg:row-start-2 space-y-4 lg:space-y-5 lg:hidden">
-                                <div className={`rounded-2xl sm:rounded-3xl p-5 ${activeTheme === 'dark'
-                                    ? 'bg-[#1d1d1f] border border-[#3d3d3f]/50'
-                                    : activeTheme === 'light'
-                                        ? 'bg-white border border-gray-200'
-                                        : `${currentTheme.cardBg} border ${currentTheme.border}`
-                                    }`}>
-                                    <div className="flex items-center justify-between gap-3 mb-4">
-                                        <div className="flex items-center gap-2">
-                                            <h3 className={`text-sm font-semibold uppercase tracking-wider ${isDarkMode ? 'text-[#86868b]' : 'text-gray-600'}`}>News</h3>
-                                            <div className={`flex items-center gap-1 p-0.5 rounded-full ${activeTheme === 'dark'
-                                                ? 'bg-black/30'
-                                                : activeTheme === 'light'
-                                                    ? 'bg-gray-100'
-                                                    : `${currentTheme.bgSecondary} border ${currentTheme.border}`
-                                                }`}>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setNewsMode('news')}
-                                                    className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors ${newsMode === 'news'
-                                                        ? 'bg-[#0071e3] text-white'
-                                                        : activeTheme === 'dark'
-                                                            ? 'text-[#86868b] hover:text-white'
-                                                            : activeTheme === 'light'
-                                                                ? 'text-gray-700 hover:text-gray-900'
-                                                                : `${currentTheme.textSecondary} hover:${currentTheme.text}`
-                                                        }`}
-                                                >
-                                                    News
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setNewsMode('videos')}
-                                                    className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors ${newsMode === 'videos'
-                                                        ? 'bg-[#0071e3] text-white'
-                                                        : activeTheme === 'dark'
-                                                            ? 'text-[#86868b] hover:text-white'
-                                                            : activeTheme === 'light'
-                                                                ? 'text-gray-700 hover:text-gray-900'
-                                                                : `${currentTheme.textSecondary} hover:${currentTheme.text}`
-                                                        }`}
-                                                >
-                                                    Videos
-                                                </button>
-                                            </div>
-                                        </div>
-                                        {newsMode === 'news' ? (
-                                            <button
-                                                type="button"
-                                                onClick={refreshNews}
-                                                disabled={refreshingNews}
-                                                className={`text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${refreshingNews
-                                                    ? activeTheme === 'dark'
-                                                        ? 'bg-white/10 text-[#86868b] cursor-wait'
-                                                        : activeTheme === 'light'
-                                                            ? 'bg-gray-100 text-gray-500 cursor-wait'
-                                                            : `${currentTheme.bgSecondary} ${currentTheme.textSecondary} cursor-wait`
-                                                    : activeTheme === 'dark'
-                                                        ? 'bg-[#0071e3]/10 text-[#0071e3] hover:bg-[#0071e3]/20'
-                                                        : activeTheme === 'light'
-                                                            ? 'bg-[#0071e3]/10 text-[#0071e3] hover:bg-[#0071e3]/20'
-                                                            : `${currentTheme.bgSecondary} ${currentTheme.accent} hover:brightness-95`
-                                                    }`}
-                                            >
-                                                {refreshingNews ? 'Refreshing…' : 'Refresh'}
-                                            </button>
-                                        ) : (
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        if (youtubeVideos.length > 0) {
-                                                            const id = activeYoutubeVideoId || youtubeVideos[0]?.id;
-                                                            if (id) setActiveYoutubeVideoId(id);
-                                                        }
-                                                        setVideoPlayerMode('modal');
-                                                    }}
-                                                    className={`text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${activeTheme === 'dark'
-                                                        ? 'bg-white/10 text-white/80 hover:bg-white/15'
-                                                        : activeTheme === 'light'
-                                                            ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                                            : `${currentTheme.bgSecondary} ${currentTheme.text} hover:${currentTheme.hoverBg}`
-                                                        }`}
-                                                >
-                                                    Open
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={refreshVideos}
-                                                    disabled={refreshingVideos}
-                                                    className={`text-xs font-medium px-3 py-1.5 rounded-full transition-colors ${refreshingVideos
-                                                        ? activeTheme === 'dark'
-                                                            ? 'bg-white/10 text-[#86868b] cursor-wait'
-                                                            : activeTheme === 'light'
-                                                                ? 'bg-gray-100 text-gray-500 cursor-wait'
-                                                                : `${currentTheme.bgSecondary} ${currentTheme.textSecondary} cursor-wait`
-                                                        : activeTheme === 'dark'
-                                                            ? 'bg-[#0071e3]/10 text-[#0071e3] hover:bg-[#0071e3]/20'
-                                                            : activeTheme === 'light'
-                                                                ? 'bg-[#0071e3]/10 text-[#0071e3] hover:bg-[#0071e3]/20'
-                                                                : `${currentTheme.bgSecondary} ${currentTheme.accent} hover:brightness-95`
-                                                        }`}
-                                                >
-                                                    {refreshingVideos ? 'Refreshing…' : 'Refresh'}
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {newsMode === 'news' ? (
-                                        newsArticles.length === 0 ? (
-                                            <p className={`text-sm ${activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.textSecondary
-                                                }`}>
-                                                No news loaded yet. Tap Refresh to fetch recent coverage.
-                                            </p>
-                                        ) : (
-                                            <div className="space-y-3">
-                                                {newsArticles.slice(0, 4).map((a, idx) => (
-                                                    <a
-                                                        key={`${a.url}-${idx}`}
-                                                        href={a.url}
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        className={`block p-3 rounded-xl border transition-colors ${activeTheme === 'dark'
-                                                            ? 'bg-black/20 border-[#3d3d3f]/60 hover:border-[#0071e3]/50'
-                                                            : activeTheme === 'light'
-                                                                ? 'bg-gray-50 border-gray-200 hover:border-blue-200'
-                                                                : `bg-white/50 ${currentTheme.border} hover:shadow-sm`
-                                                            }`}
-                                                    >
-                                                        <div className="flex items-start justify-between gap-3">
-                                                            <div className="min-w-0">
-                                                                <p className={`text-sm font-medium leading-snug line-clamp-2 ${activeTheme === 'dark' ? 'text-white' : activeTheme === 'light' ? 'text-gray-900' : currentTheme.text
-                                                                    }`}>{a.title}</p>
-                                                                {a.description && (
-                                                                    <p className={`mt-1 text-xs line-clamp-2 ${activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.textSecondary
-                                                                        }`}>{a.description}</p>
-                                                                )}
-                                                                <div className={`mt-2 text-[11px] flex items-center gap-2 ${activeTheme === 'dark' ? 'text-[#636366]' : activeTheme === 'light' ? 'text-gray-500' : currentTheme.textSecondary
-                                                                    }`}>
-                                                                    <span className="truncate">{a.source || 'NewsAPI'}</span>
-                                                                    {a.publishedAt && <span className="whitespace-nowrap">• {new Date(a.publishedAt).toLocaleDateString()}</span>}
-                                                                </div>
-                                                            </div>
-                                                            <span className={`text-xs ${activeTheme === 'dark' ? 'text-[#5ac8fa]' : activeTheme === 'light' ? 'text-blue-600' : currentTheme.accent
-                                                                }`}>↗</span>
-                                                        </div>
-                                                    </a>
-                                                ))}
-                                            </div>
-                                        )
-                                    ) : (
-                                        <div className="space-y-3">
-                                            {youtubeVideos.length === 0 ? (
-                                                <p className={`text-sm ${activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.textSecondary
-                                                    }`}>
-                                                    No videos found yet. Tap Refresh.
-                                                </p>
-                                            ) : (
-                                                <div className="max-h-[360px] overflow-auto pr-1">
-                                                    <div className="space-y-3">
-                                                        {youtubeVideos.map(v => (
-                                                            <button
-                                                                key={v.id}
-                                                                type="button"
-                                                                onClick={() => openVideoPlayer(v.id)}
-                                                                className={`block w-full text-left p-3 rounded-xl border transition-colors ${activeTheme === 'dark'
-                                                                    ? 'bg-black/20 border-[#3d3d3f]/60 hover:border-[#0071e3]/50'
-                                                                    : activeTheme === 'light'
-                                                                        ? 'bg-gray-50 border-gray-200 hover:border-blue-200'
-                                                                        : `bg-white/50 ${currentTheme.border} hover:shadow-sm`
-                                                                    }`}
-                                                            >
-                                                                <div className="flex items-start gap-3">
-                                                                    <img src={v.thumbnail} alt={v.title} className="w-16 h-10 object-cover rounded-md flex-shrink-0" />
-                                                                    <div className="min-w-0">
-                                                                        <div className={`text-sm font-medium line-clamp-2 ${activeTheme === 'dark' ? 'text-white' : activeTheme === 'light' ? 'text-gray-900' : currentTheme.text
-                                                                            }`}>{v.title}</div>
-                                                                        <div className={`mt-1 text-[11px] flex items-center gap-2 ${activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.textSecondary
-                                                                            }`}>
-                                                                            <span className="truncate">{v.channel}</span>
-                                                                            <span className="whitespace-nowrap">• {v.duration}</span>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {tasks.length > 0 && (
-                                    <div className={`rounded-2xl sm:rounded-3xl p-5 ${activeTheme === 'dark'
-                                        ? 'bg-[#1d1d1f] border border-[#3d3d3f]/50'
-                                        : activeTheme === 'light'
-                                            ? 'bg-white border border-gray-200'
-                                            : `${currentTheme.cardBg} border ${currentTheme.border}`
-                                        }`}>
-                                        <h3 className={`text-sm font-semibold uppercase tracking-wider mb-4 ${activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.text
-                                            }`}>Progress</h3>
-                                        <div className="space-y-4">
-                                            <div>
-                                                <div className="flex justify-between text-xs mb-2">
-                                                    <span className={activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.textSecondary}>Completion</span>
-                                                    <span className={`font-medium ${activeTheme === 'dark' ? 'text-white' : activeTheme === 'light' ? 'text-gray-900' : currentTheme.text}`}>{Math.round((doneCount / tasks.length) * 100)}%</span>
-                                                </div>
-                                                <div className={`h-2 rounded-full overflow-hidden ${activeTheme === 'dark' ? 'bg-[#2d2d2f]' : activeTheme === 'light' ? 'bg-gray-200' : 'bg-black/5'
-                                                    }`}>
-                                                    <div
-                                                        className="h-full bg-gradient-to-r from-[#0071e3] to-[#30d158] rounded-full transition-all"
-                                                        style={{ width: `${(doneCount / tasks.length) * 100}%` }}
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="grid grid-cols-3 gap-2 text-center">
-                                                <div className={`p-3 rounded-xl ${activeTheme === 'dark' ? 'bg-[#2d2d2f]' : activeTheme === 'light' ? 'bg-gray-100' : 'bg-white/50'
-                                                    }`}>
-                                                    <span className={`text-lg font-semibold ${activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.text
-                                                        }`}>{todoCount}</span>
-                                                    <p className={`text-[10px] uppercase mt-0.5 ${activeTheme === 'dark' ? 'text-[#636366]' : activeTheme === 'light' ? 'text-gray-500' : currentTheme.textSecondary
-                                                        }`}>To Do</p>
-                                                </div>
-                                                <div className={`p-3 rounded-xl ${activeTheme === 'dark' ? 'bg-[#0071e3]/10' : activeTheme === 'light' ? 'bg-[#0071e3]/10' : currentTheme.bgSecondary
-                                                    }`}>
-                                                    <span className={`text-lg font-semibold ${activeTheme === 'dark' ? 'text-[#0071e3]' : activeTheme === 'light' ? 'text-[#0071e3]' : currentTheme.accent
-                                                        }`}>{inProgressCount}</span>
-                                                    <p className={`text-[10px] uppercase mt-0.5 ${activeTheme === 'dark' ? 'text-[#0071e3]' : activeTheme === 'light' ? 'text-[#0071e3]' : currentTheme.accent
-                                                        }`}>Active</p>
-                                                </div>
-                                                <div className={`p-3 rounded-xl ${activeTheme === 'dark' ? 'bg-[#30d158]/10' : activeTheme === 'light' ? 'bg-[#30d158]/10' : currentTheme.bgSecondary
-                                                    }`}>
-                                                    <span className={`text-lg font-semibold ${activeTheme === 'dark' ? 'text-[#30d158]' : activeTheme === 'light' ? 'text-[#30d158]' : currentTheme.accent
-                                                        }`}>{doneCount}</span>
-                                                    <p className={`text-[10px] uppercase mt-0.5 ${activeTheme === 'dark' ? 'text-[#30d158]' : activeTheme === 'light' ? 'text-[#30d158]' : currentTheme.accent
-                                                        }`}>Done</p>
-                                                </div>
-                                            </div>
-                                            <button
-                                                onClick={() => setActiveTab('tasks')}
-                                                className="w-full mt-4 text-sm text-[#0071e3] hover:text-[#0077ed] transition-colors font-medium"
-                                            >
-                                                View Task Board
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-
-                                <div className={`rounded-2xl sm:rounded-3xl p-5 ${activeTheme === 'dark'
-                                    ? 'bg-[#1d1d1f] border border-[#3d3d3f]/50'
-                                    : activeTheme === 'light'
-                                        ? 'bg-white border border-gray-200'
-                                        : `${currentTheme.cardBg} border ${currentTheme.border}`
-                                    }`}>
-                                    <h3 className={`text-sm font-semibold uppercase tracking-wider mb-4 ${activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.text
-                                        }`}>Stats</h3>
-                                    <div className="space-y-3">
-                                        <div className="flex justify-between items-center">
-                                            <span className={`text-sm ${activeTheme === 'dark' ? 'text-[#86868b]' : activeTheme === 'light' ? 'text-gray-600' : currentTheme.textSecondary
-                                                }`}>Research Sessions</span>
-                                            <span className={`text-lg font-semibold ${activeTheme === 'dark' ? 'text-white' : activeTheme === 'light' ? 'text-gray-900' : currentTheme.text
-                                                }`}>{researchSessions.length}</span>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={openAllSourcesModal}
-                                            disabled={totalSources === 0}
-                                            className="flex justify-between items-center w-full disabled:opacity-60 text-left"
-                                        >
-                                            <span className={`text-sm ${isDarkMode ? 'text-[#86868b]' : 'text-gray-600'}`}>Total Sources</span>
-                                            <span className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{totalSources}</span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setActiveTab('data')}
-                                            className="flex justify-between items-center w-full text-left"
-                                        >
-                                            <span className={`text-sm ${isDarkMode ? 'text-[#86868b]' : 'text-gray-600'}`}>Uploaded Files</span>
-                                            <span className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{uploadedFileCount}</span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setActiveTab('notes')}
-                                            className="flex justify-between items-center w-full text-left"
-                                        >
-                                            <span className={`text-sm ${isDarkMode ? 'text-[#86868b]' : 'text-gray-600'}`}>Notes</span>
-                                            <span className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{notes.length}</span>
-                                        </button>
-                                        <div className="flex justify-between items-center">
-                                            <span className={`text-sm ${isDarkMode ? 'text-[#86868b]' : 'text-gray-600'}`}>Last Updated</span>
-                                            <span className={`text-sm ${activeTheme === 'dark' ? 'text-[#e5e5ea]' : activeTheme === 'light' ? 'text-gray-700' : currentTheme.text
-                                                }`}>{new Date(currentProject.lastModified).toLocaleDateString()}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        </>
                     )
                 }
 
@@ -8722,148 +8941,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 {
                     activeTab === 'seo' && (
                         <div className="h-auto sm:min-h-[calc(100vh-280px)] space-y-4">
-                            {/* SEO Keyword Analysis Section - Google */}
-                            <div
-                                className={`rounded-2xl p-5 border backdrop-blur-sm ${isDarkMode
-                                    ? 'bg-[#1d1d1f]/90 border-[#3d3d3f]/60'
-                                    : 'bg-white border-gray-200 shadow-sm'
-                                    }`}
-                            >
-                                <div className="flex items-start gap-3 mb-4">
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isDarkMode ? 'bg-white/10' : 'bg-gray-100'}`}>
-                                        <img src={PLATFORM_LOGOS.google} alt="Google" className="h-5 object-contain" />
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                                            <div>
-                                                <h3 className={`text-base font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                                                    SEO Keyword Analysis
-                                                </h3>
-                                                <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-[#86868b]' : 'text-gray-500'}`}>
-                                                    Analyze Google keyword metrics and get AI SEO advice.
-                                                </p>
-                                            </div>
-                                            {seoSeedCount > 0 && (
-                                                <span className={`text-xs px-2.5 py-1 rounded-full ${isDarkMode ? 'bg-[#2d2d2f] text-[#86868b]' : 'bg-gray-100 text-gray-600'}`}>
-                                                    {seoSeedCount} starter keywords
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
 
-                                {seoSeedKeywords.length > 0 && (
-                                    <div className="mb-3 flex flex-wrap gap-2">
-                                        {seoSeedKeywords.map((seed, idx) => (
-                                            <button
-                                                key={idx}
-                                                type="button"
-                                                onClick={() => {
-                                                    setSeoKeyword(seed);
-                                                    handleRunSeoAnalysis(seed);
-                                                }}
-                                                disabled={isRunningSeo || !canEdit}
-                                                className={`px-2.5 py-1 rounded-full text-xs border transition-colors ${isDarkMode
-                                                    ? 'border-[#3d3d3f] bg-[#111111] text-[#e5e5ea] hover:border-[#5ac8fa]'
-                                                    : 'border-gray-200 bg-gray-50 text-gray-800 hover:border-blue-400'
-                                                    } ${isRunningSeo ? 'opacity-60 cursor-wait' : ''}`}
-                                            >
-                                                {seed}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                    <div className="sm:col-span-2">
-                                        <label className={`block text-[11px] mb-1 ${isDarkMode ? 'text-[#86868b]' : 'text-gray-600'}`}>
-                                            Keyword
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={seoKeyword}
-                                            onChange={e => setSeoKeyword(e.target.value)}
-                                            placeholder={currentProject.name || 'e.g. sustainable living tips'}
-                                            disabled={!canEdit}
-                                            className={`w-full rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0071e3] ${isDarkMode
-                                                ? 'bg-[#111111] border border-[#3d3d3f]/60 text-white placeholder:text-[#636366]'
-                                                : 'bg-white border border-gray-300 text-gray-900 placeholder:text-gray-500'
-                                                }`}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className={`block text-[11px] mb-1 ${isDarkMode ? 'text-[#86868b]' : 'text-gray-600'}`}>
-                                            Location
-                                        </label>
-                                        <select
-                                            value={seoLocation}
-                                            onChange={e => setSeoLocation(e.target.value)}
-                                            disabled={!canEdit}
-                                            className={`w-full rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0071e3] ${isDarkMode
-                                                ? 'bg-[#111111] border border-[#3d3d3f]/60 text-white'
-                                                : 'bg-white border border-gray-300 text-gray-900'
-                                                }`}
-                                        >
-                                            {SEO_COUNTRIES.map(country => (
-                                                <option key={country.code} value={country.code}>
-                                                    {country.label} ({country.code})
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div className="mt-3 flex items-center justify-end gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => handleRunSeoAnalysis()}
-                                        disabled={isRunningSeo || !canEdit}
-                                        className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 ${isRunningSeo
-                                            ? 'bg-gray-500/60 text-white cursor-wait'
-                                            : activeTheme === 'dark' || activeTheme === 'light'
-                                                ? 'bg-[#0071e3] hover:bg-[#0077ed] text-white'
-                                                : `${currentTheme.primary} ${currentTheme.primaryHover} text-white`
-                                            }`}
-                                    >
-                                        {isRunningSeo && (
-                                            <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                <circle cx="12" cy="12" r="10" className="opacity-25" />
-                                                <path d="M4 12a8 8 0 018-8" className="opacity-75" />
-                                            </svg>
-                                        )}
-                                        {isRunningSeo ? 'Analyzing…' : 'Run Analysis'}
-                                    </button>
-                                    {seoData && !isRunningSeo && (
-                                        <button
-                                            type="button"
-                                            onClick={handleGenerateSeoBlog}
-                                            disabled={isGeneratingSeoBlog || !canEdit}
-                                            className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 ${isGeneratingSeoBlog
-                                                ? 'bg-gray-500/60 text-white cursor-wait'
-                                                : isDarkMode
-                                                    ? 'bg-[#2d2d2f] text-white hover:bg-[#3d3d3f]'
-                                                    : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                                                }`}
-                                        >
-                                            {isGeneratingSeoBlog && (
-                                                <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                    <circle cx="12" cy="12" r="10" className="opacity-25" />
-                                                    <path d="M4 12a8 8 0 018-8" className="opacity-75" />
-                                                </svg>
-                                            )}
-                                            {isGeneratingSeoBlog ? 'Generating…' : 'Generate Blog Ideas'}
-                                        </button>
-                                    )}
-                                </div>
-
-                                {seoError && <p className="mt-2 text-xs text-red-400">{seoError}</p>}
-                                {seoBlogError && <p className="mt-2 text-xs text-red-400">{seoBlogError}</p>}
-                                {seoBlogSaveMessage && (
-                                    <p className={`mt-2 text-xs ${seoBlogSaveMessage.toLowerCase().includes('failed') ? 'text-red-400' : 'text-emerald-400'}`}>
-                                        {seoBlogSaveMessage}
-                                    </p>
-                                )}
-                            </div>
 
                             {/* Ad Targeting Search Section - Facebook */}
                             <div
@@ -9562,6 +9640,149 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                                 )}
                             </div>
 
+                            {/* SEO Keyword Analysis Section - Google */}
+                            <div
+                                className={`rounded-2xl p-5 border backdrop-blur-sm ${isDarkMode
+                                    ? 'bg-[#1d1d1f]/90 border-[#3d3d3f]/60'
+                                    : 'bg-white border-gray-200 shadow-sm'
+                                    }`}
+                            >
+                                <div className="flex items-start gap-3 mb-4">
+                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isDarkMode ? 'bg-white/10' : 'bg-gray-100'}`}>
+                                        <img src={PLATFORM_LOGOS.google} alt="Google" className="h-5 object-contain" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                            <div>
+                                                <h3 className={`text-base font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                                    SEO Keyword Analysis
+                                                </h3>
+                                                <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-[#86868b]' : 'text-gray-500'}`}>
+                                                    Analyze Google keyword metrics and get AI SEO advice.
+                                                </p>
+                                            </div>
+                                            {seoSeedCount > 0 && (
+                                                <span className={`text-xs px-2.5 py-1 rounded-full ${isDarkMode ? 'bg-[#2d2d2f] text-[#86868b]' : 'bg-gray-100 text-gray-600'}`}>
+                                                    {seoSeedCount} starter keywords
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {seoSeedKeywords.length > 0 && (
+                                    <div className="mb-3 flex flex-wrap gap-2">
+                                        {seoSeedKeywords.map((seed, idx) => (
+                                            <button
+                                                key={idx}
+                                                type="button"
+                                                onClick={() => {
+                                                    setSeoKeyword(seed);
+                                                    handleRunSeoAnalysis(seed);
+                                                }}
+                                                disabled={isRunningSeo || !canEdit}
+                                                className={`px-2.5 py-1 rounded-full text-xs border transition-colors ${isDarkMode
+                                                    ? 'border-[#3d3d3f] bg-[#111111] text-[#e5e5ea] hover:border-[#5ac8fa]'
+                                                    : 'border-gray-200 bg-gray-50 text-gray-800 hover:border-blue-400'
+                                                    } ${isRunningSeo ? 'opacity-60 cursor-wait' : ''}`}
+                                            >
+                                                {seed}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                    <div className="sm:col-span-2">
+                                        <label className={`block text-[11px] mb-1 ${isDarkMode ? 'text-[#86868b]' : 'text-gray-600'}`}>
+                                            Keyword
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={seoKeyword}
+                                            onChange={e => setSeoKeyword(e.target.value)}
+                                            placeholder={currentProject.name || 'e.g. sustainable living tips'}
+                                            disabled={!canEdit}
+                                            className={`w-full rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0071e3] ${isDarkMode
+                                                ? 'bg-[#111111] border border-[#3d3d3f]/60 text-white placeholder:text-[#636366]'
+                                                : 'bg-white border border-gray-300 text-gray-900 placeholder:text-gray-500'
+                                                }`}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className={`block text-[11px] mb-1 ${isDarkMode ? 'text-[#86868b]' : 'text-gray-600'}`}>
+                                            Location
+                                        </label>
+                                        <select
+                                            value={seoLocation}
+                                            onChange={e => setSeoLocation(e.target.value)}
+                                            disabled={!canEdit}
+                                            className={`w-full rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0071e3] ${isDarkMode
+                                                ? 'bg-[#111111] border border-[#3d3d3f]/60 text-white'
+                                                : 'bg-white border border-gray-300 text-gray-900'
+                                                }`}
+                                        >
+                                            {SEO_COUNTRIES.map(country => (
+                                                <option key={country.code} value={country.code}>
+                                                    {country.label} ({country.code})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="mt-3 flex items-center justify-end gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRunSeoAnalysis()}
+                                        disabled={isRunningSeo || !canEdit}
+                                        className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 ${isRunningSeo
+                                            ? 'bg-gray-500/60 text-white cursor-wait'
+                                            : activeTheme === 'dark' || activeTheme === 'light'
+                                                ? 'bg-[#0071e3] hover:bg-[#0077ed] text-white'
+                                                : `${currentTheme.primary} ${currentTheme.primaryHover} text-white`
+                                            }`}
+                                    >
+                                        {isRunningSeo && (
+                                            <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <circle cx="12" cy="12" r="10" className="opacity-25" />
+                                                <path d="M4 12a8 8 0 018-8" className="opacity-75" />
+                                            </svg>
+                                        )}
+                                        {isRunningSeo ? 'Analyzing…' : 'Run Analysis'}
+                                    </button>
+                                    {seoData && !isRunningSeo && (
+                                        <button
+                                            type="button"
+                                            onClick={handleGenerateSeoBlog}
+                                            disabled={isGeneratingSeoBlog || !canEdit}
+                                            className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 ${isGeneratingSeoBlog
+                                                ? 'bg-gray-500/60 text-white cursor-wait'
+                                                : isDarkMode
+                                                    ? 'bg-[#2d2d2f] text-white hover:bg-[#3d3d3f]'
+                                                    : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                                                }`}
+                                        >
+                                            {isGeneratingSeoBlog && (
+                                                <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                    <circle cx="12" cy="12" r="10" className="opacity-25" />
+                                                    <path d="M4 12a8 8 0 018-8" className="opacity-75" />
+                                                </svg>
+                                            )}
+                                            {isGeneratingSeoBlog ? 'Generating…' : 'Generate Blog Ideas'}
+                                        </button>
+                                    )}
+                                </div>
+
+                                {seoError && <p className="mt-2 text-xs text-red-400">{seoError}</p>}
+                                {seoBlogError && <p className="mt-2 text-xs text-red-400">{seoBlogError}</p>}
+                                {seoBlogSaveMessage && (
+                                    <p className={`mt-2 text-xs ${seoBlogSaveMessage.toLowerCase().includes('failed') ? 'text-red-400' : 'text-emerald-400'}`}>
+                                        {seoBlogSaveMessage}
+                                    </p>
+                                )}
+                            </div>
+
                             {seoData && (
                                 <div className="mt-4 space-y-4">
                                     {Array.isArray(localSeoRows) && localSeoRows.length > 0 && (
@@ -10238,11 +10459,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                         <ProjectAssets
                             project={currentProject}
                             isDarkMode={isDarkMode}
-                            onFiltersChange={(filters) => {
-                                if (filters.length > 0) {
-                                    setCurrentAssetsFilter(filters[0]);
-                                }
-                            }}
+                            onFiltersChange={handleAssetsFilterChange}
                             onLoadResearch={onLoadResearch}
                             localProjectPodcasts={localProjectPodcasts}
                             onPlayPodcast={podcast => {
@@ -10250,7 +10467,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                             }}
                             onProjectUpdate={handleProjectChange}
                             assetCount={assetCount}
-                            initialFilters={[currentAssetsFilter]}
+                            initialFilters={currentAssetsFilter}
                             onShareToX={handleShareToX}
                             initialTable={seoTableToCreate || undefined}
                             userProfile={userProfile}
@@ -10258,6 +10475,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                             onAssetCountChange={setAssetCount}
                             editRequest={editRequestAsset}
                             onEditRequestCleared={() => setEditRequestAsset(null)}
+                            initialFocus={assetsInitialFocus}
                         />
                     )
                 }
@@ -12554,6 +12772,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                         <div className="h-[calc(100vh-220px)]">
                             <EmailBuilder
                                 isDarkMode={isDarkMode}
+                                initialFocus={emailInitialFocus}
                                 projectId={project.id}
                                 savedTemplates={project.emailTemplates || []}
                                 products={project.stripeProducts || []}
@@ -13351,18 +13570,118 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
 
 
 
-            <button
+            {/* Quick Add Task Modal */}
+            {isQuickAddTaskModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+                        onClick={() => setIsQuickAddTaskModalOpen(false)}
+                    />
+                    <div className={`relative w-full max-w-md rounded-2xl shadow-2xl p-6 ${activeTheme === 'dark'
+                        ? 'bg-[#1c1c1e] ring-1 ring-white/10'
+                        : 'bg-white'
+                        }`}>
+                        <h3 className={`text-lg font-semibold mb-4 ${activeTheme === 'dark' ? 'text-white' : 'text-gray-900'
+                            }`}>
+                            Quick Add Task
+                        </h3>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className={`block text-xs font-medium mb-1.5 ${activeTheme === 'dark' ? 'text-white/60' : 'text-gray-500'
+                                    }`}>
+                                    Title
+                                </label>
+                                <input
+                                    type="text"
+                                    value={quickTaskTitle}
+                                    onChange={e => setQuickTaskTitle(e.target.value)}
+                                    placeholder="Task title..."
+                                    autoFocus
+                                    className={`w-full px-4 py-2.5 rounded-xl text-sm border focus:outline-none focus:ring-2 transition-all ${activeTheme === 'dark'
+                                        ? 'bg-white/5 border-white/10 focus:border-blue-500/50 focus:ring-blue-500/20 text-white placeholder-white/30'
+                                        : 'bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 text-gray-900'
+                                        }`}
+                                    onKeyDown={e => {
+                                        if (e.key === 'Enter') handleQuickAddTask();
+                                    }}
+                                />
+                            </div>
+
+                            <div>
+                                <label className={`block text-xs font-medium mb-1.5 ${activeTheme === 'dark' ? 'text-white/60' : 'text-gray-500'
+                                    }`}>
+                                    Priority
+                                </label>
+                                <div className="flex gap-2">
+                                    {(['high', 'medium', 'low'] as const).map(p => (
+                                        <button
+                                            key={p}
+                                            type="button"
+                                            onClick={() => setQuickTaskPriority(p)}
+                                            className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border transition-all ${quickTaskPriority === p
+                                                ? p === 'high'
+                                                    ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                                                    : p === 'medium'
+                                                        ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                                                        : 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                                                : activeTheme === 'dark'
+                                                    ? 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10'
+                                                    : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
+                                                }`}
+                                        >
+                                            {p.charAt(0).toUpperCase() + p.slice(1)}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-3 mt-6">
+                            <button
+                                onClick={() => setIsQuickAddTaskModalOpen(false)}
+                                className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${activeTheme === 'dark'
+                                    ? 'hover:bg-white/10 text-white/70'
+                                    : 'hover:bg-gray-100 text-gray-600'
+                                    }`}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleQuickAddTask}
+                                disabled={!quickTaskTitle.trim()}
+                                className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${!quickTaskTitle.trim()
+                                    ? 'opacity-50 cursor-not-allowed'
+                                    : ''
+                                    } ${activeTheme === 'dark'
+                                        ? 'bg-[#0071e3] hover:bg-[#0077ED] text-white'
+                                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                    }`}
+                            >
+                                Add Task
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Game Center Modal */}
+            <GameCenter
+                isOpen={showGameCenter}
+                onClose={() => setShowGameCenter(false)}
+                isDarkMode={isDarkMode}
+            />
+
+            <LiveAssistantButton
                 onClick={() => setShowAssistant(true)}
-                className={`fixed bottom-4 sm:bottom-6 right-4 sm:right-6 w-12 h-12 sm:w-14 sm:h-14 text-white rounded-full shadow-lg transition-all duration-300 hover:scale-110 active:scale-95 flex items-center justify-center group z-40 ${activeTheme === 'dark' || activeTheme === 'light' ? 'bg-[#0071e3] hover:bg-[#0077ed] shadow-[#0071e3]/40 hover:shadow-[#0071e3]/60' : `${currentTheme.primary} ${currentTheme.primaryHover}`}`}
-                title="Chat with AI about your project"
+                visible={isActive === true && !showAssistant && !showProjectNoteMap}
+                className={`${activeTheme === 'dark' || activeTheme === 'light'
+                    ? 'bg-[#0071e3] hover:bg-[#0077ed]'
+                    : `${currentTheme.primary} ${currentTheme.primaryHover}`} shadow-lg text-white`}
             >
-                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
                 <span className="absolute right-full mr-3 px-3 py-1.5 bg-[#1d1d1f] text-white text-sm rounded-xl opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap hidden sm:block border border-[#3d3d3f]/50">
                     Ask AI
                 </span>
-            </button>
+            </LiveAssistantButton>
 
             {
                 activePodcast && activePodcast.url && (
@@ -13420,7 +13739,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                         onRunSeoAnalysis={runSeoAnalysisFromAssistant}
                         isSubscribed={isSubscribed}
                         activeTab={activeTab}
-                        activeAssetTab={currentAssetsFilter}
+                        activeAssetTab={currentAssetsFilter[0] || 'all'}
 
                         facebookConnected={facebookConnected}
                         facebookAccessToken={facebookAccessTokenRef.current}
@@ -13918,12 +14237,12 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                                                     {post.platforms.map((p: string) => {
                                                         if (!p) return null;
                                                         const logoUrl =
-                                                            (p === 'twitter' || p === 'x') ? 'https://c5d6cokf0svjw8ex.public.blob.vercel-storage.com/X-Logo-Round-Color.png' :
-                                                                (p === 'instagram') ? 'https://c5d6cokf0svjw8ex.public.blob.vercel-storage.com/Instagram_logo_2016.svg.webp' :
-                                                                    (p === 'linkedin') ? 'https://c5d6cokf0svjw8ex.public.blob.vercel-storage.com/LinkedIn_logo_initials.png' :
-                                                                        (p === 'tiktok') ? 'https://c5d6cokf0svjw8ex.public.blob.vercel-storage.com/tiktok-6338432_1280.webp' :
-                                                                            (p === 'youtube') ? 'https://c5d6cokf0svjw8ex.public.blob.vercel-storage.com/YouTube_full-color_icon_%282017%29.svg.png' :
-                                                                                (p === 'facebook') ? 'https://c5d6cokf0svjw8ex.public.blob.vercel-storage.com/2021_Facebook_icon.svg.webp' : null;
+                                                            (p === 'twitter' || p === 'x') ? 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/X-Logo-Round-Color.png' :
+                                                                (p === 'instagram') ? 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/Instagram_logo_2016.svg.webp' :
+                                                                    (p === 'linkedin') ? 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/LinkedIn_logo_initials.png' :
+                                                                        (p === 'tiktok') ? 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/tiktok-6338432_1280.webp' :
+                                                                            (p === 'youtube') ? 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/YouTube_full-color_icon_%282017%29.svg.png' :
+                                                                                (p === 'facebook') ? 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/2021_Facebook_icon.svg.webp' : null;
 
                                                         if (logoUrl) {
                                                             return <img key={p} src={logoUrl} alt={p} className="w-5 h-5 rounded-full border border-white/20 object-cover bg-white" />;
@@ -14193,8 +14512,51 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 isDarkMode={isDarkMode}
                 currentCredits={currentCredits}
             />
+            {/* Reverify Confirmation Modal */}
+            {showReverifyConfirm && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowReverifyConfirm(false)} />
+                    <div className={`relative w-full max-w-md rounded-2xl p-6 shadow-2xl scale-100 opacity-100 transition-all ${isDarkMode ? 'bg-[#1c1c1e] text-white' : 'bg-white text-gray-900'
+                        }`}>
+                        <div className="flex flex-col items-center text-center">
+                            <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${isDarkMode ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-600'}`}>
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h4M20 20v-5h-4M5 19a7 7 0 0012-5M19 5a7 7 0 00-12 5" />
+                                </svg>
+                            </div>
+                            <h3 className="text-xl font-semibold mb-2">Reverify Project Research?</h3>
+                            <p className={`mb-6 ${isDarkMode ? 'text-[#86868b]' : 'text-gray-500'}`}>
+                                This will check all your research sessions against the latest web data and update them if new information is found. This process may consume credits.
+                            </p>
+                            <div className="flex w-full gap-3">
+                                <button
+                                    onClick={() => setShowReverifyConfirm(false)}
+                                    className={`flex-1 px-4 py-2.5 rounded-xl font-medium transition-colors ${isDarkMode
+                                        ? 'bg-[#2c2c2e] hover:bg-[#3a3a3c] text-white'
+                                        : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
+                                        }`}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setShowReverifyConfirm(false);
+                                        handleReverifyProject();
+                                    }}
+                                    className={`flex-1 px-4 py-2.5 rounded-xl font-medium text-white transition-colors ${activeTheme === 'dark' || activeTheme === 'light'
+                                        ? 'bg-[#0071e3] hover:bg-[#0077ed]'
+                                        : (currentTheme?.primary || 'bg-[#0071e3]') + ' ' + (currentTheme?.primaryHover || 'hover:bg-[#0077ed]')
+                                        }`}
+                                >
+                                    Reverify Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div >
     );
 };
-
 
