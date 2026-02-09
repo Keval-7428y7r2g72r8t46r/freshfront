@@ -14381,12 +14381,12 @@ You can manage this product in **Assets → Products**.`;
                           <div className="flex flex-wrap gap-2">
                             {detectedPlatforms.map((platform) => {
                               const platformInfo: Record<SocialPlatform, { name: string; logo: string }> = {
-                                facebook: { name: 'Facebook', logo: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/2021_Facebook_icon.svg.webp' },
-                                instagram: { name: 'Instagram', logo: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/Instagram_logo_2016.svg.webp' },
-                                x: { name: 'X', logo: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/X-Logo-Round-Color.png' },
-                                tiktok: { name: 'TikTok', logo: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/tiktok-6338432_1280.webp' },
-                                youtube: { name: 'YouTube', logo: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/YouTube_full-color_icon_%282017%29.svg.png' },
-                                linkedin: { name: 'LinkedIn', logo: 'https://4e8x2678qze7wsvh.public.blob.vercel-storage.com/LinkedIn_logo_initials.png' },
+                                facebook: { name: 'Facebook', logo: 'https://v5mLtVQUI2sf3sCk.public.blob.vercel-storage.com/2021_Facebook_icon.svg.webp' },
+                                instagram: { name: 'Instagram', logo: 'https://v5mLtVQUI2sf3sCk.public.blob.vercel-storage.com/Instagram_logo_2016.svg.webp' },
+                                x: { name: 'X', logo: 'https://v5mLtVQUI2sf3sCk.public.blob.vercel-storage.com/X-Logo-Round-Color.png' },
+                                tiktok: { name: 'TikTok', logo: 'https://v5mLtVQUI2sf3sCk.public.blob.vercel-storage.com/tiktok-6338432_1280.webp' },
+                                youtube: { name: 'YouTube', logo: 'https://v5mLtVQUI2sf3sCk.public.blob.vercel-storage.com/YouTube_full-color_icon_%282017%29.svg.png' },
+                                linkedin: { name: 'LinkedIn', logo: 'https://v5mLtVQUI2sf3sCk.public.blob.vercel-storage.com/LinkedIn_logo_initials.png' },
                               };
                               const info = platformInfo[platform];
                               const isConnected = isPlatformConnected(platform);
@@ -14888,10 +14888,10 @@ You can manage this product in **Assets → Products**.`;
                       onClick={connectVoice}
                       disabled={connectionStatus === 'connecting'}
                       className={`flex items-center gap-2 font-medium py-3 px-5 sm:px-6 rounded-full transition-all active:scale-95 disabled:opacity-50 text-sm sm:text-base text-white ${connectionStatus === 'connecting'
-                          ? 'bg-[#5e5ce6] hover:bg-[#6e6ef6]'
-                          : activeTheme && currentTheme && activeTheme !== 'dark' && activeTheme !== 'light'
-                            ? `${currentTheme.primary} ${currentTheme.primaryHover}`
-                            : 'bg-[#5e5ce6] hover:bg-[#6e6ef6]'
+                        ? 'bg-[#5e5ce6] hover:bg-[#6e6ef6]'
+                        : activeTheme && currentTheme && activeTheme !== 'dark' && activeTheme !== 'light'
+                          ? `${currentTheme.primary} ${currentTheme.primaryHover}`
+                          : 'bg-[#5e5ce6] hover:bg-[#6e6ef6]'
                         }`}
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
