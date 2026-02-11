@@ -94,6 +94,17 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
   const dragStartDateRef = useRef<Date | null>(null);
   const dragEndDateRef = useRef<Date | null>(null);
 
+  // Prevent vertical scroll during touch drag of tasks
+  useEffect(() => {
+    const handler = (e: TouchEvent) => {
+      if (isTouchDraggingRef.current) {
+        e.preventDefault();
+      }
+    };
+    document.addEventListener('touchmove', handler, { passive: false });
+    return () => document.removeEventListener('touchmove', handler);
+  }, []);
+
   const tasks = project.tasks || [];
   const isReadOnly = !!readOnly;
 
