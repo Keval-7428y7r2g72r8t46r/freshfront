@@ -18,9 +18,9 @@ const COLUMNS: { id: TaskStatus; title: string; color: string; bgColor: string }
 ];
 
 const PRIORITY_COLORS: Record<TaskPriority, { dot: string; light: string; dark: string }> = {
-  low: { dot: 'bg-slate-400', light: 'bg-slate-500/10 text-slate-600', dark: 'bg-slate-500/20 text-slate-400' },
-  medium: { dot: 'bg-amber-400', light: 'bg-amber-500/10 text-amber-700', dark: 'bg-amber-500/20 text-amber-400' },
-  high: { dot: 'bg-red-400', light: 'bg-red-500/10 text-red-700', dark: 'bg-red-500/20 text-red-400' }
+  low: { dot: 'bg-slate-400', light: 'bg-slate-500/5 text-slate-600', dark: 'bg-slate-500/20 text-slate-400' },
+  medium: { dot: 'bg-amber-400', light: 'bg-amber-500/5 text-amber-700', dark: 'bg-amber-500/20 text-amber-400' },
+  high: { dot: 'bg-red-400', light: 'bg-red-500/5 text-red-700', dark: 'bg-red-500/20 text-red-400' }
 };
 
 const PLATFORM_LOGOS: Record<string, string> = {
@@ -1128,7 +1128,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
                       </div>
 
                       <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-                        <div className="flex bg-white border border-gray-200 dark:bg-slate-800/50 rounded-lg p-0.5 shrink-0">
+                        <div className={`flex rounded-lg p-0.5 shrink-0 ${isDarkMode ? 'bg-slate-800/50 border border-white/10' : 'bg-gray-50 border border-gray-100'}`}>
                           {(['low', 'medium', 'high'] as TaskPriority[]).map(p => (
                             <button
                               key={p}
@@ -1181,7 +1181,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
                     onTouchCancel={handleTouchCancel}
-                    className={`group p-2.5 rounded-lg border cursor-grab active:cursor-grabbing transition-all ${isDarkMode
+                    className={`group p-2.5 rounded-lg border cursor-grab active:cursor-grabbing transition-all touch-none ${isDarkMode
                       ? 'bg-slate-800/80 hover:bg-slate-800 border-white/5 hover:border-white/10'
                       : 'bg-white hover:bg-gray-50 border-gray-200 hover:border-gray-300'
                       } ${draggedTask?.id === task.id ? 'opacity-50 scale-95' : ''}`}
@@ -1460,7 +1460,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ project, onProjectUpda
 
                           return (
                             <div
-                              className="grid grid-cols-7 gap-1"
+                              className="grid grid-cols-7 gap-1 touch-none"
                               onTouchStart={handleDateTouchStart}
                               onTouchMove={handleDateTouchMove}
                               onTouchEnd={handleDateDragEnd}
