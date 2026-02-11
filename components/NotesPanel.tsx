@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import { createPortal } from 'react-dom';
 import { ProjectNote, ResearchProject, NoteTermDefinition } from '../types';
 import { storageService } from '../services/storageService';
-import { suggestNoteEnhancements, generateQuickNote, ai } from '../services/geminiService';
+import { suggestNoteEnhancements, generateQuickNote, generateTextToSpeech, ai } from '../services/geminiService';
 import { deductCredits } from '../services/creditService';
 
 
@@ -64,6 +64,70 @@ export const NotesPanel: React.FC<NotesPanelProps> = ({
   // Draggable State
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+
+  // Audio State
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const [audioLoading, setAudioLoading] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const handlePlayAudio = async (text: string) => {
+    if (isPlayingAudio) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+      setIsPlayingAudio(false);
+      return;
+    }
+
+    if (!text || audioLoading) return;
+
+    setAudioLoading(true);
+    try {
+      // Deduct credits for TTS
+      const creditSuccess = await deductCredits('audioGeneration'); // Assuming 'audioGeneration' or fallback to a standard cost
+      if (!creditSuccess) {
+        console.warn('Insufficient credits for audio generation');
+        // Fallback or notify user (optional enhancement)
+      }
+
+      const audioData = await generateTextToSpeech(text);
+      if (audioData) {
+        const byteCharacters = atob(audioData);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'audio/wav' });
+        const url = URL.createObjectURL(blob);
+
+        if (audioRef.current) {
+          audioRef.current.pause();
+        }
+
+        const audio = new Audio(url);
+        audioRef.current = audio;
+        audio.onended = () => setIsPlayingAudio(false);
+        audio.play();
+        setIsPlayingAudio(true);
+      }
+    } catch (error) {
+      console.error('Failed to play audio:', error);
+    } finally {
+      setAudioLoading(false);
+    }
+  };
+
+  // Cleanup audio on unmount or node change
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -727,8 +791,35 @@ Selected Text:
                     }`}
                 >
                   <svg className="w-4 h-4" fill={viewingNote.pinned ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                   </svg>
+                </button>
+
+                <button
+                  onClick={() => handlePlayAudio(viewingNote.content)}
+                  disabled={audioLoading}
+                  className={`p-2 rounded-lg transition-colors ${isPlayingAudio
+                      ? (isDarkMode ? 'text-green-400 bg-green-500/20' : 'text-green-600 bg-green-50')
+                      : (isDarkMode ? 'text-slate-400 hover:text-white hover:bg-white/10' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100')
+                    }`}
+                  title={isPlayingAudio ? "Stop Audio" : "Read Note Aloud"}
+                >
+                  {audioLoading ? (
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                  ) : isPlayingAudio ? (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 14.142M12 6.135a3 3 0 00-6.135 0L5 12.135A3 3 0 0011.135 12.135l.865-6z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5L6 9H2v6h4l5 4V5z" />
+                    </svg>
+                  )}
                 </button>
 
                 <button
