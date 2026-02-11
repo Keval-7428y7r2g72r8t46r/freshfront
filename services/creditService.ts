@@ -62,6 +62,7 @@ export const CREDIT_COSTS = {
     worldGeneration: 50,
     videoLive: 35,
     videoEditXai: 35,
+    audioGeneration: 5,
 } as const;
 
 export type CreditOperation = keyof typeof CREDIT_COSTS;
@@ -104,6 +105,7 @@ export const UNLIMITED_BYPASS_OPERATIONS: Set<CreditOperation> = new Set([
     'podcastShort',
     'podcastMedium',
     'podcastLong',
+    'audioGeneration',
 
     // Social/Email (these support campaigns)
     'socialPostGeneration',
@@ -325,6 +327,7 @@ export function getOperationDisplayName(operation: CreditOperation): string {
         worldGeneration: 'World Generation',
         videoLive: 'Live Video Session',
         videoEditXai: 'Video Editing (xAI)',
+        audioGeneration: 'Audio Generation',
     };
     return names[operation] || operation;
 }
