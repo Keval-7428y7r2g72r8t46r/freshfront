@@ -10184,8 +10184,60 @@ Apply the requested changes and return the complete modified HTML.`;
       summary: summaryResponse.text || editInstruction
     };
   } catch (error: any) {
-    console.error('editWebsiteWithAI failed:', error);
     throw new Error(`Failed to apply website edit: ${error.message}`);
   }
 }
+
+/**
+ * Generate Text-to-Speech audio from text using Gemini TTS model.
+ * Returns a base64 string of the audio data.
+ */
+export const generateTextToSpeech = async (
+  text: string,
+  voiceName: string = 'Kore'
+): Promise<string> => {
+  if (!text.trim()) {
+    throw new Error('Text is required for speech generation');
+  }
+
+  // Use the specific TTS model
+  const modelToUse = process.env.MODEL_TTS || 'gemini-2.5-flash-preview-tts';
+
+  try {
+    const response = await ai.models.generateContent({
+      model: modelToUse,
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: text.trim() }],
+        },
+      ],
+      config: {
+        responseModalities: ['AUDIO'],
+        // @ts-ignore - SpeechConfig types might be missing in some SDK versions
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: {
+              voiceName: voiceName,
+            },
+          },
+        },
+      } as any,
+    });
+
+    const candidates = response.candidates;
+    if (candidates && candidates.length > 0) {
+      for (const part of candidates[0].content.parts) {
+        if (part.inlineData && part.inlineData.data) {
+          return part.inlineData.data;
+        }
+      }
+    }
+
+    throw new Error('No audio data returned from Gemini TTS');
+  } catch (error) {
+    console.error('Gemini TTS generation failed:', error);
+    throw error;
+  }
+};
 
