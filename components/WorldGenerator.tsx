@@ -201,7 +201,7 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
         <div className={`w-full space-y-4 animate-in fade-in duration-700 ${!isDarkMode ? 'text-gray-900' : ''}`}>
             {/* Mode Selection */}
             <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-                <div className={`flex p-1 ${isDarkMode ? 'bg-[#1c1c1e]' : 'bg-gray-100'} rounded-xl border ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+                <div className={`flex flex-wrap p-1 ${isDarkMode ? 'bg-[#1c1c1e]' : 'bg-gray-100'} rounded-xl border ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
@@ -226,7 +226,7 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
 
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
                 {/* Left Column: Controls (Prompt & Inputs) */}
-                <div className="xl:col-span-5 space-y-6">
+                <div className={`xl:col-span-5 space-y-6 ${activeTab !== 'text' ? 'order-2 xl:order-1' : ''}`}>
                     {/* Prompt Input */}
                     <div className={`relative rounded-2xl p-5 ${isDarkMode ? 'bg-[#111111]/50 border-[#3d3d3f]/40' : 'bg-gray-50 border-gray-200'} border`}>
                         <div className="flex items-center gap-2 mb-4">
@@ -294,7 +294,7 @@ export const WorldGenerator: React.FC<WorldGeneratorProps> = ({ onWorldGenerated
                 </div>
 
                 {/* Right Column: Reference Assets or Tips */}
-                <div className="xl:col-span-7">
+                <div className={`xl:col-span-7 ${activeTab !== 'text' ? 'order-1 xl:order-2' : ''}`}>
                     {(activeTab !== 'text') ? (
                         <div className={`rounded-2xl border ${isDarkMode ? 'bg-[#111111]/50 border-[#3d3d3f]/40' : 'bg-gray-50 border-gray-200'} p-5 flex flex-col h-full min-h-[400px]`}>
                             {/* Sub-Header / Toggle */}
